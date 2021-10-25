@@ -1,0 +1,22 @@
+<Bindings>
+    <Layer name="SI_KEYBINDINGS_CATEGORY_GENERAL">
+        <Category name="Addon Selector">
+            <Action name="ADDONS_RELOADUI">
+                <Down>AddonSelector_ReloadTheUI()</Down>
+            </Action>
+            <Action name="ADDONS_SHOWACTIVEPACK">
+                <Down>AddonSelector_ShowActivePackInChat()</Down>
+            </Action>
+        </Category>
+    </Layer>
+    <Layer name="Addons">
+        <Category>
+            <Action name="ADDONS_DESELECT_ALL" hideAction="true" inheritsBindFrom="UI_SHORTCUT_SECONDARY">
+                <Down>AddonSelector_SelectAddons(false)</Down>
+            </Action>
+            <Action name="ADDONS_SELECT_ALL" hideAction="true" inheritsBindFrom="UI_SHORTCUT_TERTIARY">
+                <Down>AddonSelector_SelectAddons(true)</Down>
+            </Action>
+        </Category>
+    </Layer>
+</Bindings>

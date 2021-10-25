@@ -1,0 +1,121 @@
+<!-- Level then Layer then Tier (lowest to highest prescendence -->
+<GuiXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sir.insidi.at/or/schema/esoui.xsd">
+	<Controls>
+	<!--  This is know longer used. ZO_AddOnManager:GetRowSetupFunction() is now wrapped, thanks for the idea Merlight
+	
+        <Control name="AddonSelector_AddOnRow" inherits="ZO_AddOnRow" virtual="true" mouseEnabled="true"  >
+			<OnMouseUp>
+				Addon_Toggle_Enabled(self, button, upInside)
+			</OnMouseUp>
+		</Control>
+	-->
+        <TopLevelControl name="AddonSelectorTLC" virtual="true" clampedToScreen="true" mouseEnabled="false" movable="false" hidden="false" >
+            <Dimensions x="400" y="80"/>
+			<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsDivider" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="0" />
+			<Controls>
+				<EditBox name="$(parent)SearchBox" font="ZoFontChat" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+					<Dimensions x="200" y="20"/>
+					<Anchor point="TOPRIGHT" relativeTo="ZO_AddOns" relativePoint="TOPRIGHT"  offsetX="-5" offsetY="75" />
+					<OnEnter>
+						AddonSelector_SearchAddon("name", self:GetText(), false)
+					</OnEnter>
+					<Controls>
+						<Backdrop name="$(parent)Bg" inherits="ZO_EditBackdrop" alpha="1"  >
+							<AnchorFill />
+						</Backdrop>
+						<Label name="$(parent)Label" font="ZoFontWinH4" color="FFFFFF" wrapMode="ELLIPSIS" text="Search:" verticalAlignment="CENTER" horizontalAlignment="RIGHT" alpha="1" >
+							<Anchor point="RIGHT" relativeTo="$(parent)SearchBox" relativePoint="LEFT" offsetX="-10" offsetY="0"/>
+						</Label>
+					</Controls>
+				</EditBox>
+
+				<Label name="$(parent)NameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" >
+					<Dimensions x="100" y="24" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="0" offsetY="0"/>
+				</Label>
+                <Backdrop name="$(parent)EditBoxBg" inherits="ZO_EditBackdrop" alpha="1"  >
+					<Dimensions x="200" y="20"/>
+					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
+				</Backdrop>
+				<EditBox name="$(parent)EditBox" font="ZoFontChat" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+					<Dimensions x="200" y="20"/>
+					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
+					<OnTextChanged>
+						AddonSelector_TextChanged(self)
+					</OnTextChanged>
+					<OnMouseUp>
+						AddonSelector_OnMouseUp(self, button, upInside, ctrl, alt, shift, command)
+					</OnMouseUp>
+				</EditBox>
+
+				<Button name="$(parent)Save" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="">
+					<Dimensions x="100" y="30" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)EditBox" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
+				</Button>
+				<Texture name="$(parent)SaveModeTexture">
+					<Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$(parent)Save" />
+					<Dimensions x="26" y="24" />
+				</Texture>
+				<Label name="$(parent)SelectLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" >
+					<Dimensions x="100" y="24" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="0"/>
+				</Label>
+				<Label name="$(parent)SelectedPackNameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" mouseEnabled="true">
+					<Dimensions x="500" y="24" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)SelectLabel" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="5"/>
+				</Label>
+				<Control name="$(parent)ddl" inherits="ZO_ComboBox" mouseEnabled="true" >
+				<!-- <Control name="$(parent)ddl" inherits="ZO_ScrollableComboBox" mouseEnabled="true" > -->
+					<Dimensions x="200" y="30" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)SelectLabel" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
+				</Control>
+				<Button name="$(parent)Delete" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="">
+					<Dimensions x="100" y="30" />
+					<Anchor point="TOPLEFT" relativeTo="$(parent)ddl" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
+				</Button>
+
+                <Control name="$(parent)BottomDivider" inherits="ZO_WideHorizontalDivider">
+                    <Anchor point="BOTTOM" />
+                </Control>
+
+				<!--
+				<Button name="$(parent)AutoReloadUI" inherits="ZO_CheckButton" >
+					<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsLoadOutOfDateAddOns" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="10"/>
+
+					<Controls>
+						<Label name="$(parent)Label" font="ZoFontGame" color="INTERFACE_COLOR_TYPE_TEXT_COLORS:INTERFACE_TEXT_COLOR_NORMAL" text="" mouseEnabled="true" >
+							<Anchor point="LEFT" relativePoint="RIGHT" offsetX="5" />
+						</Label>
+					</Controls>
+				</Button>
+				-->
+				<Button name="$(parent)SettingsOpenDropdown" inherits="ZO_DropdownButton">
+                    <Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
+					<Dimensions x="45" y="45" />
+					<Textures normal="esoui/art/chatwindow/chat_options_up.dds"
+							  pressed="esoui/art/chatwindow/chat_options_down.dds"
+							  mouseOver="esoui/art/chatwindow/chat_options_over.dds"/>
+					<OnClicked>
+                        AddonSelector_ShowSettingsDropdown(self)
+					</OnClicked>
+                </Button>
+
+                <Control name="$(parent)DeselectAddonsButton" inherits="ZO_DialogButton">
+                    <Anchor point="TOPLEFT" relativeTo="ZO_AddOnsList" relativePoint="BOTTOMLEFT" offsetY="5" />
+                    <OnInitialized>
+                        self:SetParent(ZO_AddOns)
+                        ZO_KeybindButtonTemplate_Setup(self, "ADDONS_DESELECT_ALL", function() AddonSelector_SelectAddons(false) end, AddonSelector_GetLocalizedText("DeselectAllAddons"))
+                    </OnInitialized>
+                </Control>
+                <Control name="$(parent)SelectAddonsButton" inherits="ZO_DialogButton">
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <OnInitialized>
+                        self:SetParent(ZO_AddOns)
+                        ZO_KeybindButtonTemplate_Setup(self, "ADDONS_SELECT_ALL", function() AddonSelector_SelectAddons(true) end, AddonSelector_GetLocalizedText("SelectAllAddons"))
+                    </OnInitialized>
+                </Control>
+
+            </Controls>
+		</TopLevelControl>
+	</Controls>
+</GuiXml>
