@@ -1,3 +1,19 @@
+--[[
+Known bugs:
+1) 2021-10-29: Saving a pack with character packs enabled, which was selected from list before (global or character pack),
+   will show "save global" in save dialog (override text is shown!) but actually save it per character
+   ->Maybe add a radiobutton to save dialog showing the actual save mode, and making it possible to switch easily per each save dialog
+2) 2021-10-30: Selecting a pack of a non-logged in character and deleting it won't update the selected pack label afterwards to remove
+    the non-logged in charname again (show the currently logged in if char saving packs are enabled, or else show global)
+3) 2021-10-30: Having the submenu at global packs enabled will not allow to delete a global pack via submenu if character saved packs are enabled.
+    It simply seems to do nothing?
+4) 2021-10-30: After selecting a pack from the dropdown list of packs the ESC key and return key to show the men/chat do not work anymore.
+5) 2021-10-30: Changing from "save per character" to "save global" will update the selected pack label's charname to "global" but the selected packName
+   will stay the same as before (this should only happen if the selected pack was a global one!)
+   Same/similar the other way around if you switch from "global" to "save per char" settings!
+6) 2021-10-30: With "global" packs enabled in the settings, and selecting a character saved pack, the selected pack label only shows "Global" instead of
+   the selected character name
+]]
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
 local AddonSelector = {}
@@ -14,6 +30,11 @@ AddonSelector.version = "2.000"
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
 --ASG = AddonSelectorGlobal
+
+local strfor = string.format
+local strlow = string.lower
+local strgma = string.gmatch
+local zopsf = zo_plainstrfind
 
 --Constant for the global pack name
 local GLOBAL_PACK_NAME = "$G"
@@ -281,15 +302,23 @@ local langArray = {
 }
 local langArrayInClientLang = langArray[lang]
 local langArrayInFallbackLang = langArray[fallbackLang]
+local charNamePackColorTemplate = "|cc9b636%s|r"
+local charNamePackColorDef = ZO_ColorDef:New("C9B636")
+local globalPackColorTemplate = "|c7EC8E3%s|r"
+local packNameGlobal = strfor(globalPackColorTemplate, langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"])
+local selectedPackNameStr = langArrayInClientLang["selectedPackName"] or langArrayInFallbackLang["selectedPackName"]
+
 
 --Clean the color codes from the addon name
+--[[
 local function stripText(text)
     return text:gsub("|c%x%x%x%x%x%x", "")
 end
+]]
 
 --Get localized texts
 function AddonSelector_GetLocalizedText(textToFind)
-    return langArrayInClientLang[textToFind] or langArrayInClientLang[fallbackLang] or "N/A"
+    return langArrayInClientLang[textToFind] or langArrayInFallbackLang[textToFind] or "N/A"
 end
 
 -- Create the pack table or nil it out if it exists.
@@ -311,16 +340,15 @@ local function getSVTableForPacks()
     if AddonSelector.acwsv.saveGroupedByCharacterName then
         --Table for current char does not exist yt, so create it. Else a new saved pack will be compared to the global
         --packs and if the name matches it will be saved as global!
-        if not AddonSelector.acwsv.addonPacksOfChar then
-            AddonSelector.acwsv.addonPacksOfChar = {}
-            AddonSelector.acwsv.addonPacksOfChar[currentCharId] = AddonSelector.acwsv.addonPacksOfChar[currentCharId] or {}
-            AddonSelector.acwsv.addonPacksOfChar[currentCharId]._charName = currentCharName
-        end
+        AddonSelector.acwsv.addonPacksOfChar = AddonSelector.acwsv.addonPacksOfChar or {}
+        AddonSelector.acwsv.addonPacksOfChar[currentCharId] = AddonSelector.acwsv.addonPacksOfChar[currentCharId] or {}
+        AddonSelector.acwsv.addonPacksOfChar[currentCharId]._charName = currentCharName
         return AddonSelector.acwsv.addonPacksOfChar[currentCharId], currentCharName
     end
     return AddonSelector.acwsv.addonPacks, nil
 end
 
+--[[
 local function getSVTableForPacksOfChar(charId)
     if AddonSelector.acwsv.saveGroupedByCharacterName then
         if AddonSelector.acwsv.addonPacksOfChar and AddonSelector.acwsv.addonPacksOfChar[charId] then
@@ -329,6 +357,7 @@ local function getSVTableForPacksOfChar(charId)
     end
     return AddonSelector.acwsv.addonPacks, nil
 end
+]]
 
 local function getSVTableForPacksOfCharname(charName)
     if AddonSelector.acwsv.addonPacksOfChar then
@@ -341,6 +370,7 @@ local function getSVTableForPacksOfCharname(charName)
     return nil, nil
 end
 
+--[[
 local function getSVTableForPackOfChar(packName, charId)
     if AddonSelector.acwsv.saveGroupedByCharacterName then
         if AddonSelector.acwsv.addonPacksOfChar and AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][packName] then
@@ -358,6 +388,7 @@ local function getCharNameOfPack(charId)
     end
     return
 end
+]]
 
 --Deselect the combobox entry
 local function deselectComboBoxEntry()
@@ -460,6 +491,7 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
     wasDeleted = wasDeleted or false
     local packNameLabel = AddonSelector.selectedPackNameLabel
     if not packNameLabel then return end
+    local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
 
     local currentlySelectedPackName
     local currentlySelectedPackCharName
@@ -469,11 +501,19 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
         currentCharacterId, currentlySelectedPackNameData = getCurrentCharsPackNameData()
         if not currentCharacterId or not currentlySelectedPackNameData then return end
         currentlySelectedPackName = currentlySelectedPackNameData.packName
-        currentlySelectedPackCharName = currentlySelectedPackNameData.charName and ((currentlySelectedPackNameData.charName == GLOBAL_PACK_NAME and (langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"])) or currentlySelectedPackNameData.charName)
+        if wasDeleted then
+            --If pack was deleted:
+            --Reset the pack character to the currently logged in charname if settings to save per character are enabled.
+            --Else reset to "Global" name
+            currentlySelectedPackCharName = (savePackPerCharacter and currentCharName) or packNameGlobal
+        else
+            currentlySelectedPackCharName = currentlySelectedPackNameData.charName and ((currentlySelectedPackNameData.charName == GLOBAL_PACK_NAME and packNameGlobal) or currentlySelectedPackNameData.charName)
+        end
     else
         currentlySelectedPackName = packName
-        currentlySelectedPackCharName = (packData.charName and ((packData.charName == GLOBAL_PACK_NAME and (langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"])) or packData.charName)) or "n/a"
+        currentlySelectedPackCharName = (packData.charName and ((packData.charName == GLOBAL_PACK_NAME and packNameGlobal) or packData.charName)) or "n/a"
     end
+d("[AddonSelector]currentlySelectedPackName: " ..tostring(currentlySelectedPackName) ..", currentlySelectedPackCharName:" ..tostring(currentlySelectedPackCharName))
 
     --Pack wurde nicht gelöscht, sondern soll normal updaten?
     if not wasDeleted then
@@ -488,10 +528,10 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
         local packNameText
         local settings = AddonSelector.acwsv
         if settings.saveGroupedByCharacterName == true then
-            packNameText = string.format(langArrayInClientLang["selectedPackName"] or langArrayInFallbackLang["selectedPackName"], currentlySelectedPackCharName)
+            packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
         else
             --Show the "global pack" info
-            packNameText = string.format(langArrayInClientLang["selectedPackName"] or langArrayInFallbackLang["selectedPackName"], langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"])
+            packNameText = strfor(selectedPackNameStr, packNameGlobal)
         end
         packNameText = packNameText .. currentlySelectedPackName
         packNameLabel:SetText(packNameText)
@@ -552,6 +592,7 @@ local function ChangeSaveButtonEnabledState(newEnabledState)
 end
 
 local function clearAndUpdateDDL(wasDeleted)
+d("[AddonSelector]clearAndUpdateDDL - wasDeleted: " ..tostring(wasDeleted))
     AddonSelector:UpdateDDL(wasDeleted)
     AddonSelector.editBox:Clear()
     --Disable the "delete pack" button
@@ -738,7 +779,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
         unregisterOldEventUpdater()
         return
     end
-    local toSearch = string.lower(searchValue)
+    local toSearch = strlow(searchValue)
     for index, addonDataTable in ipairs(addonList) do
         local addonData = addonDataTable.data
         if addonData and addonData.index ~= nil and addonData.sortIndex ~= nil then
@@ -746,14 +787,14 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
             local stringFindCleanResult
             local stringFindResultFile
             if searchType == "name" then
-                local addonName = string.lower(addonData.addOnName)
-                local addonCleanName = string.lower(addonData.strippedAddOnName )
-                local addonFileName = string.lower(addonData.addOnFileName)
+                local addonName = strlow(addonData.addOnName)
+                local addonCleanName = strlow(addonData.strippedAddOnName )
+                local addonFileName = strlow(addonData.addOnFileName)
                 --stringFindResult = (string.find(addonFileName, toSearch) or string.find(addonName, toSearch)) or nil
                 --stringFindResult = string.find(addonName, toSearch) or nil
-                stringFindResult = zo_plainstrfind(addonName, toSearch) or nil
-                stringFindCleanResult = zo_plainstrfind(addonCleanName, toSearch) or nil
-                stringFindResultFile = zo_plainstrfind(addonFileName, toSearch) or nil
+                stringFindResult = zopsf(addonName, toSearch) or nil
+                stringFindCleanResult = zopsf(addonCleanName, toSearch) or nil
+                stringFindResultFile = zopsf(addonFileName, toSearch) or nil
 --d(">addonName: " .. tostring(addonName) .. ", addonFileName: " .. tostring(addonFileName) .. ", search: " .. tostring(toSearch) .. ", found: " .. tostring(stringFindResult))
             end
             --Result of the search
@@ -1460,10 +1501,13 @@ local function OnClick_Save()
     local doesPackAlreadyExist = false
     local saveGroupedByChar = false
     local svTable
-    local packCharacter = langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"]
+    local savePerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
+    local packCharacter = packNameGlobal
     --Save grouped by charactername
-    if AddonSelector.acwsv.saveGroupedByCharacterName then
+d("[AddonSelector]OnClick_Save - savePerChar: " ..tostring(savePerCharacter) .. ", newPackName: " ..tostring(newPackName))
+    if savePerCharacter then
         local svTableOfCurrentChar, charName = getSVTableForPacks()
+d(">charName: " ..tostring(charName))
         if svTableOfCurrentChar ~= nil and charName ~= nil then
             saveGroupedByChar = true
             svTable = svTableOfCurrentChar
@@ -1478,10 +1522,10 @@ local function OnClick_Save()
     doesPackAlreadyExist = svTable[newPackName] ~= nil or false
     if doesPackAlreadyExist == true then
         local addonPackName = "\'" .. newPackName .. "\'"
-        local savePackQuestion = string.format(langArrayInClientLang["savePackBody"] or langArrayInFallbackLang["savePackBody"], tostring(addonPackName))
+        local savePackQuestion = strfor(langArrayInClientLang["savePackBody"] or langArrayInFallbackLang["savePackBody"], tostring(addonPackName))
         ShowConfirmationDialog("SaveAddonPackDialog",
                 (langArrayInClientLang["savePackTitle"] or langArrayInFallbackLang["savePackTitle"]) .. "\n" ..
-                "["..packCharacter .. "]\n" .. newPackName,
+                "[".. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
                 savePackQuestion,
                 function() OnClick_SaveDo() end,
                 function() end,
@@ -1516,6 +1560,7 @@ local function OnClick_DeleteDo(itemData, charId)
         wasDeleted = true
     end
 
+
     if wasDeleted == true then
         clearAndUpdateDDL(true)
 
@@ -1535,16 +1580,12 @@ local function OnClick_Delete(itemData)
     --Saved grouped by charactername is enabled?
     local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
     local charId
-    local svTable
-    local packCharacter = langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"]
-    if not saveGroupedByChar then
-        svTable = AddonSelector.acwsv.addonPacks
-    else
+    local packCharacter = packNameGlobal
+    local svTable, charName = getSVTableForPacks()
+    if saveGroupedByChar then
         packCharacter = itemData.charName
         if itemData.charName == currentCharName then
-            local charName
             charId = currentCharId
-            svTable, charName = getSVTableForPacks()
         else
             svTable, charId = getSVTableForPacksOfCharname(itemData.charName)
         end
@@ -1554,9 +1595,9 @@ local function OnClick_Delete(itemData)
     local selectedPackName = itemData.name
     --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
     local addonPackName = "\'" .. selectedPackName .. "\'"
-    local deletePackQuestion = string.format(langArrayInClientLang["deletePackBody"] or langArrayInFallbackLang["deletePackBody"], tostring(addonPackName))
+    local deletePackQuestion = strfor(langArrayInClientLang["deletePackBody"] or langArrayInFallbackLang["deletePackBody"], tostring(addonPackName))
     ShowConfirmationDialog("DeleteAddonPackDialog",
-            (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. packCharacter .. "]\n" .. selectedPackName,
+            (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. selectedPackName,
             deletePackQuestion,
             function() OnClick_DeleteDo(itemData, charId) end,
             function() end,
@@ -1709,7 +1750,7 @@ function AddonSelector:CreateControlReferences()
     self.saveModeTexture = addonSelector:GetNamedChild("SaveModeTexture")
     --self.saveModeTexture:SetParent(self.saveBtn)
     self.saveModeTexture:SetTexture("/esoui/art/characterselect/gamepad/gp_characterselect_characterslots.dds")
-    self.saveModeTexture:SetColor(0.8, 0.8, 0.8, 0.7)
+    self.saveModeTexture:SetColor(charNamePackColorDef:UnpackRGBA())
 
     -- Set Saved Btn State for checkbox "Auto reloadui after pack selection"
     local checkedState = AddonSelector.acwsv.autoReloadUI
@@ -1984,9 +2025,9 @@ local function searchAddOnSlashCommandHandlder(args)
         --Parse the arguments string
         local options = {}
         --local searchResult = {} --old: searchResult = { string.match(args, "^(%S*)%s*(.-)$") }
-        for param in string.gmatch(args, "([^%s]+)%s*") do
+        for param in strgma(args, "([^%s]+)%s*") do
             if (param ~= nil and param ~= "") then
-                options[#options+1] = string.lower(param)
+                options[#options+1] = strlow(param)
             end
         end
         if options and options[1] then

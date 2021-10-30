@@ -13,7 +13,7 @@
             <Dimensions x="400" y="80"/>
 			<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsDivider" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="0" />
 			<Controls>
-				<EditBox name="$(parent)SearchBox" font="ZoFontChat" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+				<EditBox name="$(parent)SearchBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPRIGHT" relativeTo="ZO_AddOns" relativePoint="TOPRIGHT"  offsetX="-5" offsetY="75" />
 					<OnEnter>
@@ -37,7 +37,7 @@
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 				</Backdrop>
-				<EditBox name="$(parent)EditBox" font="ZoFontChat" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+				<EditBox name="$(parent)EditBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 					<OnTextChanged>
