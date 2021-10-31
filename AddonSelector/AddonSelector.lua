@@ -360,10 +360,12 @@ end
 ]]
 
 local function getSVTableForPacksOfCharname(charName)
-    if AddonSelector.acwsv.addonPacksOfChar then
-        for charId, packsData in pairs(AddonSelector.acwsv.addonPacksOfChar) do
-            if packsData["_charName"] == charName then
-                return AddonSelector.acwsv.addonPacksOfChar[charId], charId
+    local addonPacksOfChar = AddonSelector.acwsv.addonPacksOfChar
+    if addonPacksOfChar then
+        for charId, packsData in pairs(addonPacksOfChar) do
+            local addonPacksCharName = packsData["_charName"]
+            if addonPacksCharName ~= GLOBAL_PACK_NAME and addonPacksCharName == charName then
+                return addonPacksOfChar[charId], charId
             end
         end
     end
@@ -488,6 +490,7 @@ end
 
 --Update the currently selected packName label
 local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
+d(">1")
     wasDeleted = wasDeleted or false
     local packNameLabel = AddonSelector.selectedPackNameLabel
     if not packNameLabel then return end
@@ -497,23 +500,27 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
     local currentlySelectedPackCharName
     local currentCharacterId = currentCharId
     if packName == nil or packName == "" or packData == nil then
+d(">2")
         local currentlySelectedPackNameData
         currentCharacterId, currentlySelectedPackNameData = getCurrentCharsPackNameData()
         if not currentCharacterId or not currentlySelectedPackNameData then return end
         currentlySelectedPackName = currentlySelectedPackNameData.packName
         if wasDeleted then
+d(">3")
             --If pack was deleted:
             --Reset the pack character to the currently logged in charname if settings to save per character are enabled.
             --Else reset to "Global" name
             currentlySelectedPackCharName = (savePackPerCharacter and currentCharName) or packNameGlobal
         else
-            currentlySelectedPackCharName = currentlySelectedPackNameData.charName and ((currentlySelectedPackNameData.charName == GLOBAL_PACK_NAME and packNameGlobal) or currentlySelectedPackNameData.charName)
+d(">4")
+            currentlySelectedPackCharName = (currentlySelectedPackNameData.charName and ((currentlySelectedPackNameData.charName == GLOBAL_PACK_NAME and packNameGlobal) or currentlySelectedPackNameData.charName))
         end
     else
+d(">5")
         currentlySelectedPackName = packName
         currentlySelectedPackCharName = (packData.charName and ((packData.charName == GLOBAL_PACK_NAME and packNameGlobal) or packData.charName)) or "n/a"
     end
-d("[AddonSelector]currentlySelectedPackName: " ..tostring(currentlySelectedPackName) ..", currentlySelectedPackCharName:" ..tostring(currentlySelectedPackCharName))
+d("[AddonSelector]currentlySelectedPackName: " ..tostring(currentlySelectedPackName) ..", currentlySelectedPackCharName: " ..tostring(currentlySelectedPackCharName))
 
     --Pack wurde nicht gelöscht, sondern soll normal updaten?
     if not wasDeleted then
@@ -524,15 +531,19 @@ d("[AddonSelector]currentlySelectedPackName: " ..tostring(currentlySelectedPackN
         AddonSelector.acwsv.selectedPackNameForCharacters[currentCharacterId] = nil
     end
     if currentlySelectedPackName then
+d(">6")
         --Packs are saved per character? Show the character that belongs to teh currently selected pack
         local packNameText
         local settings = AddonSelector.acwsv
+        --[[
         if settings.saveGroupedByCharacterName == true then
             packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
         else
             --Show the "global pack" info
             packNameText = strfor(selectedPackNameStr, packNameGlobal)
         end
+        ]]
+        packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
         packNameText = packNameText .. currentlySelectedPackName
         packNameLabel:SetText(packNameText)
     end
@@ -540,7 +551,7 @@ end
 
 --Set the currently selected pack name and the character owning the pack for the currently logged in character
 local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, packData)
---d("SetCurrentCharacterSelectedPackname: " ..tostring(currentlySelectedPackName))
+d("SetCurrentCharacterSelectedPackname: " ..tostring(currentlySelectedPackName) .. ", charName: " ..tostring(packData.charName))
     if not currentlySelectedPackName or currentlySelectedPackName == "" or packData == nil then return end
     --Get the current character's uniqueId
     local currentCharacterId = tostring(GetCurrentCharacterId())
@@ -1443,7 +1454,7 @@ local function OnClick_AutoReload(self, button, upInside, ctrl, alt, shift, comm
     ChangeDeleteButtonEnabledState(checkedState)
 end
 
-local function OnClick_SaveDo(svTable)
+local function OnClick_SaveDo()
     local aad = ZO_ScrollList_GetDataList(ZO_AddOnsList)
     local packName = AddonSelector.editBox:GetText()
 
@@ -1472,7 +1483,8 @@ local function OnClick_SaveDo(svTable)
     end
     -- Create a temporary copy of the itemEntry data so we can select it
     -- after the ddl is updated
-    local itemData = AddonSelector:CreateItemEntry(packName, svForPack, false, currentCharName)
+    local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
+    local itemData = AddonSelector:CreateItemEntry(packName, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME)
 
     clearAndUpdateDDL()
     --Prevent reloadui for a currently new saved addon pack!
@@ -1504,10 +1516,10 @@ local function OnClick_Save()
     local savePerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
     local packCharacter = packNameGlobal
     --Save grouped by charactername
-d("[AddonSelector]OnClick_Save - savePerChar: " ..tostring(savePerCharacter) .. ", newPackName: " ..tostring(newPackName))
+--d("[AddonSelector]OnClick_Save - savePerChar: " ..tostring(savePerCharacter) .. ", newPackName: " ..tostring(newPackName))
     if savePerCharacter then
         local svTableOfCurrentChar, charName = getSVTableForPacks()
-d(">charName: " ..tostring(charName))
+--d(">charName: " ..tostring(charName))
         if svTableOfCurrentChar ~= nil and charName ~= nil then
             saveGroupedByChar = true
             svTable = svTableOfCurrentChar
@@ -1539,27 +1551,26 @@ d(">charName: " ..tostring(charName))
 end
 
 local function OnClick_DeleteDo(itemData, charId)
-    if not itemData then
+    if not itemData or not itemData.name or not itemData.charName then
         ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, langArrayInClientLang["deletePackAlert"] or langArrayInFallbackLang["deletePackAlert"])
         return
     end
 
     local wasDeleted = false
     local selectedPackName = itemData.name
-    if not selectedPackName then return end
+    local selectedCharName = itemData.charName
+    local isGlobalPack = (selectedCharName == GLOBAL_PACK_NAME) or false
 
     --Save grouped by charactername
-    if AddonSelector.acwsv.saveGroupedByCharacterName then
-        local selectedCharName = itemData.charName
+    if isGlobalPack == true then
+        AddonSelector.acwsv.addonPacks[selectedPackName] = nil
+        wasDeleted = true
+    else
         if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
             AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
             wasDeleted = true
         end
-    else
-        AddonSelector.acwsv.addonPacks[selectedPackName] = nil
-        wasDeleted = true
     end
-
 
     if wasDeleted == true then
         clearAndUpdateDDL(true)
@@ -1577,27 +1588,28 @@ local function OnClick_Delete(itemData)
     if not itemData then return end
     AddonSelector.SelectedItemDataOnDelete = itemData
 
-    --Saved grouped by charactername is enabled?
-    local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
-    local charId
-    local packCharacter = packNameGlobal
-    local svTable, charName = getSVTableForPacks()
-    if saveGroupedByChar then
-        packCharacter = itemData.charName
-        if itemData.charName == currentCharName then
-            charId = currentCharId
-        else
-            svTable, charId = getSVTableForPacksOfCharname(itemData.charName)
-        end
+    --Deleting a pack could be done for all kinds of packs, so we always need to check for the selected charName of the item!
+    --local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
+    local charId, charName, svTable
+    charName = itemData.charName
+    if charName == currentCharName then
+        charId = currentCharId
+        svTable = getSVTableForPacks()
+    else
+        svTable, charId = getSVTableForPacksOfCharname(charName)
     end
     if not svTable then return end
 
+d("[AddonSelector]charName: " ..tostring(charName) .. ", charId: " ..tostring(charId))
+
+    local packCharName
+    if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
     local selectedPackName = itemData.name
     --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
     local addonPackName = "\'" .. selectedPackName .. "\'"
     local deletePackQuestion = strfor(langArrayInClientLang["deletePackBody"] or langArrayInFallbackLang["deletePackBody"], tostring(addonPackName))
     ShowConfirmationDialog("DeleteAddonPackDialog",
-            (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. selectedPackName,
+            (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. (packCharName and strfor(charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
             deletePackQuestion,
             function() OnClick_DeleteDo(itemData, charId) end,
             function() end,
@@ -2085,7 +2097,7 @@ local function OnAddOnLoaded(event, addonName)
 
             local function mainEntryOnClickCallback(control)
                 if item.isCharacterPackHeader == true then return end
-                selfVar:ItemSelectedClickHelper(item)
+                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
             end
 
 
@@ -2102,7 +2114,7 @@ local function OnAddOnLoaded(event, addonName)
                                 label = (langArrayInClientLang["selectPack"] or langArrayInFallbackLang["selectPack"]) .. ": " .. packNameOfChar,
                                 callback = function()
                                     local packItem = AddonSelector:CreateItemEntry(packNameOfChar, addonsOfPack, false, charName)
-                                    selfVar:ItemSelectedClickHelper(packItem)
+                                    selfVar:ItemSelectedClickHelper(packItem) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
                                 end,
                             })
                             addedSubMenuEntry = true
@@ -2120,7 +2132,7 @@ local function OnAddOnLoaded(event, addonName)
                         {
                             label = (langArrayInClientLang["selectPack"] or langArrayInFallbackLang["selectPack"]) .. ": " .. itemName,
                             callback = function()
-                                selfVar:ItemSelectedClickHelper(item)
+                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
                             end,
                         },
                         {
@@ -2131,7 +2143,7 @@ local function OnAddOnLoaded(event, addonName)
                         {
                             label = (langArrayInClientLang["selectPack"] or langArrayInFallbackLang["selectPack"]) .. " & " .. (langArrayInClientLang["ReloadUI"] or langArrayInFallbackLang["ReloadUI"]) .. ": " .. itemName,
                             callback = function()
-                                selfVar:ItemSelectedClickHelper(item)
+                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
                                 ReloadUI("ingame")
                             end,
                         },
