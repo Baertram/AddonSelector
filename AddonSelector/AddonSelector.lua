@@ -63,6 +63,7 @@ local langArray = {
         ["deleteButton"]		= "Delete",
         ["deletePackTitle"]     = "Delete: ",
         ["deletePackAlert"]     = "ADDON SELECTOR: You must select a pack to delete.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackBody"]      = "Really delete?\n%s",
         ["DeselectAllAddons"]   = "Deselect all",
         ["SelectAllAddons"]     = "Select all",
@@ -93,6 +94,7 @@ local langArray = {
         ["savePackBody"]        = "Sobrescribir paquete existente %s?",
         ["deleteButton"] = "Eliminar",
         ["deletePackAlert"]     = "ADDON SELECTOR: Debes seleccionar un paquete para eliminar.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"] = "Eliminar: ",
         ["deletePackBody"] = "Eliminar el paquete?\n%s ",
         ["DeselectAllAddons"] = "Deseleccionar todo",
@@ -124,6 +126,7 @@ local langArray = {
         ["savePackBody"]        = "Ecraser le paquet existant %s?",
         ["deleteButton"]		= "Effacer",
         ["deletePackAlert"]     = "ADDON SELECTOR: Vous devez sélectionner un pack à effacer.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"]     = "Effacer: ",
         ["deletePackBody"]      = "Effacer le paquet?\n%s",
         ["DeselectAllAddons"]   = "Tout déselectionner",
@@ -155,6 +158,7 @@ local langArray = {
         ["savePackBody"]        = "Überschreibe Pack %s?",
         ["deleteButton"]		= "Löschen",
         ["deletePackAlert"]     = "ADDON SELECTOR: Du musst einen Pack zum Löschen auswählen.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack Löschen Fehler\n%s.",
         ["deletePackTitle"]     = "Löschen: ",
         ["deletePackBody"]      = "Pack löschen?\n%s",
         ["DeselectAllAddons"]   = "Alle demarkieren",
@@ -186,6 +190,7 @@ local langArray = {
         ["savePackBody"]        = "Перезаписать существующую сборку %s?",
         ["deleteButton"]        = "Удалить",
         ["deletePackAlert"]     = "ADDON SELECTOR: Вы должны выбрать пакет для удаления.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"]     = "Удалить: ",
         ["deletePackBody"]      = "Действительно удалить сборку?\n%s",
         ["DeselectAllAddons"]   = "Отключить всё",
@@ -217,6 +222,7 @@ local langArray = {
         ["savePackBody"]        = "Substituir pacote existente %s?",
         ["deleteButton"] = "Apaga",
         ["deletePackAlert"]     = "ADDON SELECTOR: Você deve selecionar um pacote para deletar.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"] = "Apaga: ",
         ["deletePackBody"] = "Apaga de Verdade?\n%s",
         ["DeselectAllAddons"] = "Desmarca tudo",
@@ -248,6 +254,7 @@ local langArray = {
         ["savePackBody"]        = "Substituir pacote existente %s?",
         ["deleteButton"] = "Apaga",
         ["deletePackAlert"]     = "ADDON SELECTOR: Você deve selecionar um pacote para deletar.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"] = "Apaga: ",
         ["deletePackBody"] = "Apaga de Verdade?\n%s",
         ["DeselectAllAddons"] = "Desmarca tudo",
@@ -279,6 +286,7 @@ local langArray = {
         ["savePackBody"] = " %sに上書き保存しますか？",
         ["deleteButton"] = "削除",
         ["deletePackAlert"]     = "ADDON SELECTOR: 削除するパックを選択する必要があります.",
+        ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
         ["deletePackTitle"] = "削除: ",
         ["deletePackBody"] = "本当に を削除しますか？\n%s",
         ["DeselectAllAddons"] = "全解除",
@@ -307,6 +315,8 @@ local charNamePackColorDef = ZO_ColorDef:New("C9B636")
 local globalPackColorTemplate = "|c7EC8E3%s|r"
 local packNameGlobal = strfor(globalPackColorTemplate, langArrayInClientLang["packGlobal"] or langArrayInFallbackLang["packGlobal"])
 local selectedPackNameStr = langArrayInClientLang["selectedPackName"] or langArrayInFallbackLang["selectedPackName"]
+local deletePackAlertStr = langArrayInClientLang["deletePackAlert"] or langArrayInFallbackLang["deletePackAlert"]
+local deletePackErrorStr = langArrayInClientLang["deletePackError"] or langArrayInFallbackLang["deletePackError"]
 
 
 --Clean the color codes from the addon name
@@ -1551,8 +1561,19 @@ local function OnClick_Save()
 end
 
 local function OnClick_DeleteDo(itemData, charId)
-    if not itemData or not itemData.name or not itemData.charName then
-        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, langArrayInClientLang["deletePackAlert"] or langArrayInFallbackLang["deletePackAlert"])
+    if not itemData then
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, deletePackAlertStr)
+        return
+    end
+    local function deleteError(reason)
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, strfor(deletePackErrorStr, reason))
+    end
+    if not itemData.name or itemData.name == "" then
+        deleteError("Pack name")
+        return
+    end
+    if not itemData.charName or itemData.charName == "" then
+        deleteError("Pack charName")
         return
     end
 
@@ -1566,6 +1587,10 @@ local function OnClick_DeleteDo(itemData, charId)
         AddonSelector.acwsv.addonPacks[selectedPackName] = nil
         wasDeleted = true
     else
+        if charId == nil then
+            deleteError("CharId nil")
+            return
+        end
         if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
             AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
             wasDeleted = true
@@ -1584,39 +1609,40 @@ end
 
 -- When delete is clicked, remove the selected addon pack
 local function OnClick_Delete(itemData)
+d("[AddonSelector]OnClick_Delete")
     itemData = itemData or AddonSelector.comboBox:GetSelectedItemData()
     if not itemData then return end
-    AddonSelector.SelectedItemDataOnDelete = itemData
+    --Debuggin
+    AddonSelector._SelectedItemDataOnDelete = itemData
 
     --Deleting a pack could be done for all kinds of packs, so we always need to check for the selected charName of the item!
     --local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
     local charId, charName, svTable
     charName = itemData.charName
-    if charName == currentCharName then
-        charId = currentCharId
-        svTable = getSVTableForPacks()
+    if charName == currentCharName or charName == GLOBAL_PACK_NAME then
+        svTable, charId = getSVTableForPacks()
     else
         svTable, charId = getSVTableForPacksOfCharname(charName)
     end
-    if not svTable then return end
+        if not svTable then return end
 
-d("[AddonSelector]charName: " ..tostring(charName) .. ", charId: " ..tostring(charId))
+        d("[AddonSelector]charName: " ..tostring(charName) .. ", charId: " ..tostring(charId))
 
-    local packCharName
-    if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
-    local selectedPackName = itemData.name
-    --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
-    local addonPackName = "\'" .. selectedPackName .. "\'"
-    local deletePackQuestion = strfor(langArrayInClientLang["deletePackBody"] or langArrayInFallbackLang["deletePackBody"], tostring(addonPackName))
-    ShowConfirmationDialog("DeleteAddonPackDialog",
-            (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. (packCharName and strfor(charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
-            deletePackQuestion,
-            function() OnClick_DeleteDo(itemData, charId) end,
-            function() end,
-            nil,
-            nil,
-            true
-    )
+        local packCharName
+        if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
+        local selectedPackName = itemData.name
+        --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
+        local addonPackName = "\'" .. selectedPackName .. "\'"
+        local deletePackQuestion = strfor(langArrayInClientLang["deletePackBody"] or langArrayInFallbackLang["deletePackBody"], tostring(addonPackName))
+        ShowConfirmationDialog("DeleteAddonPackDialog",
+        (langArrayInClientLang["deletePackTitle"] or langArrayInFallbackLang["deletePackTitle"]) .. "\n[" .. (packCharName and strfor(charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
+    deletePackQuestion,
+    function() OnClick_DeleteDo(itemData, charId) end,
+    function() end,
+    nil,
+        nil,
+        true
+        )
 end
 
 --OnMouseUp event for the selected pack name label
@@ -1754,6 +1780,12 @@ function AddonSelector:CreateControlReferences()
     --self.autoReloadLabel = self.autoReloadBtn:GetNamedChild("Label")
     self.settingsOpenDropdown = addonSelector:GetNamedChild("SettingsOpenDropdown")
     self.settingsOpenDropdown.onClickHandler = self.settingsOpenDropdown:GetHandler("OnClicked")
+    --PerfectPixel: Reposition of the settings "gear" icon -> move up to other icons (like Votans Addon List)
+    self.settingsOpenDropdown:ClearAnchors()
+    --<Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
+    local offsetY = (PP ~= nil and -10) or 65
+    self.settingsOpenDropdown:SetAnchor(TOPLEFT, ZO_AddOns, TOP, 100, offsetY)
+
     self.searchBox 	= addonSelector:GetNamedChild("SearchBox")
     self.searchLabel = addonSelector:GetNamedChild("SearchBoxLabel")
     self.searchLabel:SetText(AddonSelector_GetLocalizedText("AddonSearch"))
