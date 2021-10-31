@@ -82,6 +82,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
     ["es"] = {
         ["packName"] = "Nombre del paquete:",
@@ -114,6 +115,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
 	["fr"] = {
 		["packName"]			= "Nom du paquet:",
@@ -146,6 +148,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
 	["de"] = {
 		["packName"]			= "Pack Name:",
@@ -178,6 +181,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Zeige Packs der Charakternamen",
         ["packCharName"]        = "Charakter des Packs",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Suche: Dateiname nicht durchsuchen",
     },
     ["ru"] = {
         ["packName"]            = "Имя сборки:",
@@ -210,6 +214,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "общий",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
     ["br"] = {
         ["packName"] = "Nome do Pacote:",
@@ -242,6 +247,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
     ["pt"] = {
         ["packName"] = "Nome do Pacote:",
@@ -274,6 +280,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
     ["jp"] = {
         ["packName"] = "パック名:",
@@ -306,6 +313,7 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "グローバル",
+        ["searchExcludeFilename"] = "Search: Exclude filename",
     },
 }
 local langArrayInClientLang = langArray[lang]
@@ -319,6 +327,9 @@ local deletePackAlertStr = langArrayInClientLang["deletePackAlert"] or langArray
 local deletePackErrorStr = langArrayInClientLang["deletePackError"] or langArrayInFallbackLang["deletePackError"]
 local savedGroupedByCharNameStr = langArrayInClientLang["SaveGroupedByCharacterName"] or langArrayInFallbackLang["SaveGroupedByCharacterName"]
 local autoReloadUIStr = langArrayInClientLang["autoReloadUIHint"] or langArrayInFallbackLang["autoReloadUIHint"]
+local searchMenuStr = langArrayInClientLang["AddonSearch"] or langArrayInFallbackLang["AddonSearch"]
+searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
+local searchExcludeFileNameStr = langArrayInClientLang["searchExcludeFilename"] or langArrayInFallbackLang["searchExcludeFilename"]
 
 
 --Clean the color codes from the addon name
@@ -1430,8 +1441,7 @@ local function checkIfGlobalPacksShouldBeShown()
     local showGlobalPacks = settings.showGlobalPacks
     local savePerCharacter = settings.saveGroupedByCharacterName
     --Show the global pack entries if neither global packs nor character packs were selected to save/show!
-    if showGlobalPacks == false and
-            (savePerCharacter == false and settings.showGroupedByCharacterName == false) then
+    if showGlobalPacks == false and savePerCharacter == false then
         AddonSelector.acwsv.showGlobalPacks = true
     end
     updateSaveModeTexure(savePerCharacter)
@@ -1743,6 +1753,20 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     }
     AddCustomSubMenuItem(langArrayInClientLang["CharacterNameSettings"] or langArrayInFallbackLang["CharacterNameSettings"], characterNameSubmenu)
 
+
+    --Add the search options
+    local searchOptionsSubmenu = {
+        {
+            label    = searchExcludeFileNameStr,
+            callback = function(state)
+                AddonSelector.acwsv.searchExcludeFilename = state
+            end,
+            checked  = function() return AddonSelector.acwsv.searchExcludeFilename end,
+            itemType = MENU_ADD_OPTION_CHECKBOX,
+        }
+    }
+    AddCustomSubMenuItem(searchMenuStr, searchOptionsSubmenu)
+
     --Add the auto reload pack after selection checkbox
     local cbAutoReloadUIindex = AddCustomMenuItem(langArrayInClientLang["autoReloadUIHint"] or langArrayInFallbackLang["autoReloadUIHint"],
             function(cboxCtrl)
@@ -1923,6 +1947,7 @@ function AddonSelector:Initialize()
         showSubMenuAtGlobalPacks = true,
         saveGroupedByCharacterName = false,
         showGroupedByCharacterName = false,
+        searchExcludeFilename = false,
 	}
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
