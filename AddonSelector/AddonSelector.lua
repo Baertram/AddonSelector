@@ -646,7 +646,7 @@ function AddonSelector_SelectAddons(selectAll)
 
     if not selectAll then
         AddonSelector.acwsv.selectAllSave = {}
-        for i,v in ipairs(ZO_AddOnsList.data) do
+        for _,v in ipairs(ZO_AddOnsList.data) do
             if v.data ~= nil and v.data.index ~= nil then
                 AddonSelector.acwsv.selectAllSave[v.data.index] = v.data.addOnEnabled
                 if v.data.addOnFileName == "LibStub" then
@@ -800,6 +800,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
 --d("[AddonSelector]SearchAddon, searchType: " .. tostring(searchType) .. ", searchValue: " .. tostring(searchValue) .. ", hideNonFound: " ..tostring(doHideNonFound))
     local addonList = ZO_AddOnsList.data
     if addonList == nil then return end
+    local settings = AddonSelector.acwsv
 
     local addonsFound = {}
     local alreadyFound = AddonSelector.alreadyFound
@@ -828,7 +829,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
                 --stringFindResult = string.find(addonName, toSearch) or nil
                 stringFindResult = zopsf(addonName, toSearch) or nil
                 stringFindCleanResult = zopsf(addonCleanName, toSearch) or nil
-                stringFindResultFile = zopsf(addonFileName, toSearch) or nil
+                stringFindResultFile = (not settings.searchExcludeFilename and zopsf(addonFileName, toSearch)) or nil
 --d(">addonName: " .. tostring(addonName) .. ", addonFileName: " .. tostring(addonFileName) .. ", search: " .. tostring(toSearch) .. ", found: " .. tostring(stringFindResult))
             end
             --Result of the search
