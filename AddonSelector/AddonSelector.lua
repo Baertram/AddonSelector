@@ -1,18 +1,5 @@
 --[[
 Known bugs:
-1) 2021-10-29: Saving a pack with character packs enabled, which was selected from list before (global or character pack),
-   will show "save global" in save dialog (override text is shown!) but actually save it per character
-   ->Maybe add a radiobutton to save dialog showing the actual save mode, and making it possible to switch easily per each save dialog
-2) 2021-10-30: Selecting a pack of a non-logged in character and deleting it won't update the selected pack label afterwards to remove
-    the non-logged in charname again (show the currently logged in if char saving packs are enabled, or else show global)
-3) 2021-10-30: Having the submenu at global packs enabled will not allow to delete a global pack via submenu if character saved packs are enabled.
-    It simply seems to do nothing?
-4) 2021-10-30: After selecting a pack from the dropdown list of packs the ESC key and return key to show the men/chat do not work anymore.
-5) 2021-10-30: Changing from "save per character" to "save global" will update the selected pack label's charname to "global" but the selected packName
-   will stay the same as before (this should only happen if the selected pack was a global one!)
-   Same/similar the other way around if you switch from "global" to "save per char" settings!
-6) 2021-10-30: With "global" packs enabled in the settings, and selecting a character saved pack, the selected pack label only shows "Global" instead of
-   the selected character name
 ]]
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -40,7 +27,7 @@ local strgma = string.gmatch
 local zopsf = zo_plainstrfind
 local gTab = table
 local tins = gTab.insert
-local trem = gTab.remove
+--local trem = gTab.remove
 local tsor = gTab.sort
 
 --Constant for the global pack name
