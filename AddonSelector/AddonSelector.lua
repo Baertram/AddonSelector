@@ -31,10 +31,16 @@ AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
 --ASG = AddonSelectorGlobal
 
+local EM = EVENT_MANAGER
+
 local strfor = string.format
 local strlow = string.lower
 local strgma = string.gmatch
 local zopsf = zo_plainstrfind
+local gTab = table
+local tins = gTab.insert
+local trem = gTab.remove
+local tsor = gTab.sort
 
 --Constant for the global pack name
 local GLOBAL_PACK_NAME = "$G"
@@ -82,7 +88,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
     ["es"] = {
         ["packName"] = "Nombre del paquete:",
@@ -115,7 +122,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
 	["fr"] = {
 		["packName"]			= "Nom du paquet:",
@@ -148,7 +156,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
 	["de"] = {
 		["packName"]			= "Pack Name:",
@@ -181,7 +190,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Zeige Packs der Charakternamen",
         ["packCharName"]        = "Charakter des Packs",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Suche: Dateiname nicht durchsuchen",
+        ["searchExcludeFilename"] = "Dateiname nicht durchsuchen",
+        ["searchSaveHistory"] = "Historie der Suchbegriffe speichern",
     },
     ["ru"] = {
         ["packName"]            = "Имя сборки:",
@@ -214,7 +224,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "общий",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
     ["br"] = {
         ["packName"] = "Nome do Pacote:",
@@ -247,7 +258,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
     ["pt"] = {
         ["packName"] = "Nome do Pacote:",
@@ -280,7 +292,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "Global",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
     ["jp"] = {
         ["packName"] = "パック名:",
@@ -313,7 +326,8 @@ local langArray = {
         ["ShowGroupedByCharacterName"] = "Show packs of character names",
         ["packCharName"]        = "Character of pack",
         ["packGlobal"]          = "グローバル",
-        ["searchExcludeFilename"] = "Search: Exclude filename",
+        ["searchExcludeFilename"] = "Exclude filename",
+        ["searchSaveHistory"] = "Save history of search terms",
     },
 }
 local langArrayInClientLang = langArray[lang]
@@ -329,7 +343,6 @@ local savedGroupedByCharNameStr = langArrayInClientLang["SaveGroupedByCharacterN
 local autoReloadUIStr = langArrayInClientLang["autoReloadUIHint"] or langArrayInFallbackLang["autoReloadUIHint"]
 local searchMenuStr = langArrayInClientLang["AddonSearch"] or langArrayInFallbackLang["AddonSearch"]
 searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
-local searchExcludeFileNameStr = langArrayInClientLang["searchExcludeFilename"] or langArrayInFallbackLang["searchExcludeFilename"]
 
 
 --Clean the color codes from the addon name
@@ -637,7 +650,7 @@ end
 function AddonSelector_SelectAddons(selectAll)
     if not areAllAddonsEnabled(false) then return end
 
-    table.sort(ZO_AddOnsList.data, function(a,b) return a.data.addOnFileName == ADDON_NAME end)
+    tsor(ZO_AddOnsList.data, function(a,b) return a.data.addOnFileName == ADDON_NAME end)
     local thisAddonIndex = ZO_AddOnsList.data[1].data.index
     local libStubAddonIndex = -1
     local libDialogAddonIndex = -1
@@ -720,7 +733,7 @@ local function unregisterOldEventUpdater(p_sortIndexOfControl, p_addSelection)
             end
             if lastEventUpdateName ~= nil then
                 --Unregister the update function again now
-                EVENT_MANAGER:UnregisterForUpdate(lastEventUpdateName)
+                EM:UnregisterForUpdate(lastEventUpdateName)
 --d("<<Unregistered old events for: " ..tostring(eventData.sortIndex) .. ", " ..  tostring(eventData.addSelection))
                 --Remove the entry from the table again
                 activeUpdateControlEvents[index]= nil
@@ -752,7 +765,7 @@ local function eventUpdateFunc(p_sortIndexOfControl, p_addSelection, p_eventUpda
             end
             selectedAddonControlName:SetText(newAddonText)
             --Unregister the update function again now
-            EVENT_MANAGER:UnregisterForUpdate(p_eventUpdateName)
+            EM:UnregisterForUpdate(p_eventUpdateName)
 --d("<<Control was found and changed, unregistering event updater: " ..tostring(p_eventUpdateName))
             --Remove the entry of enabled event updater again
             unregisterOldEventUpdater(p_sortIndexOfControl, p_addSelection)
@@ -773,8 +786,8 @@ local function changeAddonControlName(sortIndexOfControl, addSelection)
     end
     --Enable the check function which will try to find the addon list row control every 100ms
     local eventUpdateName = "AddonSelector_ChangeZO_AddOnsList_Row_Index_" ..tostring(sortIndexOfControl) .. "_" .. tostring(addSelection)
-    EVENT_MANAGER:UnregisterForUpdate(eventUpdateName)
-    local eventWasRegistered = EVENT_MANAGER:RegisterForUpdate(eventUpdateName, 100, function()
+    EM:UnregisterForUpdate(eventUpdateName)
+    local eventWasRegistered = EM:RegisterForUpdate(eventUpdateName, 100, function()
 --d(">Calling RegisterForUpdateFunc: " ..tostring(eventUpdateName))
         eventUpdateFunc(sortIndexOfControl, addSelection, eventUpdateName)
     end)
@@ -786,12 +799,38 @@ local function changeAddonControlName(sortIndexOfControl, addSelection)
                 ["sortIndex"]       = sortIndexOfControl,
                 ["addSelection"]    = addSelection,
             }
-            table.insert(activeUpdateControlEvents, eventData)
+            tins(activeUpdateControlEvents, eventData)
 --d(">Event was registeerd: " ..tostring(eventUpdateName))
         end
     end
 end
 
+local function updateSearchHistory(searchType, searchValue)
+    local settings = AddonSelector.acwsv
+    local maxSearchHistoryEntries = settings.searchHistoryMaxEntries
+    local searchHistory = settings.searchHistory
+    searchHistory[searchType] = searchHistory[searchType] or {}
+    local searchHistoryOfSearchType = searchHistory[searchType]
+    if not ZO_IsElementInNumericallyIndexedTable(searchHistoryOfSearchType, searchValue) then
+        --Only keep the last 10 search entries
+        tins(searchHistory[searchType], 1, searchValue)
+        local countEntries = #searchHistory[searchType]
+        if countEntries > maxSearchHistoryEntries then
+            for i=maxSearchHistoryEntries+1, countEntries, 1 do
+                searchHistory[searchType][i] = nil
+            end
+        end
+    end
+end
+
+local searchHistoryEventUpdaterName = "AddonSelector_SearchHistory_Update"
+local function updateSearchHistoryDelayed(searchType, searchValue)
+    EM:UnregisterForUpdate(searchHistoryEventUpdaterName)
+    EM:RegisterForUpdate(searchHistoryEventUpdaterName, 2000, function()
+        EM:UnregisterForUpdate(searchHistoryEventUpdaterName)
+        updateSearchHistory(searchType, searchValue)
+    end)
+end
 
 --Search for addons by e.g. name and scroll the list to the found addon, or filter (hide) all non matching addons
 function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
@@ -800,12 +839,18 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
 --d("[AddonSelector]SearchAddon, searchType: " .. tostring(searchType) .. ", searchValue: " .. tostring(searchValue) .. ", hideNonFound: " ..tostring(doHideNonFound))
     local addonList = ZO_AddOnsList.data
     if addonList == nil then return end
+    local isEmptySearch = searchValue == ""
     local settings = AddonSelector.acwsv
+    local searchExcludeFilename = settings.searchExcludeFilename
+    local searchSaveHistory = settings.searchSaveHistory
+    if searchSaveHistory == true and not isEmptySearch then
+        updateSearchHistoryDelayed(searchType, searchValue)
+    end
 
     local addonsFound = {}
     local alreadyFound = AddonSelector.alreadyFound
     --No search term given
-    if searchValue == "" then
+    if isEmptySearch then
         --Refresh the visible controls so their names get resetted to standard
         ADD_ON_MANAGER:RefreshVisible()
         --Reset the searched table completely
@@ -815,7 +860,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
         return
     end
     local toSearch = strlow(searchValue)
-    for index, addonDataTable in ipairs(addonList) do
+    for _, addonDataTable in ipairs(addonList) do
         local addonData = addonDataTable.data
         if addonData and addonData.index ~= nil and addonData.sortIndex ~= nil then
             local stringFindResult
@@ -829,7 +874,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
                 --stringFindResult = string.find(addonName, toSearch) or nil
                 stringFindResult = zopsf(addonName, toSearch) or nil
                 stringFindCleanResult = zopsf(addonCleanName, toSearch) or nil
-                stringFindResultFile = (not settings.searchExcludeFilename and zopsf(addonFileName, toSearch)) or nil
+                stringFindResultFile = (not searchExcludeFilename and zopsf(addonFileName, toSearch)) or nil
 --d(">addonName: " .. tostring(addonName) .. ", addonFileName: " .. tostring(addonFileName) .. ", search: " .. tostring(toSearch) .. ", found: " .. tostring(stringFindResult))
             end
             --Result of the search
@@ -863,7 +908,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
                     if not wasAddedBefore and not wasFoundBefore then
                         --Add the found addon to the already found, but not scrolled-to list
                         AddonSelector.alreadyFound[toSearch] = AddonSelector.alreadyFound[toSearch] or {}
-                        table.insert(AddonSelector.alreadyFound[toSearch], {[sortIndex] = false})
+                        tins(AddonSelector.alreadyFound[toSearch], {[sortIndex] = false})
                     end
                 end
             end
@@ -1355,7 +1400,7 @@ function AddonSelector:UpdateDDL(wasDeleted)
         for _, addonPacks in pairs(settings.addonPacksOfChar) do
             local charName = addonPacks._charName
             local itemData = self:CreateItemEntry("[" .. charName .. "]", addonPacks, true, charName)
-            table.insert(packTable, itemData)
+            tins(packTable, itemData)
             wasItemAdded = true
         end
     end
@@ -1364,7 +1409,7 @@ function AddonSelector:UpdateDDL(wasDeleted)
     if settings.showGlobalPacks == true then
         for packName, addonTable in pairs(settings.addonPacks) do
             local itemData = self:CreateItemEntry(packName, addonTable, false, GLOBAL_PACK_NAME)
-            table.insert(packTable, itemData)
+            tins(packTable, itemData)
             wasItemAdded = true
         end
     end
@@ -1373,7 +1418,7 @@ function AddonSelector:UpdateDDL(wasDeleted)
     self.comboBox:ClearItems()
 
     if wasItemAdded == true then
-        table.sort(packTable, function(entryA, entryB)
+        tsor(packTable, function(entryA, entryB)
             if entryA.isCharacterPackHeader == true and entryB.isCharacterPackHeader == true then
                 return entryA.name < entryB.name
             elseif entryA.isCharacterPackHeader == true and not entryB.isCharacterPackHeader then
@@ -1758,11 +1803,19 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     --Add the search options
     local searchOptionsSubmenu = {
         {
-            label    = searchExcludeFileNameStr,
+            label    = langArrayInClientLang["searchExcludeFilename"] or langArrayInFallbackLang["searchExcludeFilename"],
             callback = function(state)
                 AddonSelector.acwsv.searchExcludeFilename = state
             end,
             checked  = function() return AddonSelector.acwsv.searchExcludeFilename end,
+            itemType = MENU_ADD_OPTION_CHECKBOX,
+        },
+        {
+            label    = langArrayInClientLang["searchSaveHistory"] or langArrayInFallbackLang["searchSaveHistory"],
+            callback = function(state)
+                AddonSelector.acwsv.searchSaveHistory = state
+            end,
+            checked  = function() return AddonSelector.acwsv.searchSaveHistory end,
             itemType = MENU_ADD_OPTION_CHECKBOX,
         }
     }
@@ -1949,6 +2002,9 @@ function AddonSelector:Initialize()
         saveGroupedByCharacterName = false,
         showGroupedByCharacterName = false,
         searchExcludeFilename = false,
+        searchSaveHistory = false,
+        searchHistory = {},
+        searchHistoryMaxEntries = 10,
 	}
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
@@ -2044,7 +2100,7 @@ function AddonSelector:Initialize()
             end
             --if AddonSelector.noAddonCheckBoxUpdate then return true end
         end)
-        --EVENT_MANAGER:RegisterForEvent("AddonSelectorMultiselectHookOnShow", EVENT_ACTION_LAYER_PUSHED, function(...) AddonSelector_HookForMultiSelectByShiftKey(...) end)
+        --EM:RegisterForEvent("AddonSelectorMultiselectHookOnShow", EVENT_ACTION_LAYER_PUSHED, function(...) AddonSelector_HookForMultiSelectByShiftKey(...) end)
 
         if ZO_AddOns ~= nil then
             ZO_AddOns:SetMouseEnabled(true)
@@ -2197,7 +2253,7 @@ local function OnAddOnLoaded(event, addonName)
                     itemName = item.name
                     for packNameOfChar, addonsOfPack in pairs(packDataOfChar) do
                         if packNameOfChar ~= "_charName" then
-                            table.insert(subMenuEntries, {
+                            tins(subMenuEntries, {
                                 label = (langArrayInClientLang["selectPack"] or langArrayInFallbackLang["selectPack"]) .. ": " .. packNameOfChar,
                                 callback = function()
                                     local packItem = AddonSelector:CreateItemEntry(packNameOfChar, addonsOfPack, false, charName)
@@ -2265,10 +2321,10 @@ local function OnAddOnLoaded(event, addonName)
         return true
     end)
 
-	EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
+	EM:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 end
 
 ---------------------------------------------------------------------
 --  Register Events --
 ---------------------------------------------------------------------
-EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
+EM:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
