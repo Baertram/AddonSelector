@@ -32,6 +32,7 @@ AddonSelectorGlobal = AddonSelector
 --ASG = AddonSelectorGlobal
 
 local EM = EVENT_MANAGER
+local SM = SCENE_MANAGER
 
 local strfor = string.format
 local strlow = string.lower
@@ -44,6 +45,8 @@ local tsor = gTab.sort
 
 --Constant for the global pack name
 local GLOBAL_PACK_NAME = "$G"
+
+local SEARCH_TYPE_NAME = "name"
 
 local AddOnManager = GetAddOnManager()
 --The drop down list for the packs -> ZO_ScrollableComboBox
@@ -703,8 +706,8 @@ function AddonSelector_SelectAddons(selectAll)
     end
 
     ZO_AddOnManager.isDirty = true
-    SCENE_MANAGER:RemoveFragment(ADDONS_FRAGMENT)
-    SCENE_MANAGER:AddFragment(ADDONS_FRAGMENT)
+    SM:RemoveFragment(ADDONS_FRAGMENT)
+    SM:AddFragment(ADDONS_FRAGMENT)
 end
 
 --Scroll the scrollbar to an index
@@ -834,7 +837,7 @@ end
 
 --Search for addons by e.g. name and scroll the list to the found addon, or filter (hide) all non matching addons
 function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
-    searchType = searchType or "name"
+    searchType = searchType or SEARCH_TYPE_NAME
     doHideNonFound = doHideNonFound or false
 --d("[AddonSelector]SearchAddon, searchType: " .. tostring(searchType) .. ", searchValue: " .. tostring(searchValue) .. ", hideNonFound: " ..tostring(doHideNonFound))
     local addonList = ZO_AddOnsList.data
@@ -866,7 +869,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
             local stringFindResult
             local stringFindCleanResult
             local stringFindResultFile
-            if searchType == "name" then
+            if searchType == SEARCH_TYPE_NAME then
                 local addonName = strlow(addonData.addOnName)
                 local addonCleanName = strlow(addonData.strippedAddOnName )
                 local addonFileName = strlow(addonData.addOnFileName)
@@ -979,28 +982,30 @@ d(">scrollToIndex: " ..tostring(scrollToIndex) .. ", approximatelyCurrentAddonSo
 end
 
 local function showAddOnsList()
-    if not SCENE_MANAGER then return end
+    if not SM then return end
     if not ADDONS_FRAGMENT then return end
     if ADDONS_FRAGMENT and ADDONS_FRAGMENT.control and not ADDONS_FRAGMENT.control:IsHidden() then return end
     --Show the game menu (as if you have pressed ESC key)
     ZO_SceneManager_ToggleGameMenuBinding()
     --Show the addons
-    SCENE_MANAGER:AddFragment(ADDONS_FRAGMENT)
+    SM:AddFragment(ADDONS_FRAGMENT)
     return true
 end
 
-local function openGameMenuAndAddOnsAndThenSearch(addonName)
+local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScene)
     if not addonName or addonName == "" then return end
-    --Show the game menu and open the AddOns
-    if showAddOnsList() then
-        --Set the focus to the addon search box
-        if AddonSelectorSearchBox then
-            AddonSelectorSearchBox:SetText(addonName)
-            AddonSelectorSearchBox:TakeFocus()
-        end
-        --Search for the addonName
-        AddonSelector_SearchAddon("name", addonName, false)
+    doNotShowAddOnsScene = doNotShowAddOnsScene or false
+    if not doNotShowAddOnsScene then
+        --Show the game menu and open the AddOns
+        if not showAddOnsList() then return end
     end
+    --Set the focus to the addon search box
+    if AddonSelectorSearchBox then
+        AddonSelectorSearchBox:SetText(addonName)
+        AddonSelectorSearchBox:TakeFocus()
+    end
+    --Search for the addonName
+    AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false)
 end
 
 --Add the active addon count to the header text
@@ -1859,6 +1864,7 @@ end
 -- Create the AddonSelector control, set references to controls
 -- and click handlers for the save/delete buttons
 function AddonSelector:CreateControlReferences()
+    local settings = AddonSelector.acwsv
     -- Create Controls:
     local addonSelector = CreateControlFromVirtual("AddonSelector", ZO_AddOns, "AddonSelectorTLC")
 
@@ -1882,6 +1888,20 @@ function AddonSelector:CreateControlReferences()
     self.settingsOpenDropdown:SetAnchor(TOPLEFT, ZO_AddOns, TOP, offsetX, offsetY)
 
     self.searchBox 	= addonSelector:GetNamedChild("SearchBox")
+    self.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
+        if not settings.searchSaveHistory then return end
+        if isUpInside and mouseButton == MOUSE_BUTTON_INDEX_RIGHT then
+            local searchHistory = settings.searchHistory
+            local searchHistoryOfSearchMode = searchHistory[SEARCH_TYPE_NAME]
+            if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
+                ClearMenu()
+                for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
+                    AddCustomMenuItem(searchTerm, function() openGameMenuAndAddOnsAndThenSearch(searchTerm, true) end)
+                end
+                ShowMenu(selfCtrl)
+            end
+        end
+    end)
     self.searchLabel = addonSelector:GetNamedChild("SearchBoxLabel")
     self.searchLabel:SetText(AddonSelector_GetLocalizedText("AddonSearch"))
     self.selectedPackNameLabel = addonSelector:GetNamedChild("SelectedPackNameLabel")
@@ -1903,7 +1923,7 @@ function AddonSelector:CreateControlReferences()
     self.autoReloadUITexture:SetHandler("OnMouseExit", onMouseExitTooltip)
 
     -- Set Saved Btn State for checkbox "Auto reloadui after pack selection"
-    local checkedState = AddonSelector.acwsv.autoReloadUI
+    local checkedState = settings.autoReloadUI
     updateAutoReloadUITexture(checkedState)
     --self.autoReloadBtn:SetState(checkedState)
     --Disable the "save pack" button
