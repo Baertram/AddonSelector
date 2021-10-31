@@ -814,7 +814,8 @@ local function updateSearchHistory(searchType, searchValue)
     local searchHistory = settings.searchHistory
     searchHistory[searchType] = searchHistory[searchType] or {}
     local searchHistoryOfSearchType = searchHistory[searchType]
-    if not ZO_IsElementInNumericallyIndexedTable(searchHistoryOfSearchType, searchValue) then
+    local toSearch = strlow(searchValue)
+    if not ZO_IsElementInNumericallyIndexedTable(searchHistoryOfSearchType, toSearch) then
         --Only keep the last 10 search entries
         tins(searchHistory[searchType], 1, searchValue)
         local countEntries = #searchHistory[searchType]
@@ -829,7 +830,7 @@ end
 local searchHistoryEventUpdaterName = "AddonSelector_SearchHistory_Update"
 local function updateSearchHistoryDelayed(searchType, searchValue)
     EM:UnregisterForUpdate(searchHistoryEventUpdaterName)
-    EM:RegisterForUpdate(searchHistoryEventUpdaterName, 2000, function()
+    EM:RegisterForUpdate(searchHistoryEventUpdaterName, 1500, function()
         EM:UnregisterForUpdate(searchHistoryEventUpdaterName)
         updateSearchHistory(searchType, searchValue)
     end)
@@ -843,6 +844,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
     local addonList = ZO_AddOnsList.data
     if addonList == nil then return end
     local isEmptySearch = searchValue == ""
+    local toSearch = (not isEmptySearch and strlow(searchValue)) or searchValue
     local settings = AddonSelector.acwsv
     local searchExcludeFilename = settings.searchExcludeFilename
     local searchSaveHistory = settings.searchSaveHistory
@@ -862,7 +864,6 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
         unregisterOldEventUpdater()
         return
     end
-    local toSearch = strlow(searchValue)
     for _, addonDataTable in ipairs(addonList) do
         local addonData = addonDataTable.data
         if addonData and addonData.index ~= nil and addonData.sortIndex ~= nil then
@@ -1000,9 +1001,10 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
         if not showAddOnsList() then return end
     end
     --Set the focus to the addon search box
-    if AddonSelectorSearchBox then
-        AddonSelectorSearchBox:SetText(addonName)
-        AddonSelectorSearchBox:TakeFocus()
+    local searchBox = AddonSelector.searchBox
+    if searchBox then
+        searchBox:SetText(addonName)
+        searchBox:TakeFocus()
     end
     --Search for the addonName
     AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false)
