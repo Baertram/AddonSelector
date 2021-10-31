@@ -93,6 +93,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
     ["es"] = {
         ["packName"] = "Nombre del paquete:",
@@ -127,6 +128,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
 	["fr"] = {
 		["packName"]			= "Nom du paquet:",
@@ -161,6 +163,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
 	["de"] = {
 		["packName"]			= "Pack Name:",
@@ -195,6 +198,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Dateiname nicht durchsuchen",
         ["searchSaveHistory"] = "Historie der Suchbegriffe speichern",
+        ["searchClearHistory"] = "Historie leeren",
     },
     ["ru"] = {
         ["packName"]            = "Имя сборки:",
@@ -229,6 +233,7 @@ local langArray = {
         ["packGlobal"]          = "общий",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
     ["br"] = {
         ["packName"] = "Nome do Pacote:",
@@ -263,6 +268,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
     ["pt"] = {
         ["packName"] = "Nome do Pacote:",
@@ -297,6 +303,7 @@ local langArray = {
         ["packGlobal"]          = "Global",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
     ["jp"] = {
         ["packName"] = "パック名:",
@@ -331,6 +338,7 @@ local langArray = {
         ["packGlobal"]          = "グローバル",
         ["searchExcludeFilename"] = "Exclude filename",
         ["searchSaveHistory"] = "Save history of search terms",
+        ["searchClearHistory"] = "Clear history",
     },
 }
 local langArrayInClientLang = langArray[lang]
@@ -346,7 +354,7 @@ local savedGroupedByCharNameStr = langArrayInClientLang["SaveGroupedByCharacterN
 local autoReloadUIStr = langArrayInClientLang["autoReloadUIHint"] or langArrayInFallbackLang["autoReloadUIHint"]
 local searchMenuStr = langArrayInClientLang["AddonSearch"] or langArrayInFallbackLang["AddonSearch"]
 searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
-
+local clearSearchHistoryStr = langArrayInClientLang["searchClearHistory"] or langArrayInFallbackLang["searchClearHistory"]
 
 --Clean the color codes from the addon name
 --[[
@@ -834,6 +842,13 @@ local function updateSearchHistoryDelayed(searchType, searchValue)
         EM:UnregisterForUpdate(searchHistoryEventUpdaterName)
         updateSearchHistory(searchType, searchValue)
     end)
+end
+
+local function clearSearchHistory(searchType)
+    local settings = AddonSelector.acwsv
+    local searchHistory = settings.searchHistory
+    if not searchHistory[searchType] then return end
+    settings.searchHistory[searchType] = nil
 end
 
 --Search for addons by e.g. name and scroll the list to the found addon, or filter (hide) all non matching addons
@@ -1894,12 +1909,21 @@ function AddonSelector:CreateControlReferences()
         if not settings.searchSaveHistory then return end
         if isUpInside and mouseButton == MOUSE_BUTTON_INDEX_RIGHT then
             local searchHistory = settings.searchHistory
-            local searchHistoryOfSearchMode = searchHistory[SEARCH_TYPE_NAME]
+            local searchType = SEARCH_TYPE_NAME
+            local searchHistoryOfSearchMode = searchHistory[searchType]
             if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
                 ClearMenu()
                 for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
-                    AddCustomMenuItem(searchTerm, function() openGameMenuAndAddOnsAndThenSearch(searchTerm, true) end)
+                    AddCustomMenuItem(searchTerm, function()
+                        openGameMenuAndAddOnsAndThenSearch(searchTerm, true)
+                        ClearMenu()
+                    end)
                 end
+                AddCustomMenuItem("-", function() end)
+                AddCustomMenuItem(clearSearchHistoryStr, function()
+                    clearSearchHistory(searchType)
+                    ClearMenu()
+                end)
                 ShowMenu(selfCtrl)
             end
         end
