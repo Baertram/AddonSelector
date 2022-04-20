@@ -1917,10 +1917,11 @@ end
 function AddonSelector:CreateControlReferences()
     local settings = AddonSelector.acwsv
     -- Create Controls:
-    --local addonSelector = CreateControlFromVirtual("AddonSelector", ZO_AddOns, "AddonSelectorTLC")
+    local addonSelector = CreateControlFromVirtual("AddonSelector", ZO_AddOns, "AddonSelectorVirtualTemplate", nil)
+
+    --[[
     local addonSelector = CreateControlFromVirtual("AddonSelector", GuiRoot, "AddonSelectorTLC")
     addonSelector:SetHidden(true)
-
     ADDONS_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
         if newState == SCENE_FRAGMENT_SHOWING then
             addonSelector:SetHidden(false)
@@ -1928,6 +1929,7 @@ function AddonSelector:CreateControlReferences()
             addonSelector:SetHidden(true)
         end
     end)
+    ]]
 
     -- Assign references:
     self.addonSelectorControl = addonSelector

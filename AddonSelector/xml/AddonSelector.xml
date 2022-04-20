@@ -9,7 +9,8 @@
 			</OnMouseUp>
 		</Control>
 	-->
-        <TopLevelControl name="AddonSelectorTLC" virtual="true" clampedToScreen="true" mouseEnabled="false" movable="false" hidden="false" >
+		<!-- Old control type: TopLevelControl, Old name: AddonSelectorTLC -- With API101034 ZOs changed that TLCs only belong to GuiRooot! -->
+        <Control name="AddonSelectorVirtualTemplate" virtual="true" clampedToScreen="true" mouseEnabled="false" movable="false" hidden="false" >
             <Dimensions x="400" y="80"/>
 			<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsDivider" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="0" />
 			<Controls>
@@ -121,6 +122,6 @@
                 </Control>
 
             </Controls>
-		</TopLevelControl>
+		</Control>
 	</Controls>
 </GuiXml>
