@@ -41,6 +41,10 @@ local addonsWhichShouldNotBeDisabled = {
     ["LibCustomMenu"] = true,
 }
 local addonsWhichShouldNotBeDisabledCount = 2 --entries in addonsWhichShouldNotBeDisabled
+--Get the current addonIndex of the "AddonSelector" addon
+local thisAddonIndex = 0
+--Needed dependencies index
+local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
 
 local AddOnManager = GetAddOnManager()
@@ -697,13 +701,9 @@ end
 
 --Select/Deselect all addon checkboxes
 function AddonSelector_SelectAddons(selectAll)
-d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll))
+--d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll))
     if not areAllAddonsEnabled(false) then return end
     if not ZOAddOnsList or not ZOAddOnsList.data then return end
-
-    --Get the current addonIndex of the "AddonSelector" addon
-    local thisAddonIndex = 0
-    local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
     local selectAllSave = AddonSelector.acwsv.selectAllSave
     local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
@@ -711,10 +711,14 @@ d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll
 
     --Copy the AddOns list
     local addonsListCopy = ZO_ShallowTableCopy(ZOAddOnsList.data)
+    --TODO: For debugging
+    --AddonSelector._addonsListCopy = addonsListCopy
     --local addonsList = ZOAddOnsList.data
 
-    --Only if not all entries should be selected and if we have not done this once before
+    --Only if not all entries should be selected
     if not selectAll then
+        addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
+
         --d(">Sorting addon table and finding index")
         --Sort the copied addons list by type (headlines etc. to the end, sort by addonFileName or cleanAddonName)
         tsor(addonsListCopy, function(a,b)
@@ -751,6 +755,16 @@ d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll
             end
         end)
 
+        --Save the currently enabled addons for a later re-enable
+        selectAllSave = {}
+        for _,v in ipairs(addonsListCopy) do
+            local vData = v.data
+            local vDataIndex = vData ~= nil and vData.index
+            if vDataIndex ~= nil then
+                selectAllSave[vDataIndex] = vData.addOnEnabled
+            end
+        end
+
         --Restore from saved addons (after some were disabled already -> re-enable them again) or disable all?
         local fullHouse = true
         local emptyHouse = true
@@ -767,35 +781,18 @@ d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll
         end
     end --if not selectAll
 
-
-    if not selectAll then
-        --Save the currently enabled addons for a later re-enable
-        AddonSelector.acwsv.selectAllSave = {}
-        for _,v in ipairs(addonsListCopy) do
-            local vData = v.data
-            local vDataIndex = vData ~= nil and vData.index
-            if vDataIndex ~= nil then
-                selectAllSave[vDataIndex] = vData.addOnEnabled
-            end
-        end
-    end --if not selectAll
-
-
-    --TODO: For debugging
-    AddonSelector._addonsListCopy = addonsListCopy
-
-    local isSelectAddonsButtonTextEqualSelectedSaved = (AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText and true) or false
+    local isSelectAddonsButtonTextEqualSelectedSaved = (selectAll == true and AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText and true) or false
 
     local numAddons = AddOnManager:GetNumAddOns()
     for i = 1, numAddons do
         local name = AddOnManager:GetAddOnInfo(i)
-d(">addonIdx: " ..tostring(i) .. ", addOnFileName: " ..tostring(name))
+--d(">addonIdx: " ..tostring(i) .. ", addOnFileName: " ..tostring(name))
         if selectAll == true or (i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) then
-            if selectAll == true and isSelectAddonsButtonTextEqualSelectedSaved == true then -- Are we restoring from save?
-d(">>restoring previously saved")
+            if isSelectAddonsButtonTextEqualSelectedSaved == true then -- Are we restoring from save?
+--d(">>restoring previously saved")
                 AddOnManager:SetAddOnEnabled(i, selectAllSave[i])
-            else -- Otherwise continue as normal: enabled/disable addon
-d(">>selectAll: " ..tostring(selectAll))
+            else -- Otherwise continue as normal: enabled/disable addon via "selectAll" boolean flag
+--d(">>selectAll: " ..tostring(selectAll))
                 AddOnManager:SetAddOnEnabled(i, selectAll)
             end
         end
