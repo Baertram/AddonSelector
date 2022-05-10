@@ -12,7 +12,7 @@ AddonSelector.noAddonCheckBoxUpdate = false
 AddonSelector.lastChangedAddOnVars = {}
 AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
-AddonSelector.version = "2.12"
+AddonSelector.version = "2.13"
 
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
@@ -34,15 +34,19 @@ local tsor = gTab.sort
 local GLOBAL_PACK_NAME = "$G"
 local SEARCH_TYPE_NAME = "name"
 
+local playerActivatedEventCalled = false
+
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
     ["LibDialog"] =     true,
     ["LibCustomMenu"] = true,
 }
+local addonsWhichShouldNotBeDisabledCount = 2 --entries in addonsWhichShouldNotBeDisabled
 
 
 local AddOnManager = GetAddOnManager()
+AddonSelector.AddOnManager = AddOnManager
 --The drop down list for the packs -> ZO_ScrollableComboBox
 local isAreAddonsEnabledFuncGiven = (AddOnManager.AreAddOnsEnabled ~= nil) or false
 
@@ -695,14 +699,136 @@ end
 
 --Select/Deselect all addon checkboxes
 function AddonSelector_SelectAddons(selectAll)
+    d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tostring(selectAll))
     if not areAllAddonsEnabled(false) then return end
     if not ZOAddOnsList or not ZOAddOnsList.data then return end
-    tsor(ZOAddOnsList.data, function(a,b) return a.data.addOnFileName == ADDON_NAME end)
-    local thisAddonIndex = ZOAddOnsList.data[1].data.index
 
-    local notEmpty = false
+    --Get the current addonIndex of the "AddonSelector" addon
+    local thisAddonIndex = 0
     local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
+    local selectAllSave = AddonSelector.acwsv.selectAllSave
+    local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
+    local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
+
+    --Copy the AddOns list
+    local addonsListCopy = ZO_ShallowTableCopy(ZOAddOnsList.data)
+    local addonsList = ZOAddOnsList.data
+
+    tsor(addonsList, function(a,b) return a.addOnFileName == ADDON_NAME end)
+    AddonSelector._addonsList = addonsList
+
+    --Only if not all entries should be selected and if we have not done this once before
+    if not selectAll and playerActivatedEventCalled == true then
+d(">Sorting addon table and finding index")
+        --Sort the copied addons list by type (headlines etc. to the end, sort by addonFileName or cleanAddonName)
+        tsor(addonsListCopy, function(a,b)
+            --headlines etc: Move to the end
+            if a.typeId == nil or a.typeId ~= 1 then
+d(">>Comp skipped a: " ..tostring(a.typeId))
+                return false
+                --AddonFileName (TXT filename) is provided? Sort by that
+            elseif a.data.addOnFileName ~= nil then
+                local addonFileName = a.data.addOnFileName
+d(">>Comp file a: " ..tostring(addonFileName) .. ", b: " ..tostring(b.data.addOnFileName))
+                --Find AddonSelector and other dependencies indices
+                local addonIndex = a.data.index
+                if addonIndex ~= nil then
+                    if thisAddonIndex == 0 and addonFileName == ADDON_NAME then
+                        thisAddonIndex = addonIndex
+d(">>>Found AddonSelector at addonIdx: " ..tostring(addonIndex) .. ", addOnFileName: " ..tostring(addonFileName))
+                    elseif addonsWhichShouldNotBeDisabled[addonFileName] then
+                        addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] = true
+d(">>>Found dependency at addonIdx: " ..tostring(addonIndex) .. ", addOnFileName: " ..tostring(addonFileName))
+                    end
+                end
+
+                if not b.data.addOnFileName then return true end
+                return a.data.addOnFileName < b.data.addOnFileName
+            elseif a.data.strippedAddOnName ~= nil then
+d(">>Comp name a: " ..tostring(a.data.strippedAddOnName) .. ", b: " ..tostring(b.data.strippedAddOnName))
+                if not b.data.strippedAddOnName then return true end
+                --Sort by "clean" (no color coding etc.) addon name
+                return a.data.strippedAddOnName < b.data.strippedAddOnName
+            else
+                --Nothing to compare
+                return false
+            end
+        end)
+
+        --[[
+            --Do not scan for anything if all addons should be enabled
+            if not selectAll and playerActivatedEventCalled == true then
+        d(">checking index of AddonSelector and dependencies")
+                local countDependenciesFound = 0
+                --TODO: Does this change each time we click enable/disable addons?
+                --Or only once per EVENT_PLAYER_ACTIVATED
+                for _, addonData in ipairs(addonsListCopy) do
+                    local addoDataTable = addonData.data
+                    if addoDataTable ~= nil and addoDataTable.typeId == 1 then
+                        local addOnFileName = addoDataTable.addOnFileName
+                        local addonIndex = addoDataTable.index
+                        if addOnFileName ~= nil and addonIndex ~= nil then
+        d(">addonIdx: " ..tostring(addonIndex) .. ", addOnFileName: " ..tostring(addOnFileName))
+                            if addOnFileName == ADDON_NAME then
+                                --Save the index of AddonSelector itsself
+                                thisAddonIndex = addonIndex
+        d(">>Found AddonSelector at addonIdx: " ..tostring(addonIndex) .. ", addOnFileName: " ..tostring(addOnFileName))
+                            else
+                                --Save the index of libraries/dependencies needed for AddonSelector
+                                if addonsWhichShouldNotBeDisabled[addOnFileName] then
+                                    addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] = true
+        d(">>Found dependency at addonIdx: " ..tostring(addonIndex) .. ", addOnFileName: " ..tostring(addOnFileName))
+                                    countDependenciesFound = countDependenciesFound + 1
+                                end
+                            end
+                            --Addon AddonSelector and the dependencies were all found? Abort the loop
+                            if thisAddonIndex ~= 0 and countDependenciesFound >= addonsWhichShouldNotBeDisabledCount then
+        d("<<found AddonSelector at: " ..tostring(thisAddonIndex) .. " and " ..tostring(countDependenciesFound) .. " dependencies!")
+                                playerActivatedEventCalled = false
+                                break
+                            end
+                        end
+                    end
+                end
+        ]]
+
+        --Restore from saved addons (after some were disabled already -> re-enable them again) or disable all?
+        local fullHouse = true
+        local emptyHouse = true
+        for i,v in ipairs(selectAllSave) do
+            if i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i] then
+                if not v then fullHouse = false
+                else emptyHouse = false end
+            end
+        end
+        if not fullHouse and not emptyHouse then
+            AddonSelectorSelectAddonsButton:SetText(selectSavedText)
+        else
+            AddonSelectorSelectAddonsButton:SetText(selectAllText)
+        end
+    end --if not selectAll
+
+    --TODO: For debugging
+    AddonSelector._addonsListCopy = addonsListCopy
+
+    local isSelectAddonsButtonTextEqualSelectedSaved = (AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText and true) or false
+
+    local numAddons = AddOnManager:GetNumAddOns()
+    for i = 1, numAddons do
+        local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
+d(">addonIdx: " ..tostring(i) .. ", addOnFileName: " ..tostring(name))
+        if selectAll == true or (i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) then
+            if selectAll == true and isSelectAddonsButtonTextEqualSelectedSaved == true then -- Are we restoring from save?
+                AddOnManager:SetAddOnEnabled(i, selectAllSave[i])
+            else -- Otherwise continue as normal: enabled/disable addon
+                AddOnManager:SetAddOnEnabled(i, selectAll)
+            end
+        end
+    end
+
+
+    --[[
     if not selectAll then
         AddonSelector.acwsv.selectAllSave = {}
         for _,v in ipairs(ZOAddOnsList.data) do
@@ -717,35 +843,18 @@ function AddonSelector_SelectAddons(selectAll)
         end
     end
 
-    local selectAllSave = AddonSelector.acwsv.selectAllSave
-    local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
-    local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
-    if not selectAll then
-        local fullHouse = true
-        local emptyHouse = true
-        for i,v in ipairs(selectAllSave) do
-            if i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i] then
-                if not v then fullHouse = false
-                else emptyHouse = false end
-            end
-        end
-        if not fullHouse and not emptyHouse then
-            AddonSelectorSelectAddonsButton:SetText(selectSavedText)
-        else
-            AddonSelectorSelectAddonsButton:SetText(selectAllText)
-        end
-    end
-
     local numAddons = AddOnManager:GetNumAddOns()
     for i = 1, numAddons do
-        if i ~= thisAddonIndex or selectAll then
-            if AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText and selectAll then -- Are we restoring from save?
+        if selectAll == true or (i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) then
+            if selectAll == true and AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText then -- Are we restoring from save?
                 AddOnManager:SetAddOnEnabled(i, selectAllSave[i])
             else -- Otherwise continue as normal
                 AddOnManager:SetAddOnEnabled(i, selectAll)
             end
         end
     end
+    ]]
+
 
     ZO_AddOnManager.isDirty = true
     SM:RemoveFragment(ADDONS_FRAGMENT)
@@ -2286,6 +2395,14 @@ local function searchAddOnSlashCommandHandlder(args)
     end
 end
 
+
+-------------------------------------------------------------------
+--  OnPlayerActivated --
+-------------------------------------------------------------------
+local function OnPlayerActivated(event, firstRun)
+    playerActivatedEventCalled = true
+end
+
 -------------------------------------------------------------------
 --  OnAddOnLoaded  --
 -------------------------------------------------------------------
@@ -2415,6 +2532,8 @@ local function OnAddOnLoaded(event, addonName)
         end
         return true
     end)
+
+    EM:RegisterForEvent(ADDON_NAME, EVENT_PLAYER_ACTIVATED, OnPlayerActivated)
 
 	EM:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 end
