@@ -756,7 +756,8 @@ function AddonSelector_SelectAddons(selectAll)
         end)
 
         --Save the currently enabled addons for a later re-enable
-        selectAllSave = {}
+        AddonSelector.acwsv.selectAllSave = {}
+        selectAllSave = AddonSelector.acwsv.selectAllSave
         for _,v in ipairs(addonsListCopy) do
             local vData = v.data
             local vDataIndex = vData ~= nil and vData.index
@@ -764,28 +765,28 @@ function AddonSelector_SelectAddons(selectAll)
                 selectAllSave[vDataIndex] = vData.addOnEnabled
             end
         end
-
-        --Restore from saved addons (after some were disabled already -> re-enable them again) or disable all?
-        local fullHouse = true
-        local emptyHouse = true
-        for i,v in ipairs(selectAllSave) do
-            if i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i] then
-                if not v then fullHouse = false
-                else emptyHouse = false end
-            end
-        end
-        if not fullHouse and not emptyHouse then
-            AddonSelectorSelectAddonsButton:SetText(selectSavedText)
-        else
-            AddonSelectorSelectAddonsButton:SetText(selectAllText)
-        end
     end --if not selectAll
 
+    --Restore from saved addons (after some were disabled already -> re-enable them again) or disable all?
+    selectAllSave = AddonSelector.acwsv.selectAllSave
+    local fullHouse = true
+    local emptyHouse = true
+    for i,v in ipairs(selectAllSave) do
+        if i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i] then
+            if not v then fullHouse = false
+            else emptyHouse = false end
+        end
+    end
+    if not fullHouse and not emptyHouse then
+        AddonSelectorSelectAddonsButton:SetText(selectSavedText)
+    else
+        AddonSelectorSelectAddonsButton:SetText(selectAllText)
+    end
     local isSelectAddonsButtonTextEqualSelectedSaved = (selectAll == true and AddonSelectorSelectAddonsButton.nameLabel:GetText() == selectSavedText and true) or false
 
     local numAddons = AddOnManager:GetNumAddOns()
     for i = 1, numAddons do
-        local name = AddOnManager:GetAddOnInfo(i)
+        --local name = AddOnManager:GetAddOnInfo(i)
 --d(">addonIdx: " ..tostring(i) .. ", addOnFileName: " ..tostring(name))
         if selectAll == true or (i ~= thisAddonIndex and not addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) then
             if isSelectAddonsButtonTextEqualSelectedSaved == true then -- Are we restoring from save?
@@ -796,6 +797,13 @@ function AddonSelector_SelectAddons(selectAll)
                 AddOnManager:SetAddOnEnabled(i, selectAll)
             end
         end
+    end
+
+    --Reset last saved addons for the re-enable as all were enabled now
+    if isSelectAddonsButtonTextEqualSelectedSaved == true then
+        AddonSelector.acwsv.selectAllSave = {}
+        --Update the keybind strip's button
+        AddonSelectorSelectAddonsButton:SetText(selectAllText)
     end
 
     --Update the flag for the filters and resort of the addon list
