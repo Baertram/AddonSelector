@@ -1,6 +1,36 @@
 --[[
-Known bugs:
+------------------------------------------------------------------------------------------------------------------------
+ Changelog
+------------------------------------------------------------------------------------------------------------------------
+2022-07-15
+AddonSelector v2.13
+-Made compatible with PTS API101035
+General remark: If you got Votans Addon List enabled this will interfere and disable addons/libs if you deselect/select other addons/libs via keybinds, the settings context menu or via SHIFT+click! e.g. if you disable a library where only 1 addon was using it this addon might get disabled too. And the other way around, the same.
+
+-Fixed SHIFT+left click mass marking
+-Fixed "Show active pack to chat" keybind/function to show Global or character name saved for the pack properly
+
+-Added new settings context menu entries:
+--Undo last mass-marking (will undo to the last automatically saved backup, which is saved as you mass-change any addon's state via the keybinds, settings context menu or SHIFT+click)
+The entry shows the # of addons enabled, and the date & time as the backup was saved.
+This backup is saved account wide, not per character!
+--Clear last backuped mass-marking
+--Deselect all addons (including libraries)
+--Re-Select last enable addons (same like the keybind that switches between "re-select" or "select all")
+--Select all addons (including libraries -> Will not change and enable you to always select all addons)
+--Deselect all libraries
+--Select all libraries
+
+
+------------------------------------------------------------------------------------------------------------------------
+ Known bugs:
+------------------------------------------------------------------------------------------------------------------------
 #1 Using the pack selection dropdown and selecting a pack will disable RETURN key (open chat) and ESC key? -> Becasue of remove fragment and add fragment maybe?
+
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 ]]
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -1949,10 +1979,14 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
 
     if AddonSelector.acwsv.lastMassMarkingSavedProfile ~= nil then
         local lastSavedPreMassMarkingTime = ""
+        local countAddonsInBackup = 0
         if AddonSelector.acwsv.lastMassMarkingSavedProfileTime ~= nil then
+            countAddonsInBackup = NonContiguousCount(AddonSelector.acwsv.lastMassMarkingSavedProfileTime)
             lastSavedPreMassMarkingTime = os.date("%c", AddonSelector.acwsv.lastMassMarkingSavedProfileTime)
         end
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " (" .. tostring(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL)
+        if countAddonsInBackup > 0 then
+            AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tostring(countAddonsInBackup) .." (" .. tostring(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL)
+        end
         AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL)
         AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
     end
