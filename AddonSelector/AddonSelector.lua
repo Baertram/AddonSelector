@@ -65,6 +65,7 @@ local tsor = gTab.sort
 
 --Constant for the global pack name
 local GLOBAL_PACK_NAME = "$G"
+local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 local SEARCH_TYPE_NAME = "name"
 
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
@@ -642,12 +643,12 @@ local function Addon_Toggle_Enabled(rowControl)
 
     if state == TRISTATE_CHECK_BUTTON_CHECKED then
         -- changed so it automatically refreshes the multiButton (reload UI)
-        --ADD_ON_MANAGER:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_UNCHECKED)
-        ADD_ON_MANAGER:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_UNCHECKED)
+        --ADDON_MANAGER_OBJECT:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_UNCHECKED)
+        ADDON_MANAGER_OBJECT:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_UNCHECKED)
         return
     end
-    --ADD_ON_MANAGER:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_CHECKED)
-    ADD_ON_MANAGER:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_CHECKED)
+    --ADDON_MANAGER_OBJECT:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_CHECKED)
+    ADDON_MANAGER_OBJECT:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_CHECKED)
 end
 
 local function getCurrentCharsPackNameData()
@@ -779,6 +780,26 @@ local function clearAndUpdateDDL(wasDeleted)
     ChangeDeleteButtonEnabledState(nil, false)
 end
 
+local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
+    noPackUpdate = noPackUpdate or false
+    ADDON_MANAGER_OBJECT:RefreshData()
+    ADDON_MANAGER_OBJECT.isDirty = true
+    if ADDON_MANAGER_OBJECT.RefreshMultiButton then
+        ADDON_MANAGER_OBJECT:RefreshMultiButton()
+    end
+    --Enable the delete button
+    ChangeDeleteButtonEnabledState(nil, true)
+    if not noPackUpdate then
+        --Set the currently selected packname
+        SetCurrentCharacterSelectedPackname(addonPackName, addonPackData)
+        --Update the currently selected packName label
+        UpdateCurrentlySelectedPackName(nil, addonPackName, addonPackData)
+    end
+    --Enable the save pack button
+    ChangeSaveButtonEnabledState(true)
+end
+
+
 local function updateAddonsEnabledStateByPackData(packData)
     if not packData then return false end
     local addonTable = packData.addonTable or packData
@@ -822,7 +843,9 @@ function AddonSelector_UndoLastMassMarking(clearBackup)
     else
         --load the last saved addon pack data from AddonSelector.acwsv.lastMassMarkingSavedProfile
 --d(">loading last backuped pre-mass-marking pack!")
-        updateAddonsEnabledStateByPackData(AddonSelector.acwsv.lastMassMarkingSavedProfile)
+        local packData = AddonSelector.acwsv.lastMassMarkingSavedProfile
+        updateAddonsEnabledStateByPackData(packData)
+        onAddonPackSelected(GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME, packData, true)
     end
 end
 
@@ -919,7 +942,7 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
     end
     local isSelectAddonsButtonTextEqualSelectedSaved = (not enableAll and selectAll == true and addonSelectorSelectAddonsButtonNameLabel:GetText() == selectSavedText and true) or false
 
-    --local addonsMasterList = ADD_ON_MANAGER.masterList
+    --local addonsMasterList = ADDON_MANAGER_OBJECT.masterList
     local numAddons = ADDON_MANAGER:GetNumAddOns()
     for i = 1, numAddons do
         local isProtectedAddonOrDependency = ((i == thisAddonIndex or addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) and true) or false
@@ -958,12 +981,12 @@ end
 
 --Scroll the scrollbar to an index
 local function scrollAddonsScrollBarToIndex(index, animateInstantly)
-    if ADD_ON_MANAGER ~= nil and ADD_ON_MANAGER.list ~= nil and ADD_ON_MANAGER.list.scrollbar ~= nil then
-        --ADD_ON_MANAGER.list.scrollbar:SetValue((ADD_ON_MANAGER.list.uniformControlHeight-0.9)*index)
+    if ADDON_MANAGER_OBJECT ~= nil and ADDON_MANAGER_OBJECT.list ~= nil and ADDON_MANAGER_OBJECT.list.scrollbar ~= nil then
+        --ADDON_MANAGER_OBJECT.list.scrollbar:SetValue((ADDON_MANAGER_OBJECT.list.uniformControlHeight-0.9)*index)
         --ZO_Scroll_ScrollAbsolute(self, value)
         local onScrollCompleteCallback = function() end
         animateInstantly = animateInstantly or false
-        ZO_ScrollList_ScrollDataIntoView(ADD_ON_MANAGER.list, index, onScrollCompleteCallback, animateInstantly)
+        ZO_ScrollList_ScrollDataIntoView(ADDON_MANAGER_OBJECT.list, index, onScrollCompleteCallback, animateInstantly)
     end
 end
 
@@ -1031,7 +1054,7 @@ local function changeAddonControlName(sortIndexOfControl, addSelection)
     unregisterOldEventUpdater()
     --Refresh the visible controls so their names get resetted to standard
     if addSelection then
-        ADD_ON_MANAGER:RefreshVisible()
+        ADDON_MANAGER_OBJECT:RefreshVisible()
     end
     --Enable the check function which will try to find the addon list row control every 100ms
     local eventUpdateName = "AddonSelector_ChangeZO_AddOnsList_Row_Index_" ..tostring(sortIndexOfControl) .. "_" .. tostring(addSelection)
@@ -1110,7 +1133,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
     --No search term given
     if isEmptySearch then
         --Refresh the visible controls so their names get resetted to standard
-        ADD_ON_MANAGER:RefreshVisible()
+        ADDON_MANAGER_OBJECT:RefreshVisible()
         --Reset the searched table completely
         AddonSelector.alreadyFound = {}
         --Unregister all update events
@@ -1323,6 +1346,9 @@ local function AddonSelector_MultiSelect(control, addonEnabledCBox, button)
     --Shift not pressed: Remember the currently clicked control as first one + remember it's data as table copy so it won't change with the next "scroll" indside the addonlist,
     --as the addon list rows are re-used during scroll (they belong to a control pool)!
     if not isShiftDown then
+        --Save the currently enabled addons as a special "backup pack" so we can restore it later
+        saveAddonsAsPackBeforeMassMarking()
+
         AddonSelector.firstControl      = addonRowControl
         local currentAddonRowData       = ZO_ShallowTableCopy(addonRowControl.data)
         AddonSelector.firstControlData  = currentAddonRowData
@@ -1398,7 +1424,7 @@ local function AddonSelector_MultiSelect(control, addonEnabledCBox, button)
         --Enable the update of the addon count after the loop again
         AddonSelector.noAddonNumUpdate = false
         --Refresh the visible data
-        ADD_ON_MANAGER:RefreshData()
+        ADDON_MANAGER_OBJECT:RefreshData()
         ZO_ScrollList_RefreshVisible(ZOAddOnsList)
         return true
     else
@@ -1449,7 +1475,7 @@ local function AddonSelector_CheckLastChangedMultiSelectAddOn(rowControl)
             end
         end
         --Refresh the visible data
-        ADD_ON_MANAGER:RefreshData()
+        ADDON_MANAGER_OBJECT:RefreshData()
         ZO_ScrollList_RefreshVisible(ZOAddOnsList)
         --Update the active addons count
         AddonSelectorUpdateCount(50)
@@ -1589,22 +1615,6 @@ local function ShowConfirmationDialog(dialogName, title, body, callbackYes, call
     libDialog:ShowDialog(ADDON_NAME, dialogName, data)
 end
 
-local function onAddonPackSelected(addonPackName, addonPackData)
-    ADD_ON_MANAGER:RefreshData()
-    ADD_ON_MANAGER.isDirty = true
-    if ADD_ON_MANAGER.RefreshMultiButton then
-        ADD_ON_MANAGER:RefreshMultiButton()
-    end
-    --Enable the delete button
-    ChangeDeleteButtonEnabledState(nil, true)
-    --Set the currently selected packname
-    SetCurrentCharacterSelectedPackname(addonPackName, addonPackData)
-    --Update the currently selected packName label
-    UpdateCurrentlySelectedPackName(nil, addonPackName, addonPackData)
-    --Enable the save pack button
-    ChangeSaveButtonEnabledState(true)
-end
-
 -- When an item is selected in the comboBox go through all available
 -- addons & compare them against the selected addon pack.
 -- Enable all addons that are in the selected addon pack, disable the rest.
@@ -1720,12 +1730,12 @@ end
 
 local function updateSaveModeTexure(doShow)
     AddonSelector.saveModeTexture:SetHidden(not doShow)
-    ADD_ON_MANAGER:RefreshVisible()
+    ADDON_MANAGER_OBJECT:RefreshVisible()
 end
 
 local function updateAutoReloadUITexture(doShow)
     AddonSelector.autoReloadUITexture:SetHidden(not doShow)
-    ADD_ON_MANAGER:RefreshVisible()
+    ADDON_MANAGER_OBJECT:RefreshVisible()
 end
 
 local function checkIfGlobalPacksShouldBeShown()
@@ -2362,13 +2372,13 @@ function AddonSelector:Initialize()
 	-- TYPE_ID = 1 dataType and recreate it using my own template.
 	-- Done to make the row controls mouseEnabled
 	--[[ Disabled on advice by Votan, 31.08.2018, Exchanged with code lines below
-    ADD_ON_MANAGER.list.dataTypes = {}
-	ZO_ScrollList_AddDataType(ADD_ON_MANAGER.list, 1, "ZO_AddOnRow", 30, ADD_ON_MANAGER:GetRowSetupFunction())
+    ADDON_MANAGER_OBJECT.list.dataTypes = {}
+	ZO_ScrollList_AddDataType(ADDON_MANAGER_OBJECT.list, 1, "ZO_AddOnRow", 30, ADDON_MANAGER_OBJECT:GetRowSetupFunction())
 	]]
-    if ADD_ON_MANAGER.list.dataTypes[1] then
-        ADD_ON_MANAGER.list.dataTypes[1].setupCallback = ADD_ON_MANAGER:GetRowSetupFunction()
+    if ADDON_MANAGER_OBJECT.list.dataTypes[1] then
+        ADDON_MANAGER_OBJECT.list.dataTypes[1].setupCallback = ADDON_MANAGER_OBJECT:GetRowSetupFunction()
     else
-        ZO_ScrollList_AddDataType(ADD_ON_MANAGER.list, 1, "ZO_AddOnRow", 30, ADD_ON_MANAGER:GetRowSetupFunction())
+        ZO_ScrollList_AddDataType(ADDON_MANAGER_OBJECT.list, 1, "ZO_AddOnRow", 30, ADDON_MANAGER_OBJECT:GetRowSetupFunction())
     end
 
     --Change the description texts now
@@ -2383,7 +2393,7 @@ function AddonSelector:Initialize()
     AddonSelector.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
 
     --PreHook the ChangeEnabledState function for the addon entries, in order to update the enabled addons number
-    ZO_PreHook(ADD_ON_MANAGER, "ChangeEnabledState", function(ctrl, index, checkState)
+    ZO_PreHook(ADDON_MANAGER_OBJECT, "ChangeEnabledState", function(ctrl, index, checkState)
         AddonSelectorUpdateCount(50)
     end)
     if ADDON_MANAGER ~= nil then
@@ -2418,7 +2428,7 @@ function AddonSelector:Initialize()
     end
 
     --PreHook the Addonmanagers OnShow function
-    ZO_PreHook(ADD_ON_MANAGER, "OnShow", function(ctrl)
+    ZO_PreHook(ADDON_MANAGER_OBJECT, "OnShow", function(ctrl)
 --d("ADD_ON_MANAGER:OnShow")
         --Hide other controls/keybinds
         AddonSelectorOnShow_HideStuff()
