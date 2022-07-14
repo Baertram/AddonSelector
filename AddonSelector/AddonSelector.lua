@@ -1979,12 +1979,11 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
 
     if AddonSelector.acwsv.lastMassMarkingSavedProfile ~= nil then
         local lastSavedPreMassMarkingTime = ""
-        local countAddonsInBackup = 0
+        local countAddonsInBackup = NonContiguousCount(AddonSelector.acwsv.lastMassMarkingSavedProfile)
         if AddonSelector.acwsv.lastMassMarkingSavedProfileTime ~= nil then
-            countAddonsInBackup = NonContiguousCount(AddonSelector.acwsv.lastMassMarkingSavedProfileTime)
             lastSavedPreMassMarkingTime = os.date("%c", AddonSelector.acwsv.lastMassMarkingSavedProfileTime)
         end
-        if countAddonsInBackup > 0 then
+        if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
             AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tostring(countAddonsInBackup) .." (" .. tostring(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL)
         end
         AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL)
