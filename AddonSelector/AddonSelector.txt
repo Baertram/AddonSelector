@@ -1,5 +1,5 @@
 ## Title: Addon Selector
-## APIVersion: 101033 101034
+## APIVersion: 101034 101035
 ## SavedVariables: AddonSelectorSavedVars
 ## AddOnVersion: 2013
 ## Version: 2.13
