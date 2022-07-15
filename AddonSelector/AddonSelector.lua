@@ -9,6 +9,7 @@ General remark: If you got Votans Addon List enabled this will interfere and dis
 
 -Fixed SHIFT+left click mass marking
 -Fixed "Show active pack to chat" keybind/function to show Global or character name saved for the pack properly
+-Changed new added secondary keybind to UI_SHORTCUT_QUARTERNARY instead, as AddonSelector uses the secondary keybind since years already!
 
 -Added new settings context menu entries:
 --Undo last mass-marking (will undo to the last automatically saved backup, which is saved as you mass-change any addon's state via the keybinds, settings context menu or SHIFT+click)
@@ -20,7 +21,8 @@ This backup is saved account wide, not per character!
 --Select all addons (including libraries -> Will not change and enable you to always select all addons)
 --Deselect all libraries
 --Select all libraries
-
+--Scroll up to AddOns
+--Scroll down to libraries
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -2503,6 +2505,30 @@ function AddonSelector:Initialize()
         end
     end)
     ]]
+
+
+    --Update the keybind descriptor for the 2nd keybind to use the 3rd keybind, as AddonSelector also uses 2nd keybind since years!
+    --[[
+    local secondaryKeybindDescriptor =
+    {
+        keybind = "ADDONS_PANEL_SECONDARY",
+        name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
+        callback = function()
+            ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
+        end,
+    }
+    ]]
+    ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
+    if ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor ~= nil then
+        ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor = {
+            keybind = "ADDONS_PANEL_QUATERNARY",
+            name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
+            callback = function()
+                ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
+            end,
+        }
+        ADDON_MANAGER_OBJECT:RefreshKeybinds()
+    end
 end
 
 --Reload the user interface

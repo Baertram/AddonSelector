@@ -17,6 +17,9 @@
             <Action name="ADDONS_SELECT_ALL" hideAction="true" inheritsBindFrom="UI_SHORTCUT_TERTIARY">
                 <Down>AddonSelector_SelectAddons(true)</Down>
             </Action>
+            <Action name="ADDONS_PANEL_QUATERNARY" hideAction="true" inheritsBindFrom="UI_SHORTCUT_QUATERNARY">
+                <Down>ZO_AddOnManagerSecondaryButton_Callback()</Down>
+            </Action>
         </Category>
     </Layer>
 </Bindings>
