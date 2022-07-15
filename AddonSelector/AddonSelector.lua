@@ -121,7 +121,9 @@ local langArray = {
         ["DeselectAllAddons"]   = "Alle demarkieren",
         ["SelectAllAddons"]     = "Alle markieren",
         ["DeselectAllLibraries"]= "Alle Bibliotheken demarkieren",
-        ["SelectAllLibraries"]  = "Alle Bibliotheken markieren",
+        ["SelectAllLibraries"]   = "Alle Bibliotheken markieren",
+        ["ScrollToAddons"]       = "^ AddOns       ^",
+        ["ScrollToLibraries"]    = "v Bibliotheken v",
         ["SelectAllAddonsSaved"] = "Gesicherte markieren",
         ["AddonSearch"]          = "Suche:",
         ["selectedPackName"]     = "Gewählt (%s): ",
@@ -161,6 +163,8 @@ local langArray = {
         ["SelectAllAddons"]     = "Select all",
         ["DeselectAllLibraries"]= "Deselect all libaries",
         ["SelectAllLibraries"]  = "Select all libaries",
+        ["ScrollToAddons"]       = "^ AddOns    ^",
+        ["ScrollToLibraries"]    = "v Libraries v",
         ["SelectAllAddonsSaved"] = "Select saved",
         ["AddonSearch"]          = "Search:",
         ["selectedPackName"]     = "Selected (%s): ",
@@ -787,16 +791,16 @@ local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
     if ADDON_MANAGER_OBJECT.RefreshMultiButton then
         ADDON_MANAGER_OBJECT:RefreshMultiButton()
     end
-    --Enable the delete button
-    ChangeDeleteButtonEnabledState(nil, true)
     if not noPackUpdate then
+        --Enable the delete button
+        ChangeDeleteButtonEnabledState(nil, true)
         --Set the currently selected packname
         SetCurrentCharacterSelectedPackname(addonPackName, addonPackData)
         --Update the currently selected packName label
         UpdateCurrentlySelectedPackName(nil, addonPackName, addonPackData)
+        --Enable the save pack button
+        ChangeSaveButtonEnabledState(true)
     end
-    --Enable the save pack button
-    ChangeSaveButtonEnabledState(true)
 end
 
 
@@ -981,12 +985,28 @@ end
 
 --Scroll the scrollbar to an index
 local function scrollAddonsScrollBarToIndex(index, animateInstantly)
+    ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
     if ADDON_MANAGER_OBJECT ~= nil and ADDON_MANAGER_OBJECT.list ~= nil and ADDON_MANAGER_OBJECT.list.scrollbar ~= nil then
         --ADDON_MANAGER_OBJECT.list.scrollbar:SetValue((ADDON_MANAGER_OBJECT.list.uniformControlHeight-0.9)*index)
         --ZO_Scroll_ScrollAbsolute(self, value)
         local onScrollCompleteCallback = function() end
         animateInstantly = animateInstantly or false
         ZO_ScrollList_ScrollDataIntoView(ADDON_MANAGER_OBJECT.list, index, onScrollCompleteCallback, animateInstantly)
+    end
+end
+
+function AddonSelector_ScrollTo(toAddOns)
+    if toAddOns == nil then end
+    ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
+    local addonManagerObjectList = ADDON_MANAGER_OBJECT.list
+    if toAddOns == true then
+        --Scroll to AddOns
+        ZO_ScrollList_ResetToTop(addonManagerObjectList)
+    else
+        --Scroll to libraries
+        local firstLibData = ADDON_MANAGER_OBJECT.addonTypes[true][1]
+        if not firstLibData or not firstLibData.sortIndex then return end
+        scrollAddonsScrollBarToIndex(firstLibData.sortIndex, true)
     end
 end
 
@@ -2010,6 +2030,9 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL)
     AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
 
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("ScrollToAddons"),         function() AddonSelector_ScrollTo(true)  end, MENU_ADD_OPTION_LABEL)
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("ScrollToLibraries"),      function() AddonSelector_ScrollTo(false) end, MENU_ADD_OPTION_LABEL)
+    AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
     --Add the global pack options
     checkIfGlobalPacksShouldBeShown()
     local globalPackSubmenu = {
