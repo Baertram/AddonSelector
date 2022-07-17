@@ -3,26 +3,8 @@
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
 2022-07-15
-AddonSelector v2.13
--Made compatible with PTS API101035
-General remark: If you got Votans Addon List enabled this will interfere and disable addons/libs if you deselect/select other addons/libs via keybinds, the settings context menu or via SHIFT+click! e.g. if you disable a library where only 1 addon was using it this addon might get disabled too. And the other way around, the same.
-
--Fixed SHIFT+left click mass marking
--Fixed "Show active pack to chat" keybind/function to show Global or character name saved for the pack properly
--Changed new added secondary keybind to UI_SHORTCUT_QUARTERNARY instead, as AddonSelector uses the secondary keybind since years already!
-
--Added new settings context menu entries:
---Undo last mass-marking (will undo to the last automatically saved backup, which is saved as you mass-change any addon's state via the keybinds, settings context menu or SHIFT+click)
-The entry shows the # of addons enabled, and the date & time as the backup was saved.
-This backup is saved account wide, not per character!
---Clear last backuped mass-marking
---Deselect all addons (including libraries)
---Re-Select last enable addons (same like the keybind that switches between "re-select" or "select all")
---Select all addons (including libraries -> Will not change and enable you to always select all addons)
---Deselect all libraries
---Select all libraries
---Scroll up to AddOns
---Scroll down to libraries
+AddonSelector v2.14
+-Updated PL translations - by generalupload
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -47,7 +29,7 @@ AddonSelector.noAddonCheckBoxUpdate = false
 AddonSelector.lastChangedAddOnVars = {}
 AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
-AddonSelector.version = "2.13"
+AddonSelector.version = "2.14"
 
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
@@ -401,21 +383,25 @@ local langArray = {
         ["searchClearHistory"] = "Clear history",
     },
     ["pl"] = { --by generaluploads
-		["packName"]			= "Nazwa paczki:",
-		["selectPack"]			= "Wybierz",
-    	["ERRORpackMissing"] 	= "ADDON SELECTOR: Brak nazwy paczki",
-        ["autoReloadUIHint"]	= "Automatycznie przeładuj interfejs przy wyborze paczki.",
+        ["packName"]            = "Nazwa paczki:",
+        ["selectPack"]          = "Wybierz",
+        ["ERRORpackMissing"]    = "ADDON SELECTOR: Brak nazwy paczki",
+        ["autoReloadUIHint"]    = "Automatycznie przeładuj interfejs przy wyborze paczki.",
         ["autoReloadUIHintTooltip"] = "Automatycznie przeładuj interfejs: Kiedy jest WłĄCZONA, uniemożliwi to edycję i usuwanie pakietów addonów. Będziesz musiał/a to wyłączyć, aby edytować lub usuwać paczki addonów!",
-        ["saveButton"]			= "Zapisz",
+        ["saveButton"]          = "Zapisz",
         ["savePackTitle"]        = "Nadpisać paczkę?",
         ["savePackBody"]        = "Nadpisać istniejącą paczkę %s?",
-        ["deleteButton"]		= "Usuń",
+        ["deleteButton"]        = "Usuń",
         ["deletePackTitle"]     = "Usuń: ",
         ["deletePackAlert"]     = "ADDON SELECTOR: Musisz wybrać paczkę, którą chcesz usunąć.",
         ["deletePackError"]     = "ADDON SELECTOR: Błąd usuwania paczki\n%s.",
         ["deletePackBody"]      = "Naprawdę usunąć?\n%s",
         ["DeselectAllAddons"]   = "Odznacz wszystkie",
         ["SelectAllAddons"]     = "Zaznacz wszystkie",
+        ["DeselectAllLibraries"]= "Odznacz wszystkie biblioteki",
+        ["SelectAllLibraries"]  = "Zaznacz wszystkie biblioteki",
+        ["ScrollToAddons"]       = "^ AddOny    ^",
+        ["ScrollToLibraries"]    = "v Biblioteki v",
         ["SelectAllAddonsSaved"] = "Zapisano ponowny wybór",
         ["AddonSearch"]          = "Szukaj:",
         ["selectedPackName"]     = "Wybrano (%s): ",
@@ -434,6 +420,8 @@ local langArray = {
         ["searchExcludeFilename"] = "Wyklucz nazwę pliku",
         ["searchSaveHistory"] = "Zapisz historię wyszukiwanych haseł",
         ["searchClearHistory"] = "Wyczyść historię",
+        ["UndoLastMassMarking"] = "< Cofnij ostatnie zaznaczenia",
+        ["ClearLastMassMarking"] = "Wyczyść zaznaczenie kopii zapasowej"
     },
 }
 langArray["fx"] = langArray["pl"] --inofficial pl "debug language" -> by generaluploads
