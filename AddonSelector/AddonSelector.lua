@@ -5,8 +5,10 @@
 2022-08-24
 AddonSelector v2.15
 -Fixed reloadUI keybind button disabled after pack selection
--Fixed auto ReloadUI at global packs not working
--Added settings context menu entry (only informatin) showing the last loaded pack name, date & time
+-Fixed auto ReloadUI at global packs not working if same pack was selected as before (and seting to auto reloadUI was enabled in between)
+-Added settings context menu entry (only information) showing the last loaded pack name, date & time before the reload has taken place.
+--Non existing (character)packs will be shown red at the char/pack name
+--Clicking the existing pack name will activate that pack in the dropdown box again
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -863,6 +865,27 @@ local function updateAddonsEnabledStateByPackData(packData)
     return somethingDone
 end
 
+local function loadAddonPack(packName, packData)
+    -- Clear the edit box:
+    AddonSelector.editBox:Clear()
+
+    --TODO: Remove after debugging
+    --AddonSelector.SelectedPackData = packData
+
+    local somethingDone = updateAddonsEnabledStateByPackData(packData)
+--d(">somethingDone: " ..tos(somethingDone))
+
+    if not doNotReloadUI and AddonSelector.acwsv.autoReloadUI == true then -- and somethingDone == true then
+        --Set the currently selected packname
+        SetCurrentCharacterSelectedPackname(packName, packData)
+        AddonSelector.acwsv.packChangedBeforeReloadUI = true
+        ReloadUI("ingame")
+    else
+        AddonSelector.acwsv.packChangedBeforeReloadUI = true
+        onAddonPackSelected(packName, packData, false)
+    end
+end
+
 --Undo the last mass marking by loading the last saved profile before the mass marking was done
 --Mass marking = deselect all, select all, deselect all libraries, select all libraries, shift click mass marking
 function AddonSelector_UndoLastMassMarking(clearBackup)
@@ -1668,24 +1691,7 @@ end
 -- Enable all addons that are in the selected addon pack, disable the rest.
 local function OnClickDDL(comboBox, packName, packData, selectionChanged)
 --d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
-    -- Clear the edit box:
-    AddonSelector.editBox:Clear()
-
-    --TODO: Remove after debugging
-    --AddonSelector.SelectedPackData = packData
-
-    local somethingDone = updateAddonsEnabledStateByPackData(packData)
---d(">somethingDone: " ..tos(somethingDone))
-
-    if not doNotReloadUI and AddonSelector.acwsv.autoReloadUI == true then -- and somethingDone == true then
-        --Set the currently selected packname
-        SetCurrentCharacterSelectedPackname(packName, packData)
-        AddonSelector.acwsv.packChangedBeforeReloadUI = true
-        ReloadUI("ingame")
-    else
-        AddonSelector.acwsv.packChangedBeforeReloadUI = true
-        onAddonPackSelected(packName, packData, false)
-    end
+    loadAddonPack(packName, packData)
 end
 
 -- Create ItemEntry table for the ddl
@@ -2165,7 +2171,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
            lastLoadedPackCharName = packNameGlobal
         end
         local lastLoadedPackName = lastLoadedPackData.packName
-
+        local packStillExistsAndIsSelectable = true
         --Check if that pack still exists or not
         local outputColorCharStart = ""
         local outputColorCharEnd = ""
@@ -2177,14 +2183,17 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             if lastLoadedPackCharName == GLOBAL_PACK_NAME then
                 outputColorStart =  "|cFF0000"
                 outputColorEnd =    "|r"
+                packStillExistsAndIsSelectable = false
             else
                 outputColorCharStart =  "|cFF0000"
                 outputColorCharEnd =    "|r"
+                packStillExistsAndIsSelectable = false
             end
         else
             if lastLoadedPackName == nil or addonPacksOfCharOrGlobal[lastLoadedPackName] == nil then
                 outputColorStart =  "|cFF0000"
                 outputColorEnd =    "|r"
+                packStillExistsAndIsSelectable = false
             end
         end
 
@@ -2195,6 +2204,21 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
                 function()
                     --TODO Set the pack to the dropddown box again
+                    if packStillExistsAndIsSelectable == true then
+                        doNotReloadUI = true
+                        --todo Select the entry in the pack dropdown box now and activate the addons of the pack that way
+                        --But do not reloadUI automatically!
+                        local function evalFunc(entry)
+                            if entry.isCharacterPackHeader == false then
+                                if entry.name == lastLoadedPackName and entry.charName == lastLoadedPackCharNameReal then
+                                    return true
+                                end
+                            end
+                            return false
+                        end
+                        AddonSelector.ddl.m_comboBox:SetSelectedItemByEval(evalFunc, false) --do not ignore the callback -> run it!
+                        doNotReloadUI = false
+                    end
                 end, MENU_ADD_OPTION_LABEL)
         end
     end
