@@ -2200,7 +2200,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         local lastLoadedPackTime = ""
         lastLoadedPackTime = os.date("%c", lastLoadedPackData.timestamp)
         if lastLoadedPackCharName ~= "" and lastLoadedPackName ~= "" and lastLoadedPackTime ~= "" then
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER)
+            --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment)
+            AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6, nil)
             AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
                 function()
                     --TODO Set the pack to the dropddown box again
