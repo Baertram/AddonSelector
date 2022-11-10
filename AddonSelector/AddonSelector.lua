@@ -2,14 +2,9 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2022-08-24
-AddonSelector v2.15
--Fixed reloadUI keybind button disabled after pack selection
--Fixed auto ReloadUI at global packs not working if same pack was selected as before (and seting to auto reloadUI was enabled in between)
--Added settings context menu entry (only information) showing the last loaded pack name, date & time before the reload has taken place.
---Non existing (character)packs will be shown red at the char/pack name
---Clicking the existing pack name will activate that pack in the dropdown box again
-
+2022-11-10
+AddonSelector v2.16
+Added IT translations
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -34,7 +29,7 @@ AddonSelector.noAddonCheckBoxUpdate = false
 AddonSelector.lastChangedAddOnVars = {}
 AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
-AddonSelector.version = "2.14"
+AddonSelector.version = "2.16"
 
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
@@ -437,7 +432,43 @@ local langArray = {
         ["UndoLastMassMarking"] = "< Cofnij ostatnie zaznaczenia",
         ["ClearLastMassMarking"] = "Wyczyść zaznaczenie kopii zapasowej",
         ["LastPackLoaded"] = "Ostatnio załadowany:",
-},
+    },
+        ["it"] = { --by horizonxael
+        ["packName"] = "Nome del profilo :",
+        ["selectPack"] = "Seleziona il profilo",
+        ["ERRORpackMissing"] = "ADDON SELECTOR : Nessun nome profilo",
+        ["autoReloadUIHint"] = "Ricaricare l'interfaccia dopo aver selezionato un profilo.",
+        ["autoReloadUIHintTooltip"] = "Ricaricamento automatico: selezionato, vieta la modifica o l'eliminazione dei profili. Deve essere deselezionato per modificare o eliminare un profilo",
+        ["saveButton"] = "Registra",
+        ["savePackTitle"] = "¿Sostituire il profilo?",
+        ["savePackBody"] = "Sostituisci il profilo esistente %s?",
+        ["deleteButton"] = "Cancella",
+        ["deletePackTitle"] = "Cancellare: ",
+        ["deletePackAlert"] = "ADDON SELECTOR: Devi selezionare un profilo da eliminare.",
+        ["deletePackError"] = "ADDON SELECTOR: Errore di eliminazione del profilo\n%s.",
+        ["deletePackBody"] = "Vuoi davvero eliminare questo profilo?\n%s",
+        ["DeselectAllAddons"] = "Deseleziona tutto",
+        ["SelectAllAddons"] = "Seleziona tutto",
+        ["SelectAllAddonsSaved"] = "Seleziona Salvato",
+        ["AddonSearch"] = "Ricercare:",
+        ["selectedPackName"] = "Selezionato (%s): ",
+        ["LibDialogMissing"] = "Libreria \'LibDialog\' mancante! Il componente aggiuntivo non può funzionare senza di essa!",
+        ["ReloadUI"] = GetString(SI_ADDON_MANAGER_RELOAD) or "Ricarica interfaccia",
+        ["ShowActivePack"] = "Mostra profilo attivo",
+        ["ShowSubMenuAtGlobalPacks"] = "Mostra i sottomenu del gruppo di profili",
+        ["ShowSettings"] = "Mostra configurazione di \'"..ADDON_NAME.."\' ",
+        ["ShowGlobalPacks"] = "Mostra i gruppi di profili salvati",
+        ["GlobalPackSettings"] = "Configurazione del gruppo di profili",
+        ["CharacterNameSettings"] = "Impostazione del nome del personaggio",
+        ["SaveGroupedByCharacterName"] = "Salva i gruppi in base al nome del personaggio",
+        ["ShowGroupedByCharacterName"] = "Mostra i gruppi in base al nome del personaggio",
+        ["packCharName"] = "Profilo del personaggio",
+        ["packGlobal"] = "Profilo globale",
+        ["searchExcludeFilename"] = "Escludi nome file",
+        ["searchSaveHistory"] = "Salva la cronologia delle ricerche",
+        ["searchClearHistory"] = "Cancellare la cronologia",
+        ["LastPackLoaded"] = "Ultimo caricato:",
+    },
 }
 langArray["fx"] = langArray["pl"] --inofficial pl "debug language" -> by generaluploads
 
@@ -742,7 +773,7 @@ end
 --Get the currently selected pack name and the character owning the pack for the currently logged in character
 --as the user interfaces reloaded and the pack was loaded
 local function GetCurrentCharacterSelectedPackname()
-d("GetCurrentCharacterSelectedPackname-currentCharId: " .. tos(currentCharId))
+--d("GetCurrentCharacterSelectedPackname-currentCharId: " .. tos(currentCharId))
     --Get the current character's uniqueId
     if not currentCharId then return end
     --Set the currently selected packname to the SavedVariables
