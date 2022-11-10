@@ -433,7 +433,7 @@ local langArray = {
         ["ClearLastMassMarking"] = "Wyczyść zaznaczenie kopii zapasowej",
         ["LastPackLoaded"] = "Ostatnio załadowany:",
     },
-        ["it"] = { --by horizonxael
+    ["it"] = { --by horizonxael
         ["packName"] = "Nome del profilo :",
         ["selectPack"] = "Seleziona il profilo",
         ["ERRORpackMissing"] = "ADDON SELECTOR : Nessun nome profilo",
@@ -449,6 +449,10 @@ local langArray = {
         ["deletePackBody"] = "Vuoi davvero eliminare questo profilo?\n%s",
         ["DeselectAllAddons"] = "Deseleziona tutto",
         ["SelectAllAddons"] = "Seleziona tutto",
+        ["DeselectAllLibraries"]= "Deseleziona tutte le librerie",
+        ["SelectAllLibraries"] = "Seleziona tutte le librerie",
+        ["ScrollToAddons"] = "^ Componenti Aggiuntivi ^",
+        ["ScrollToLibraries"] = "v Librerie v",
         ["SelectAllAddonsSaved"] = "Seleziona Salvato",
         ["AddonSearch"] = "Ricercare:",
         ["selectedPackName"] = "Selezionato (%s): ",
@@ -467,6 +471,8 @@ local langArray = {
         ["searchExcludeFilename"] = "Escludi nome file",
         ["searchSaveHistory"] = "Salva la cronologia delle ricerche",
         ["searchClearHistory"] = "Cancellare la cronologia",
+        ["UndoLastMassMarking"] = "< Annulla le ultime marcature",
+        ["ClearLastMassMarking"] = "Cancella il backup della marcatura",
         ["LastPackLoaded"] = "Ultimo caricato:",
     },
 }
