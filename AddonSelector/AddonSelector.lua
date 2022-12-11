@@ -2,9 +2,12 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2022-11-10
-AddonSelector v2.16
-Added IT translations
+2022-12-11
+AddonSelector v2.18
+
+Added support for Addon Category addon:
+-Search box right click context menu
+-Search box category name search
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -29,7 +32,7 @@ AddonSelector.noAddonCheckBoxUpdate = false
 AddonSelector.lastChangedAddOnVars = {}
 AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
-AddonSelector.version = "2.16"
+AddonSelector.version = "2.17"
 
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
@@ -85,10 +88,19 @@ local currentCharIdNum = GetCurrentCharacterId()
 local currentCharId = tos(currentCharIdNum)
 local currentCharName = ZO_CachedStrFormat(SI_UNIT_NAME, GetUnitName("player"))
 
+--Other addons
+--[AddonCategory]
+local isAddonCategoryEnabled = false
+local addonCategoryCategories, addonCategoryIndices
+
+
 local doNotReloadUI = false
 local lang = GetCVar("language.2")
 local fallbackLang = "en"
 local langArray = {
+    ---------------------------------------------------------------------------------------------------------------------
+    -- Official ESO languages
+    ------------------------------------------------------------------------------------------------------------------------
 	["de"] = { -- by Baertram
 		["packName"]			= "Pack Name:",
 		["selectPack"]			= "Pack wählen",
@@ -130,7 +142,10 @@ local langArray = {
         ["UndoLastMassMarking"] = "< Markierungen rückgängig machen",
         ["ClearLastMassMarking"] = "Markierungs Backup löschen",
         ["LastPackLoaded"] = "Zuletzt geladen:",
+        ["addonCategories"] = "Addon Kategorien",
+        ["noCategory"]      = "-Keine Kategorie-"
     },
+---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
 		["packName"]			= "Pack name:",
 		["selectPack"]			= "Select pack",
@@ -172,7 +187,10 @@ local langArray = {
         ["UndoLastMassMarking"] = "< Undo last markings",
         ["ClearLastMassMarking"] = "Clear marking backup",
         ["LastPackLoaded"] = "Last loaded:",
+        ["addonCategories"] = "Addon categories",
+        ["noCategory"]      = "-No category-"
     },
+---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
         ["packName"]            = "Nombre del conjunto:",
         ["selectPack"]          = "Selecciona conjunto",
@@ -209,6 +227,7 @@ local langArray = {
         ["searchClearHistory"] = "Borrar historial",
         ["LastPackLoaded"] = "Último cargado:",
     },
+---------------------------------------------------------------------------------------------------------------------
     ["fr"] = { --by Kwisatz
         ["packName"]            = "Nom du profil :",
         ["selectPack"]          = "Sélectionner profil",
@@ -245,6 +264,7 @@ local langArray = {
         ["searchClearHistory"] = "Effacer l'historique",
         ["LastPackLoaded"] = "Dernier chargé:",
     },
+---------------------------------------------------------------------------------------------------------------------
     ["jp"] = { -- by Calamath
         ["packName"] = "パック名:",
         ["selectPack"] = "パック選択",
@@ -281,6 +301,7 @@ local langArray = {
         ["searchClearHistory"] = "履歴を消去する",
         ["LastPackLoaded"] = "最終ロード:",
     },
+---------------------------------------------------------------------------------------------------------------------
     ["ru"] = { --by Friday_The13_rus
         ["packName"]            = "Имя сборки:",
         ["selectPack"]          = "Выбрать",
@@ -317,8 +338,54 @@ local langArray = {
         ["searchClearHistory"] = "Очистить историю",
         ["LastPackLoaded"] = "Последняя загрузка:",
     },
-
-    --Custom languages
+---------------------------------------------------------------------------------------------------------------------
+    --Chinese by Lykeion 20221206
+    ["zh"] = { -- by Lykeion
+        ["packName"] = "插件包名称:",
+        ["selectPack"] = "选择插件包",
+        ["ERRORpackMissing"] = "ADDON SELECTOR: 未找到插件包名称",
+        ["autoReloadUIHint"] = "选择插件包时自动重新加载UI.",
+        ["autoReloadUIHintTooltip"] = "启用该选项时你对插件包的编辑和删除将被重载中断. 如果你想编辑插件包请先关闭本功能!",
+        ["saveButton"] = "保存",
+        ["savePackTitle"] = "覆盖插件包?",
+        ["savePackBody"] = "覆盖已存在的插件包 %s?",
+        ["deleteButton"] = "删除",
+        ["deletePackTitle"] = "删除: ",
+        ["deletePackAlert"] = "ADDON SELECTOR: 你必须选中一个插件包以删除.",
+        ["deletePackError"] = "ADDON SELECTOR: 插件包删除发生错误\n%s.",
+        ["deletePackBody"] = "真的要删除吗?\n%s",
+        ["DeselectAllAddons"] = "取消选择所有",
+        ["SelectAllAddons"] = "选择所有",
+        ["DeselectAllLibraries"]= "取消选择所有Lib",
+        ["SelectAllLibraries"] = "选择所有Lib",
+        ["ScrollToAddons"] = "↑向上滚动至插件↑",
+        ["ScrollToLibraries"] = "↓向下滚动至运行库↓",
+        ["SelectAllAddonsSaved"] = "选择已保存的",
+        ["AddonSearch"] = "搜索:",
+        ["selectedPackName"] = "已选择 (%s): ",
+        ["LibDialogMissing"] = "运行库 \'LibDialog\' 未找到! 本插件必须使用该运行库!",
+        ["ReloadUI"] = GetString(SI_ADDON_MANAGER_RELOAD) or "重新加载UI",
+        ["ShowActivePack"] = "显示启用的插件包",
+        ["ShowSubMenuAtGlobalPacks"] = "在账户插件包包中展示子菜单",
+        ["ShowSettings"] = "显示 \'"..ADDON_NAME.."\' 设置",
+        ["ShowGlobalPacks"] = "显示账户保存的插件包",
+        ["GlobalPackSettings"] = "账户插件包设置",
+        ["CharacterNameSettings"] = "角色名设置",
+        ["SaveGroupedByCharacterName"] = "按角色名保存插件包",
+        ["ShowGroupedByCharacterName"] = "展示以角色命名的插件包",
+        ["packCharName"] = "角色插件包",
+        ["packGlobal"] = "账户插件包",
+        ["searchExcludeFilename"] = "不包含文件名",
+        ["searchSaveHistory"] = "保存搜索关键词历史",
+        ["searchClearHistory"] = "清除历史",
+        ["UndoLastMassMarking"] = "< 重做上次的标记",
+        ["ClearLastMassMarking"] = "清除标记备份文件",
+        ["LastPackLoaded"] = "上次加载:",
+    },
+    ---------------------------------------------------------------------------------------------------------------------
+    -- Custom languages
+    ------------------------------------------------------------------------------------------------------------------------
+    --Brazilian
     ["br"] = { -- by Anntauri
         ["packName"]            = "Nome do pacote:",
         ["selectPack"]          = "Selecionar pacote",
@@ -355,6 +422,8 @@ local langArray = {
         ["searchClearHistory"] = "Limpar histórico",
         ["LastPackLoaded"] = "Último carregamento:",
     },
+---------------------------------------------------------------------------------------------------------------------
+    --Portuguese
     ["pt"] = {
         ["packName"] = "Nome do Pacote:",
         ["selectPack"] = "Escolha pacote",
@@ -391,6 +460,8 @@ local langArray = {
         ["searchClearHistory"] = "Clear history",
         ["LastPackLoaded"] = "Último carregamento:",
     },
+    ---------------------------------------------------------------------------------------------------------------------
+    --Polish
     ["pl"] = { --by generaluploads
         ["packName"]            = "Nazwa paczki:",
         ["selectPack"]          = "Wybierz",
@@ -433,6 +504,8 @@ local langArray = {
         ["ClearLastMassMarking"] = "Wyczyść zaznaczenie kopii zapasowej",
         ["LastPackLoaded"] = "Ostatnio załadowany:",
     },
+---------------------------------------------------------------------------------------------------------------------
+    --Italian
     ["it"] = { --by horizonxael
         ["packName"] = "Nome del profilo :",
         ["selectPack"] = "Seleziona il profilo",
@@ -504,6 +577,8 @@ local deletePackTitleStr = AddonSelector_GetLocalizedText("deletePackTitle")
 local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
 local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
 local packNameStr = AddonSelector_GetLocalizedText("packName")
+local addonCategoriesStr = AddonSelector_GetLocalizedText("addonCategories")
+local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
 
 --Clean the color codes from the addon name
 --[[
@@ -1082,6 +1157,7 @@ local function scrollAddonsScrollBarToIndex(index, animateInstantly)
         ZO_ScrollList_ScrollDataIntoView(ADDON_MANAGER_OBJECT.list, index, onScrollCompleteCallback, animateInstantly)
     end
 end
+AddonSelector.ScrollAddonsScrollBarToIndex = scrollAddonsScrollBarToIndex
 
 function AddonSelector_ScrollTo(toAddOns)
     if toAddOns == nil then end
@@ -1220,11 +1296,67 @@ local function clearSearchHistory(searchType)
     settings.searchHistory[searchType] = nil
 end
 
+
+-------------------------------------------------------------------
+-- -v- Other addons -v-
+-------------------------------------------------------------------
+--[AddonCategory]
+local function getAddonCategoryCategories()
+    if not isAddonCategoryEnabled then return nil, nil end
+    local addonCategories, addonCategoriesIndices
+    local possibleAddonCategories = AddonCategory.indexCategories
+    if possibleAddonCategories ~= nil then
+        addonCategories = {}
+        addonCategoriesIndices = {}
+        local countAdded = 1
+        --Add the 1st entry "No category"
+        addonCategories[1] = noCategoryStr
+        addonCategoriesIndices[noCategoryStr] = -1 --Dummy value to show it schould scroll up to the addons
+        --Add the defined categories of the addon AddonCategory
+        for categoryName, categorysIndexInAddonsList in pairs(possibleAddonCategories) do
+            countAdded = countAdded + 1
+            addonCategories[countAdded] = categoryName
+            addonCategoriesIndices[categoryName] = categorysIndexInAddonsList
+        end
+        --Sort the output table by category name
+        table.sort(addonCategories)
+    end
+    return addonCategories, addonCategoriesIndices
+end
+-------------------------------------------------------------------
+--  -^- Other addons -^-
+-------------------------------------------------------------------
+
+
 --Search for addons by e.g. name and scroll the list to the found addon, or filter (hide) all non matching addons
-function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound)
+function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAddonCategorySearched)
     searchType = searchType or SEARCH_TYPE_NAME
     doHideNonFound = doHideNonFound or false
---d("[AddonSelector]SearchAddon, searchType: " .. tos(searchType) .. ", searchValue: " .. tos(searchValue) .. ", hideNonFound: " ..tos(doHideNonFound))
+    isAddonCategorySearched = isAddonCategorySearched or false
+--d("[AddonSelector]SearchAddon, searchType: " .. tos(searchType) .. ", searchValue: " .. tos(searchValue) .. ", hideNonFound: " ..tos(doHideNonFound).. ", isAddonCategorySearched: " ..tos(isAddonCategorySearched))
+
+    if isAddonCategorySearched == true then
+        --searchValue is the category name of the addon AddonCategory. The index to scroll to is defined via table
+        --AddonCategory.indexCategories[categoryName] = addonsIndexInAddonsList
+        --Cached data will be stored in local table addonCategoryIndices[categoryName] where categoryName is searchValue!
+        -->Get the index tos croll to now
+        if addonCategoryIndices == nil then
+            addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
+        end
+        if addonCategoryIndices == nil then return end
+        local indexToScrollTo = addonCategoryIndices[searchValue]
+--d(">addoncategory index: " ..tos(indexToScrollTo))
+        if indexToScrollTo == nil then return end
+        if indexToScrollTo ~= -1 then
+            -->Scroll to the searchValue's index now
+            scrollAddonsScrollBarToIndex(indexToScrollTo)
+        else
+            --Scroll to the top -> Unassigned addons (no category)
+            AddonSelector_ScrollTo(true)
+        end
+        return
+    end
+
     local addonList = ZOAddOnsList.data
     if addonList == nil then return end
     local isEmptySearch = searchValue == ""
@@ -1377,21 +1509,29 @@ local function showAddOnsList()
     return true
 end
 
-local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScene)
+local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScene, isAddonCategorySearched)
     if not addonName or addonName == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
+    isAddonCategorySearched = isAddonCategorySearched or false
     if not doNotShowAddOnsScene then
         --Show the game menu and open the AddOns
         if not showAddOnsList() then return end
     end
     --Set the focus to the addon search box
     local searchBox = AddonSelector.searchBox
-    if searchBox then
-        searchBox:SetText(addonName)
-        searchBox:TakeFocus()
+    if not isAddonCategorySearched then
+        if searchBox then
+            searchBox:SetText(addonName)
+            searchBox:TakeFocus()
+        end
+    else
+        --Do not add the searched category to the search history
+        if searchBox then
+            searchBox:SetText("")
+        end
     end
-    --Search for the addonName
-    AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false)
+    --Search for the addonName or category
+    AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false, isAddonCategorySearched)
 end
 
 --Add the active addon count to the header text
@@ -2288,6 +2428,7 @@ local function onMouseExitTooltip()
     ZO_Tooltips_HideTextTooltip()
 end
 
+
 -- Create the AddonSelector control, set references to controls
 -- and click handlers for the save/delete buttons
 function AddonSelector:CreateControlReferences()
@@ -2328,24 +2469,50 @@ function AddonSelector:CreateControlReferences()
 
     self.searchBox 	= addonSelector:GetNamedChild("SearchBox")
     self.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
-        if not settings.searchSaveHistory then return end
         if isUpInside and mouseButton == MOUSE_BUTTON_INDEX_RIGHT then
-            local searchHistory = settings.searchHistory
-            local searchType = SEARCH_TYPE_NAME
-            local searchHistoryOfSearchMode = searchHistory[searchType]
-            if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
-                ClearMenu()
-                for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
-                    AddCustomMenuItem(searchTerm, function()
-                        openGameMenuAndAddOnsAndThenSearch(searchTerm, true)
+            local doShowMenu = false
+            local searchHistoryWasAdded = false
+            if settings.searchSaveHistory then
+                local searchHistory = settings.searchHistory
+                local searchType = SEARCH_TYPE_NAME
+                local searchHistoryOfSearchMode = searchHistory[searchType]
+                if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
+                    ClearMenu()
+                    for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
+                        AddCustomMenuItem(searchTerm, function()
+                            openGameMenuAndAddOnsAndThenSearch(searchTerm, true, false)
+                            ClearMenu()
+                        end)
+                    end
+                    AddCustomMenuItem("-", function() end)
+                    AddCustomMenuItem(clearSearchHistoryStr, function()
+                        clearSearchHistory(searchType)
                         ClearMenu()
                     end)
+                    doShowMenu = true
+                    searchHistoryWasAdded = true
                 end
-                AddCustomMenuItem("-", function() end)
-                AddCustomMenuItem(clearSearchHistoryStr, function()
-                    clearSearchHistory(searchType)
-                    ClearMenu()
-                end)
+            end
+            --AddonCategory support
+            if isAddonCategoryEnabled == true then
+                addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
+                if addonCategoryCategories ~= nil and #addonCategoryCategories > 0 then
+                    if not searchHistoryWasAdded then
+                        ClearMenu()
+                    else
+                        AddCustomMenuItem(addonCategoriesStr, function() end, MENU_ADD_OPTION_HEADER)
+                    end
+                    for _, searchTerm in ipairs(addonCategoryCategories) do
+                        AddCustomMenuItem(searchTerm, function()
+                            openGameMenuAndAddOnsAndThenSearch(searchTerm, true, true)
+                            ClearMenu()
+                        end)
+                    end
+                    doShowMenu = true
+                end
+            end
+            --Show the context menu now?
+            if doShowMenu == true then
                 ShowMenu(selfCtrl)
             end
         end
@@ -2735,6 +2902,13 @@ local function OnAddOnLoaded(event, addonName)
     ADDON_MANAGER = ADDON_MANAGER or GetAddOnManager()
     ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
     AddonSelector.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
+
+
+    --AddonCategory is enabled?
+    isAddonCategoryEnabled = (AddonCategory ~= nil and AddonCategory.getIndexOfCategory ~= nil and true) or false
+    if isAddonCategoryEnabled == true then
+        addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
+    end
 
 	--Load SavedVariables, update controls etc.
     AddonSelector:Initialize()
