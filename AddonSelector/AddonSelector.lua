@@ -1519,16 +1519,9 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     end
     --Set the focus to the addon search box
     local searchBox = AddonSelector.searchBox
-    if not isAddonCategorySearched then
-        if searchBox then
-            searchBox:SetText(addonName)
-            searchBox:TakeFocus()
-        end
-    else
-        --Do not add the searched category to the search history
-        if searchBox then
-            searchBox:SetText("")
-        end
+    if searchBox then
+        searchBox:SetText(addonName)
+        searchBox:TakeFocus()
     end
     --Search for the addonName or category
     AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false, isAddonCategorySearched)
