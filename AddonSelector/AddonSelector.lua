@@ -1519,9 +1519,16 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     end
     --Set the focus to the addon search box
     local searchBox = AddonSelector.searchBox
-    if searchBox then
-        searchBox:SetText(addonName)
-        searchBox:TakeFocus()
+    if not isAddonCategorySearched then
+        if searchBox then
+            searchBox:SetText(addonName)
+            searchBox:TakeFocus()
+        end
+    else
+        --Do not add the searched category to the search history
+        if searchBox then
+            searchBox:SetText("")
+        end
     end
     --Search for the addonName or category
     AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false, isAddonCategorySearched)
@@ -2753,7 +2760,15 @@ function AddonSelector:Initialize()
             AddonSelectorSelectAddonsButton:ClearAnchors()
             AddonSelectorSelectAddonsButton:SetAnchor(TOPLEFT, AddonSelectorDeselectAddonsButton, BOTTOMLEFT, 0, 0)
         end
+        --With API101038 - "Advanced error messages" checkbox
+        zo_callLater(function()
+            if ZO_AddOnsAdvancedUIErrors ~= nil then
+                ZO_AddOnsAdvancedUIErrors:ClearAnchors()
+                ZO_AddOnsAdvancedUIErrors:SetAnchor(TOPLEFT, AddonSelectorSearchBoxLabel, BOTTOMLEFT, 0, 15)
+            end
+        end, 30)
     end
+    AddonSelector.OnShow_HideStuff = AddonSelectorOnShow_HideStuff
 
     --PreHook the Addonmanagers OnShow function
     ZO_PreHook(ADDON_MANAGER_OBJECT, "OnShow", function(ctrl)
