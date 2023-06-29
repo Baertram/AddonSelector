@@ -202,8 +202,12 @@ local function OnAddonRowClickedNarrateNewState(control, newState)
             OnUpdateDoNarrate("OnAddonRowClicked", 250, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
         else
             zo_callLater(function()
-                addonName, addonData = getAddonNameAndData(control)
-                if addonData.addOnEnabled == false then
+                --addonName, addonData = getAddonNameAndData(control)
+                local oldIndex = addonData.index
+                --local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
+                local newName, _, _, _, isEnabledNow = ADDON_MANAGER:GetAddOnInfo(oldIndex)
+d(">newName: " ..tos(newName))
+                if isEnabledNow == false then
                     narrateAddonStateText = "[New state] Disabled,   " ..addonName
                 else
                     narrateAddonStateText = "[New state] Enabled,   " ..addonName
