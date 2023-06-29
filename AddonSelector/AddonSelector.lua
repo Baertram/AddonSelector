@@ -2,12 +2,10 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2022-12-11
-AddonSelector v2.18
+2023-06-26
+AddonSelector v2.20
 
-Added support for Addon Category addon:
--Search box right click context menu
--Search box category name search
+Added Screen Reader features
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -69,6 +67,136 @@ local thisAddonIndex = 0
 local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
 
+------------------------------------------------------------------------------------------------------------------------
+-- Accessibility
+------------------------------------------------------------------------------------------------------------------------
+
+local function IsAccessibilitySettingEnabled(settingId)
+    return GetSetting_Bool(SETTING_TYPE_ACCESSIBILITY, settingId)
+end
+
+--[[
+local function ChangeAccessibilitySetting(settingId, newValue)
+    SetSetting(SETTING_TYPE_ACCESSIBILITY, settingId, tonumber(newValue))
+end
+]]
+
+local function IsAccessibilityModeEnabled()
+	return IsAccessibilitySettingEnabled(ACCESSIBILITY_SETTING_ACCESSIBILITY_MODE)
+end
+
+local function IsAccessibilityChatReaderEnabled()
+	return IsAccessibilityModeEnabled() and IsAccessibilitySettingEnabled(ACCESSIBILITY_SETTING_TEXT_CHAT_NARRATION)
+end
+
+local function IsAccessibilityUIReaderEnabled()
+	return IsAccessibilityModeEnabled() and IsAccessibilitySettingEnabled(ACCESSIBILITY_SETTING_SCREEN_NARRATION)
+end
+
+local function StopNarration(UItoo)
+--d(">StopNarration-UItoo: " ..tostring(UItoo))
+    UItoo = UItoo or false
+    if IsAccessibilityChatReaderEnabled() then
+        RequestReadPendingNarrationTextToClient(NARRATION_TYPE_TEXT_CHAT)
+        ClearNarrationQueue(NARRATION_TYPE_TEXT_CHAT)
+    end
+    if UItoo == true and IsAccessibilityUIReaderEnabled() then
+        RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
+        ClearNarrationQueue(NARRATION_TYPE_UI_SCREEN)
+    end
+end
+
+local function AddNewChatNarrationText(newText, stopCurrent)
+    if IsAccessibilityChatReaderEnabled() == false then return end
+    stopCurrent = stopCurrent or false
+--d(">AddNewChatNarrationText-stopCurrent: " ..tostring(stopCurrent) ..", text: " ..tostring(newText))
+    if stopCurrent == true then
+        StopNarration()
+    end
+    if newText == nil or newText == "" then return end
+    PlaySound(SOUNDS.TREE_HEADER_CLICK)
+    --[[
+    if LibDebugLogger == nil and DebugLogViewer == nil then
+        --Using this API does no always properly work
+        RequestReadTextChatToClient(newText)
+        --Adding it to the chat as debug message works better/more reliably
+        --But this will add a timestamp which is read, too :-(
+        --CHAT_ROUTER:AddDebugMessage(newText)
+    else
+        --Using this API does no always properly work
+        RequestReadTextChatToClient(newText)
+        --Adding it to the chat as debug message works better/more reliably
+        --But this will add a timestamp which is read, too :-(
+        --Disable DebugLogViewer capture of debug messages?
+        --LibDebugLogger:SetBlockChatOutputEnabled(false)
+        --CHAT_ROUTER:AddDebugMessage(newText)
+        --LibDebugLogger:SetBlockChatOutputEnabled(true)
+    end
+    ]]
+    RequestReadTextChatToClient(newText)
+end
+
+local function OnAddonRowMouseExitStopNarrate(control)
+--d("[AddonSelector]OnAddonRowMouseExitStopNarrate")
+    StopNarration()
+end
+
+local function OnAddonRowMouseEnterStartNarrate(control)
+    --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
+    if control == nil then return end
+    AddonSelector._mouseOverAddonControl = control
+    if not IsAccessibilityChatReaderEnabled() then return end
+
+    --Get the addon name at the control
+    local addonData
+    local addonName
+    local isAddonEnabled
+    local isAddonMissingDependencies
+
+    addonData = control.data
+    if addonData == nil or addonData.addOnName == nil then
+        --Get the parent of the "name", "expand" or "checkbox" controls
+        local parent = control:GetParent()
+        if parent ~= nil and parent.data == nil then
+            if control.GetText == nil then return end
+            addonName = control:GetText()
+        elseif parent.data ~= nil then
+            addonData = parent.data
+        end
+    end
+    if addonName == nil and addonData ~= nil then
+        addonName = addonData.addOnName
+    end
+    if addonName == nil or addonName == "" then return end
+
+    local narrateAboutAddonText = addonName
+    local hasDependencyError = false
+    if addonData ~= nil then
+        if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
+            narrateAboutAddonText = narrateAboutAddonText .. " - State: Dependency error"
+            hasDependencyError = true
+        end
+        if hasDependencyError == false and addonData.isAddOnEnabled ~= nil and addonData.isAddOnEnabled == false then
+            narrateAboutAddonText = narrateAboutAddonText .. " - State: Disabled"
+        end
+        if addonData.isLibrary ~= nil and addonData.isLibrary == true then
+            narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+        end
+    else
+        if zo_strfind(addonName, "Lib", 1, true) ~= nil then
+            narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+        end
+    end
+
+--d(">>Text: " .. tos(narrateAboutAddonText))
+    if narrateAboutAddonText ~= nil and narrateAboutAddonText ~= "" then
+        AddNewChatNarrationText(narrateAboutAddonText, true)
+    end
+end
+
+------------------------------------------------------------------------------------------------------------------------
+-- Addon Selector
+---------------------------------------------------------------------------------------------------------------------------
 ADDON_MANAGER = GetAddOnManager()
 AddonSelector.ADDON_MANAGER = ADDON_MANAGER
 --Maybe nil here
@@ -918,7 +1046,7 @@ end
 
 local function clearAndUpdateDDL(wasDeleted)
 --d("[AddonSelector]clearAndUpdateDDL - wasDeleted: " ..tos(wasDeleted))
-    AddonSelector:UpdateDDL(wasDeleted)
+    AddonSelector.UpdateDDL(wasDeleted)
     AddonSelector.editBox:Clear()
     --Disable the "delete pack" button
     ChangeDeleteButtonEnabledState(nil, false)
@@ -1872,7 +2000,7 @@ local function OnClickDDL(comboBox, packName, packData, selectionChanged)
 end
 
 -- Create ItemEntry table for the ddl
-function AddonSelector:CreateItemEntry(packName, addonTable, isCharacterPackHeader, charName)
+function AddonSelector.CreateItemEntry(packName, addonTable, isCharacterPackHeader, charName)
 	return {name = packName, callback = OnClickDDL, addonTable = addonTable, isCharacterPackHeader=isCharacterPackHeader, charName=charName}
 end
 
@@ -1880,7 +2008,7 @@ end
 -- Clear & re-add all items, including new ones. Easier/quicker than
 -- trying to see if an item already exists & editing it. Just adding
 -- a new item would result in duplicates when editing a pack.
-function AddonSelector:UpdateDDL(wasDeleted)
+function AddonSelector.UpdateDDL(wasDeleted)
     wasDeleted = wasDeleted or false
     --local addonPacks = AddonSelector.acwsv.addonPacks
     local packTable = {}
@@ -1891,7 +2019,7 @@ function AddonSelector:UpdateDDL(wasDeleted)
     if settings.showGroupedByCharacterName == true or settings.saveGroupedByCharacterName == true then
         for _, addonPacks in pairs(settings.addonPacksOfChar) do
             local charName = addonPacks._charName
-            local itemData = self:CreateItemEntry("[" .. charName .. "]", addonPacks, true, charName)
+            local itemData = AddonSelector.CreateItemEntry("[" .. charName .. "]", addonPacks, true, charName)
             tins(packTable, itemData)
             wasItemAdded = true
         end
@@ -1900,14 +2028,14 @@ function AddonSelector:UpdateDDL(wasDeleted)
     --Show the addon packs saved without character?
     if settings.showGlobalPacks == true then
         for packName, addonTable in pairs(settings.addonPacks) do
-            local itemData = self:CreateItemEntry(packName, addonTable, false, GLOBAL_PACK_NAME)
+            local itemData = AddonSelector.CreateItemEntry(packName, addonTable, false, GLOBAL_PACK_NAME)
             tins(packTable, itemData)
             wasItemAdded = true
         end
     end
 
-    self.comboBox:SetSortsItems(false)
-    self.comboBox:ClearItems()
+    AddonSelector.comboBox:SetSortsItems(false)
+    AddonSelector.comboBox:ClearItems()
 
     if wasItemAdded == true then
         tsor(packTable, function(entryA, entryB)
@@ -1920,24 +2048,24 @@ function AddonSelector:UpdateDDL(wasDeleted)
             end
             return entryA.name < entryB.name
         end)
-        self.comboBox:AddItems(packTable)
+        AddonSelector.comboBox:AddItems(packTable)
     end
     --Update the currently selected packName label
     UpdateCurrentlySelectedPackName(wasDeleted, nil, nil)
 end
 
 --OnMouseUp event function for the XML control editbox
-function AddonSelector_OnMouseUp(self, mouseButton, upInside, ctrlKey, altKey, shiftKey, ...)
+function AddonSelector_OnMouseUp(editControl, mouseButton, upInside, ctrlKey, altKey, shiftKey, ...)
 --d("[AddonSelector]EditBox OnMouseUp- mouseButton: " ..tos(mouseButton) ..", upInside: " ..tos(upInside))
     if mouseButton == MOUSE_BUTTON_INDEX_RIGHT and upInside then
-        local newText = self:GetText()
+        local newText = editControl:GetText()
         if newText and newText == "" then
             --Get the current character name and format it
             if currentCharName and currentCharName ~= "" then
-                self:SetText(currentCharName .. "_")
-                self:SetMouseEnabled(true)
-                self:SetKeyboardEnabled(true)
-                self:TakeFocus()
+                editControl:SetText(currentCharName .. "_")
+                editControl:SetMouseEnabled(true)
+                editControl:SetKeyboardEnabled(true)
+                editControl:TakeFocus()
             end
         end
     end
@@ -1947,8 +2075,8 @@ end
 -- On text changed, when user types in the editBox
 -- Clear the comboBox, check to make sure the text is not empty
 -- I don't want it clearing the ddl when I manually call editBox:Clear()
-function AddonSelector_TextChanged(self)
-	local newText = self:GetText()
+function AddonSelector_TextChanged(editControl)
+	local newText = editControl:GetText()
     local newEnabledState = false
     if newText and newText ~= "" then
         newEnabledState = true
@@ -2037,7 +2165,7 @@ local function OnClick_SaveDo()
     -- Create a temporary copy of the itemEntry data so we can select it
     -- after the ddl is updated
     local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
-    local itemData = AddonSelector:CreateItemEntry(packName, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME)
+    local itemData = AddonSelector.CreateItemEntry(packName, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME)
 
     clearAndUpdateDDL()
     --Prevent reloadui for a currently new saved addon pack!
@@ -2407,13 +2535,13 @@ end
 
 -- Used to change the layout of the Addon scrollList to
 -- make room for the AddonSelector control
-function AddonSelector:ChangeLayout()
+function AddonSelector.ChangeLayout()
 	--local template = ZO_AddOns
 	--local divider = ZO_AddOnsDivider
 	local list = ZOAddOnsList
 	--local bg = ZO_AddonsBGLeft
 	list:ClearAnchors()
-	list:SetAnchor(TOPLEFT, self.addonSelectorControl, BOTTOMLEFT, 0, 10)
+	list:SetAnchor(TOPLEFT, AddonSelector.addonSelectorControl, BOTTOMLEFT, 0, 10)
 	-- This does not work ?? Items get cut off.
 	--list:SetAnchor(BOTTOMRIGHT, bg, BOTTOMRIGHT, -20, -100)
 	--list:SetDimensions(885, 560)
@@ -2431,7 +2559,7 @@ end
 
 -- Create the AddonSelector control, set references to controls
 -- and click handlers for the save/delete buttons
-function AddonSelector:CreateControlReferences()
+function AddonSelector.CreateControlReferences()
     local settings = AddonSelector.acwsv
     -- Create Controls:
     local addonSelector = CreateControlFromVirtual("AddonSelector", ZO_AddOns, "AddonSelectorVirtualTemplate", nil)
@@ -2449,26 +2577,26 @@ function AddonSelector:CreateControlReferences()
     ]]
 
     -- Assign references:
-    self.addonSelectorControl = addonSelector
+    AddonSelector.addonSelectorControl = addonSelector
 
-    self.editBox 	= addonSelector:GetNamedChild("EditBox")
-    self.ddl 		= addonSelector:GetNamedChild("ddl")
-    self.comboBox	= self.ddl.m_comboBox
-    self.saveBtn 	= addonSelector:GetNamedChild("Save")
-    self.deleteBtn 	= addonSelector:GetNamedChild("Delete")
-    --self.autoReloadBtn = addonSelector:GetNamedChild("AutoReloadUI")
-    --self.autoReloadLabel = self.autoReloadBtn:GetNamedChild("Label")
-    self.settingsOpenDropdown = addonSelector:GetNamedChild("SettingsOpenDropdown")
-    self.settingsOpenDropdown.onClickHandler = self.settingsOpenDropdown:GetHandler("OnClicked")
+    AddonSelector.editBox 	= addonSelector:GetNamedChild("EditBox")
+    AddonSelector.ddl 		= addonSelector:GetNamedChild("ddl")
+    AddonSelector.comboBox	= AddonSelector.ddl.m_comboBox
+    AddonSelector.saveBtn 	= addonSelector:GetNamedChild("Save")
+    AddonSelector.deleteBtn 	= addonSelector:GetNamedChild("Delete")
+    --AddonSelector.autoReloadBtn = addonSelector:GetNamedChild("AutoReloadUI")
+    --AddonSelector.autoReloadLabel = AddonSelector.autoReloadBtn:GetNamedChild("Label")
+    AddonSelector.settingsOpenDropdown = addonSelector:GetNamedChild("SettingsOpenDropdown")
+    AddonSelector.settingsOpenDropdown.onClickHandler = AddonSelector.settingsOpenDropdown:GetHandler("OnClicked")
     --PerfectPixel: Reposition of the settings "gear" icon -> move up to other icons (like Votans Addon List)
-    self.settingsOpenDropdown:ClearAnchors()
+    AddonSelector.settingsOpenDropdown:ClearAnchors()
     --<Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
     local offsetX = (PP ~= nil and 40) or 100
     local offsetY = (PP ~= nil and -7) or 65
-    self.settingsOpenDropdown:SetAnchor(TOPLEFT, ZO_AddOns, TOP, offsetX, offsetY)
+    AddonSelector.settingsOpenDropdown:SetAnchor(TOPLEFT, ZO_AddOns, TOP, offsetX, offsetY)
 
-    self.searchBox 	= addonSelector:GetNamedChild("SearchBox")
-    self.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
+    AddonSelector.searchBox 	= addonSelector:GetNamedChild("SearchBox")
+    AddonSelector.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
         if isUpInside and mouseButton == MOUSE_BUTTON_INDEX_RIGHT then
             local doShowMenu = false
             local searchHistoryWasAdded = false
@@ -2517,30 +2645,30 @@ function AddonSelector:CreateControlReferences()
             end
         end
     end)
-    self.searchLabel = addonSelector:GetNamedChild("SearchBoxLabel")
-    self.searchLabel:SetText(AddonSelector_GetLocalizedText("AddonSearch"))
-    self.selectedPackNameLabel = addonSelector:GetNamedChild("SelectedPackNameLabel")
+    AddonSelector.searchLabel = addonSelector:GetNamedChild("SearchBoxLabel")
+    AddonSelector.searchLabel:SetText(AddonSelector_GetLocalizedText("AddonSearch"))
+    AddonSelector.selectedPackNameLabel = addonSelector:GetNamedChild("SelectedPackNameLabel")
 
-    self.saveModeTexture = addonSelector:GetNamedChild("SaveModeTexture")
-    self.saveModeTexture:SetTexture("/esoui/art/characterselect/gamepad/gp_characterselect_characterslots.dds")
-    self.saveModeTexture:SetColor(charNamePackColorDef:UnpackRGBA())
-    self.saveModeTexture:SetMouseEnabled(true)
-    self.saveModeTexture.tooltipText = savedGroupedByCharNameStr
-    self.saveModeTexture:SetHandler("OnMouseEnter", onMouseEnterTooltip)
-    self.saveModeTexture:SetHandler("OnMouseExit", onMouseExitTooltip)
+    AddonSelector.saveModeTexture = addonSelector:GetNamedChild("SaveModeTexture")
+    AddonSelector.saveModeTexture:SetTexture("/esoui/art/characterselect/gamepad/gp_characterselect_characterslots.dds")
+    AddonSelector.saveModeTexture:SetColor(charNamePackColorDef:UnpackRGBA())
+    AddonSelector.saveModeTexture:SetMouseEnabled(true)
+    AddonSelector.saveModeTexture.tooltipText = savedGroupedByCharNameStr
+    AddonSelector.saveModeTexture:SetHandler("OnMouseEnter", onMouseEnterTooltip)
+    AddonSelector.saveModeTexture:SetHandler("OnMouseExit", onMouseExitTooltip)
 
-    self.autoReloadUITexture = addonSelector:GetNamedChild("AutoReloadUITexture")
-    self.autoReloadUITexture:SetTexture("/esoui/art/miscellaneous/eso_icon_warning.dds")
-    self.autoReloadUITexture:SetColor(1, 0, 0, 0.6)
-    self.autoReloadUITexture:SetMouseEnabled(true)
-    self.autoReloadUITexture.tooltipText = autoReloadUIStr
-    self.autoReloadUITexture:SetHandler("OnMouseEnter", onMouseEnterTooltip)
-    self.autoReloadUITexture:SetHandler("OnMouseExit", onMouseExitTooltip)
+    AddonSelector.autoReloadUITexture = addonSelector:GetNamedChild("AutoReloadUITexture")
+    AddonSelector.autoReloadUITexture:SetTexture("/esoui/art/miscellaneous/eso_icon_warning.dds")
+    AddonSelector.autoReloadUITexture:SetColor(1, 0, 0, 0.6)
+    AddonSelector.autoReloadUITexture:SetMouseEnabled(true)
+    AddonSelector.autoReloadUITexture.tooltipText = autoReloadUIStr
+    AddonSelector.autoReloadUITexture:SetHandler("OnMouseEnter", onMouseEnterTooltip)
+    AddonSelector.autoReloadUITexture:SetHandler("OnMouseExit", onMouseExitTooltip)
 
     -- Set Saved Btn State for checkbox "Auto reloadui after pack selection"
     local checkedState = settings.autoReloadUI
     updateAutoReloadUITexture(checkedState)
-    --self.autoReloadBtn:SetState(checkedState)
+    --AddonSelector.autoReloadBtn:SetState(checkedState)
     --Disable the "save pack" button
     ChangeSaveButtonEnabledState(false)
     --Disable the "delete pack" button
@@ -2552,7 +2680,7 @@ function AddonSelector:CreateControlReferences()
     --[[
     local function OnMouseEnter()
         local toolTipText = AddonSelector_GetLocalizedText("autoReloadUIHintTooltip")
-        InitializeTooltip(InformationTooltip, self.autoReloadLabel, LEFT, 26, 0, RIGHT)
+        InitializeTooltip(InformationTooltip, AddonSelector.autoReloadLabel, LEFT, 26, 0, RIGHT)
         InformationTooltip:AddLine(toolTipText)
     end
     local function OnMouseExit()
@@ -2573,21 +2701,21 @@ function AddonSelector:CreateControlReferences()
     local function OnMouseUp_SettingsLabel(settingsLabel, mouseButton, upInside)
         ZO_Tooltips_HideTextTooltip()
         if not upInside or not mouseButton == MOUSE_BUTTON_INDEX_LEFT then return end
-        AddonSelector_ShowSettingsDropdown(self.settingsOpenDropdown)
+        AddonSelector_ShowSettingsDropdown(AddonSelector.settingsOpenDropdown)
     end
 
     -- SetHandlers:
-    self.saveBtn:SetHandler("OnMouseUp", OnClick_Save)
-    self.deleteBtn:SetHandler("OnMouseUp", function() OnClick_Delete() end)
-    --self.autoReloadBtn:SetHandler("OnMouseUp", OnClick_AutoReload)
-    --self.autoReloadBtn:SetHandler("OnMouseEnter", OnMouseEnter)
-    --self.autoReloadBtn:SetHandler("OnMouseExit", OnMouseExit)
-    --self.autoReloadLabel:SetHandler("OnMouseUp", OnClick_AutoReloadLabel)
-    --self.autoReloadLabel:SetHandler("OnMouseEnter", OnMouseEnter)
-    --self.autoReloadLabel:SetHandler("OnMouseExit", OnMouseExit)
-    self.settingsOpenDropdown:SetHandler("OnMouseEnter", OnMouseEnter)
-    self.settingsOpenDropdown:SetHandler("OnMouseExit", OnMouseExit)
-    self.selectedPackNameLabel:SetHandler("OnMouseUp", OnClick_SelectedPackNameLabel)
+    AddonSelector.saveBtn:SetHandler("OnMouseUp", OnClick_Save)
+    AddonSelector.deleteBtn:SetHandler("OnMouseUp", function() OnClick_Delete() end)
+    --AddonSelector.autoReloadBtn:SetHandler("OnMouseUp", OnClick_AutoReload)
+    --AddonSelector.autoReloadBtn:SetHandler("OnMouseEnter", OnMouseEnter)
+    --AddonSelector.autoReloadBtn:SetHandler("OnMouseExit", OnMouseExit)
+    --AddonSelector.autoReloadLabel:SetHandler("OnMouseUp", OnClick_AutoReloadLabel)
+    --AddonSelector.autoReloadLabel:SetHandler("OnMouseEnter", OnMouseEnter)
+    --AddonSelector.autoReloadLabel:SetHandler("OnMouseExit", OnMouseExit)
+    AddonSelector.settingsOpenDropdown:SetHandler("OnMouseEnter", OnMouseEnter)
+    AddonSelector.settingsOpenDropdown:SetHandler("OnMouseExit", OnMouseExit)
+    AddonSelector.selectedPackNameLabel:SetHandler("OnMouseUp", OnClick_SelectedPackNameLabel)
 end
 
 
@@ -2599,6 +2727,20 @@ function ZO_AddOnManager:GetRowSetupFunction()
     return function(control, data)
         control:SetMouseEnabled(areAllAddonsEnabled(true))
         control:SetHandler("OnMouseUp", Addon_Toggle_Enabled)
+
+        --Accessibility
+        if control:GetHandler("OnMouseEnter") ~= nil then
+            ZO_PostHookHandler(control, "OnMouseEnter", function(ctrl) OnAddonRowMouseEnterStartNarrate(ctrl) end)
+        else
+            control:SetHandler("OnMouseEnter", function(ctrl) OnAddonRowMouseEnterStartNarrate(ctrl) end,   "AddonSelectorAddonRowOnMouseEnter")
+        end
+
+        if control:GetHandler("OnMouseExit") ~= nil then
+            ZO_PostHookHandler(control, "OnMouseExit", function(ctrl) OnAddonRowMouseExitStopNarrate(ctrl) end)
+        else
+            control:SetHandler("OnMouseExit", function(ctrl) OnAddonRowMouseExitStopNarrate(ctrl) end,      "AddonSelectorAddonRowOnMouseExit")
+        end
+
         local retVar = func(control, data)
         AddonSelector_HookSingleControlForMultiSelectByShiftKey(control)
         return retVar
@@ -2618,7 +2760,7 @@ end
 --====================================--
 --====  Initialize ====--
 --====================================--
-function AddonSelector:Initialize()
+function AddonSelector.Initialize()
     --Libraries
     AddonSelector.LDIALOG = LibDialog
     AddonSelector.LCM = LibCustomMenu
@@ -2650,41 +2792,41 @@ function AddonSelector:Initialize()
     local oldSVWithoutServer = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars)
 
     --ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
-    self.acwsv = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars, worldName, "AllAccounts")
+    AddonSelector.acwsv = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars, worldName, "AllAccounts")
     --Old non-server dependent SV exist and new SV too and were not migrated yet
-    if oldSVWithoutServer ~= nil and not self.acwsv.svMigrationToServerDone then
+    if oldSVWithoutServer ~= nil and not AddonSelector.acwsv.svMigrationToServerDone then
         --Copy all addon packages from the old SV to the new server dependent ones, but do not overwrite any existing ones
         local addonPacksOfNonServerDependentSV = oldSVWithoutServer.addonPacks
         for packName, addonTable in pairs(addonPacksOfNonServerDependentSV) do
-            if self.acwsv.addonPacks and not self.acwsv.addonPacks[packName] then
-                self.acwsv.addonPacks[packName] = addonTable
+            if AddonSelector.acwsv.addonPacks and not AddonSelector.acwsv.addonPacks[packName] then
+                AddonSelector.acwsv.addonPacks[packName] = addonTable
             end
         end
         --Copy all select all save infos
         local selectAllSavedOfNonServerDependentSV = oldSVWithoutServer.selectAllSave
         for idx, data in pairs(selectAllSavedOfNonServerDependentSV) do
-            if self.acwsv.selectAllSave and not self.acwsv.selectAllSave[idx] then
-                self.acwsv.selectAllSave[idx] = data
+            if AddonSelector.acwsv.selectAllSave and not AddonSelector.acwsv.selectAllSave[idx] then
+                AddonSelector.acwsv.selectAllSave[idx] = data
             end
         end
         --Copy all selected packnames of the characters
         local selectedPackNameForCharactersOfNonServerDependentSV = oldSVWithoutServer.selectedPackNameForCharacters
         for idx, data in pairs(selectedPackNameForCharactersOfNonServerDependentSV) do
-            if self.acwsv.selectedPackNameForCharacters and not self.acwsv.selectedPackNameForCharacters[idx] then
-                self.acwsv.selectedPackNameForCharacters[idx] = data
+            if AddonSelector.acwsv.selectedPackNameForCharacters and not AddonSelector.acwsv.selectedPackNameForCharacters[idx] then
+                AddonSelector.acwsv.selectedPackNameForCharacters[idx] = data
             end
         end
         --Copy the other settings
-        self.acwsv.autoReloadUI = oldSVWithoutServer.autoReloadUI
+        AddonSelector.acwsv.autoReloadUI = oldSVWithoutServer.autoReloadUI
 
         --SV copy old non-server to server dependent finished for this server. Set the flag to true
-        self.acwsv.svMigrationToServerDone = true
+        AddonSelector.acwsv.svMigrationToServerDone = true
     end
 
-    if self.acwsv.autoReloadUI == BSTATE_PRESSED then
-        self.acwsv.autoReloadUI = true
-    elseif self.acwsv.autoReloadUI == BSTATE_NORMAL then
-        self.acwsv.autoReloadUI = false
+    if AddonSelector.acwsv.autoReloadUI == BSTATE_PRESSED then
+        AddonSelector.acwsv.autoReloadUI = true
+    elseif AddonSelector.acwsv.autoReloadUI == BSTATE_NORMAL then
+        AddonSelector.acwsv.autoReloadUI = false
     end
 
     --Packname saved was an old value without charName info? Migrate it
@@ -2699,9 +2841,9 @@ function AddonSelector:Initialize()
         end
     end
 
-    self:CreateControlReferences()
-    self:UpdateDDL()
-    self:ChangeLayout()
+    AddonSelector.CreateControlReferences()
+    AddonSelector.UpdateDDL()
+    AddonSelector.ChangeLayout()
 
     -- Very hacky, but easiest method: Wipe out the games
     -- TYPE_ID = 1 dataType and recreate it using my own template.
@@ -2850,14 +2992,14 @@ function AddonSelector:Initialize()
 
 
     --Get the currently loaded packname of the char, if it was changed before reloadUI
-    if self.acwsv.packChangedBeforeReloadUI == true then
+    if AddonSelector.acwsv.packChangedBeforeReloadUI == true then
         local currentPackOfchar = GetCurrentCharacterSelectedPackname()
         if currentPackOfchar ~= nil then
             --Set the last loaded pack data
             AddonSelector.acwsv.lastLoadedPackNameForCharacters[currentCharId] = currentPackOfchar
         end
     end
-    self.acwsv.packChangedBeforeReloadUI = false
+    AddonSelector.acwsv.packChangedBeforeReloadUI = false
 end
 
 --Reload the user interface
@@ -2919,7 +3061,7 @@ local function OnAddOnLoaded(event, addonName)
     end
 
 	--Load SavedVariables, update controls etc.
-    AddonSelector:Initialize()
+    AddonSelector.Initialize()
 
     addonSelectorSelectAddonsButtonNameLabel = AddonSelectorSelectAddonsButton.nameLabel --GetControl(AddonSelectorSelectAddonsButton, "NameLabel")
 
@@ -2964,7 +3106,7 @@ local function OnAddOnLoaded(event, addonName)
 
             local function mainEntryOnClickCallback(control)
                 if item.isCharacterPackHeader == true then return end
-                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
+                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
             end
 
 
@@ -2980,8 +3122,8 @@ local function OnAddOnLoaded(event, addonName)
                             tins(subMenuEntries, {
                                 label = (selectPackStr) .. ": " .. packNameOfChar,
                                 callback = function()
-                                    local packItem = AddonSelector:CreateItemEntry(packNameOfChar, addonsOfPack, false, charName)
-                                    selfVar:ItemSelectedClickHelper(packItem) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
+                                    local packItem = AddonSelector.CreateItemEntry(packNameOfChar, addonsOfPack, false, charName)
+                                    selfVar:ItemSelectedClickHelper(packItem) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
                                 end,
                             })
                             addedSubMenuEntry = true
@@ -2999,7 +3141,7 @@ local function OnAddOnLoaded(event, addonName)
                         {
                             label = (selectPackStr) .. ": " .. itemName,
                             callback = function()
-                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
+                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
                             end,
                         },
                         {
@@ -3010,7 +3152,7 @@ local function OnAddOnLoaded(event, addonName)
                         {
                             label = (selectPackStr) .. " & " .. (reloadUIStr) .. ": " .. itemName,
                             callback = function()
-                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector:CreateItemEntry" as callback of the entry
+                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
                                 ReloadUI("ingame")
                             end,
                         },
