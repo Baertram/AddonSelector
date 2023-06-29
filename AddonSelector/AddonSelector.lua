@@ -70,6 +70,7 @@ local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility
 ------------------------------------------------------------------------------------------------------------------------
+local chatNarrationUpdaterName = "AddonSelector_ChatNarration-"
 
 local function IsAccessibilitySettingEnabled(settingId)
     return GetSetting_Bool(SETTING_TYPE_ACCESSIBILITY, settingId)
@@ -97,12 +98,10 @@ local function StopNarration(UItoo)
 --d(">StopNarration-UItoo: " ..tostring(UItoo))
     UItoo = UItoo or false
     if IsAccessibilityChatReaderEnabled() then
-        ClearActiveNarration()
         RequestReadPendingNarrationTextToClient(NARRATION_TYPE_TEXT_CHAT)
         ClearNarrationQueue(NARRATION_TYPE_TEXT_CHAT)
     end
     if UItoo == true and IsAccessibilityUIReaderEnabled() then
-        ClearActiveNarration()
         RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
         ClearNarrationQueue(NARRATION_TYPE_UI_SCREEN)
     end
@@ -140,19 +139,27 @@ local function AddNewChatNarrationText(newText, stopCurrent)
     ]]
     RequestReadTextChatToClient(newTextClean)
 end
+--AddonSelector.AddNewChatNarrationText = AddNewChatNarrationText
+
+local function OnUpdateDoNarrate(uniqueId, delay, callbackFunc)
+    local updaterName = chatNarrationUpdaterName ..tostring(uniqueId)
+    EM:UnregisterForUpdate(updaterName)
+    if IsAccessibilityChatReaderEnabled() == false or callbackFunc == nil then return end
+    delay = delay or 1000
+    EM:RegisterForUpdate(updaterName, delay, function()
+        if IsAccessibilityChatReaderEnabled() == false then EM:UnregisterForUpdate(updaterName) return end
+        callbackFunc()
+        EM:UnregisterForUpdate(updaterName)
+    end)
+end
 
 local function OnAddonRowMouseExitStopNarrate(control)
 --d("[AddonSelector]OnAddonRowMouseExitStopNarrate")
-    --StopNarration()
+    StopNarration()
 end
 
-local function OnAddonRowMouseEnterStartNarrate(control)
-    --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
-    if control == nil then return end
-    AddonSelector._mouseOverAddonControl = control
-    if not IsAccessibilityChatReaderEnabled() then return end
-
-    --Get the addon name at the control
+local function getAddonNameAndData(control)
+    if control == nil then return nil, nil end
     local addonData
     local addonName
 
@@ -161,7 +168,7 @@ local function OnAddonRowMouseEnterStartNarrate(control)
         --Get the parent of the "name", "expand" or "checkbox" controls
         local parent = control:GetParent()
         if parent ~= nil and parent.data == nil then
-            if control.GetText == nil then return end
+            if control.GetText == nil then return nil, nil end
             addonName = control:GetText()
         elseif parent.data ~= nil then
             addonData = parent.data
@@ -171,30 +178,75 @@ local function OnAddonRowMouseEnterStartNarrate(control)
         addonName = addonData.strippedAddOnName
         addonName = addonName or addonData.addOnName
     end
-    if addonName == nil or addonName == "" then return end
+--d(">getAddonNameAndData: " ..tos(addonName) .. ", data: " ..tos(addonData))
+    if addonName == nil or addonName == "" then return nil, nil end
+    return addonName, addonData
+end
+
+local function OnAddonRowClickedNarrateNewState(control, newState)
+--d("[AddonSelector]OnAddonRowClickedNarrateNewState-newState: " ..tos(newState))
+    if control == nil then return end
+    if not IsAccessibilityChatReaderEnabled() then return end
+
+        local addonName, addonData = getAddonNameAndData(control)
+        if addonName == nil or addonData == nil then return end
+
+        local narrateAddonStateText
+        if newState ~= nil then
+            if newState == TRISTATE_CHECK_BUTTON_UNCHECKED then
+                narrateAddonStateText = "[New state] Disabled,   " ..addonName
+            else
+                narrateAddonStateText = "[New state] Enabled,   " ..addonName
+            end
+--d(">addon state: " .. tos(narrateAddonStateText))
+            OnUpdateDoNarrate("OnAddonRowClicked", 250, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+        else
+            zo_callLater(function()
+                addonName, addonData = getAddonNameAndData(control)
+                if addonData.addOnEnabled == false then
+                    narrateAddonStateText = "[New state] Disabled,   " ..addonName
+                else
+                    narrateAddonStateText = "[New state] Enabled,   " ..addonName
+                end
+--d(">DELAYED: addon state: " .. tos(narrateAddonStateText))
+                OnUpdateDoNarrate("OnAddonRowClicked", 250, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+            end, 50)
+        end
+end
+
+local function OnAddonRowMouseEnterStartNarrate(control)
+--d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
+    if control == nil then return end
+    if not IsAccessibilityChatReaderEnabled() then return end
+
+    --Get the addon name at the control
+    local addonName, addonData = getAddonNameAndData(control)
+    if addonName == nil or addonData == nil then return end
 
     local narrateAboutAddonText = addonName
     local hasDependencyError = false
     local isLibrary = false
-    if addonData ~= nil then
-        if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
-            narrateAboutAddonText = narrateAboutAddonText .. "   -   [State] Dependency error"
-            hasDependencyError = true
+    if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
+        narrateAboutAddonText = narrateAboutAddonText .. "   [State] Dependency error"
+        hasDependencyError = true
+    end
+    if hasDependencyError == false then
+        if addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
+            narrateAboutAddonText = narrateAboutAddonText .. "   [State] Disabled"
+        elseif addonData.addOnEnabled ~= nil and addonData.addOnEnabled == true then
+            narrateAboutAddonText = narrateAboutAddonText .. "    [State] Enabled"
         end
-        if hasDependencyError == false and addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
-            narrateAboutAddonText = narrateAboutAddonText .. "   -   [State] Disabled"
-        end
-        if addonData.isLibrary ~= nil and addonData.isLibrary == true then
-            narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
-            isLibrary = true
-        end
+    end
+    if addonData.isLibrary ~= nil and addonData.isLibrary == true then
+        narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+        isLibrary = true
     end
     if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
         narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
     end
 
 --d(">>Text: " .. tos(narrateAboutAddonText))
-    AddNewChatNarrationText(narrateAboutAddonText, true)
+    OnUpdateDoNarrate("OnAddonRowMouseEnter", 250, function() AddNewChatNarrationText(narrateAboutAddonText, true)  end)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -896,21 +948,32 @@ end
 -- Toggles Enabled state when a row is clicked
 -->Using  Votans Addon List function ADD_ON_MANAGER:OnEnabledButtonClicked so that dependencies are enabled too
 local function Addon_Toggle_Enabled(rowControl)
-    --d("Addon_Toggle_Enabled")
+d("Addon_Toggle_Enabled")
     if not areAllAddonsEnabled(true) then return end
 
     --local addonIndex 	= rowControl.data.index
     local enabledBtn 	= rowControl:GetNamedChild("Enabled")
     local state 		= ZO_TriStateCheckButton_GetState(enabledBtn)
+    local newState
 
     if state == TRISTATE_CHECK_BUTTON_CHECKED then
         -- changed so it automatically refreshes the multiButton (reload UI)
         --ADDON_MANAGER_OBJECT:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_UNCHECKED)
-        ADDON_MANAGER_OBJECT:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_UNCHECKED)
-        return
+        newState = TRISTATE_CHECK_BUTTON_UNCHECKED
+    else
+        --ADDON_MANAGER_OBJECT:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_CHECKED)
+        newState = TRISTATE_CHECK_BUTTON_CHECKED
     end
-    --ADDON_MANAGER_OBJECT:ChangeEnabledState(addonIndex, TRISTATE_CHECK_BUTTON_CHECKED)
-    ADDON_MANAGER_OBJECT:OnEnabledButtonClicked(enabledBtn, TRISTATE_CHECK_BUTTON_CHECKED)
+d(">newState: " ..tos(newState))
+    ADDON_MANAGER_OBJECT:OnEnabledButtonClicked(enabledBtn, newState)
+
+d(">1")
+
+    --Accessibility
+    --Do not narrate if SHIFT key is pressed to "multi-select" addons (set end spot to enable/disable)?
+    if not IsShiftKeyDown() then
+        OnAddonRowClickedNarrateNewState(rowControl, newState)
+    end
 end
 
 local function getCurrentCharsPackNameData()
@@ -1942,9 +2005,17 @@ local function AddonSelector_HookSingleControlForMultiSelectByShiftKey(control)-
                     end, 150)
                 end
                 ]]
+                local isShiftKeyPressed = IsShiftKeyDown()
+--d("Enabled_Clicked-shiftKey: " ..tos(isShiftKeyPressed))
+                --Accessibility
+                --Do not narrate if SHIFT key is pressed to "multi-select" addons (set end spot to enable/disable)?
+                if not isShiftKeyPressed then
+                    OnAddonRowClickedNarrateNewState(control, nil)
+                end
+
                 --If the shift key was pressed do not enable the addon's checkbox by the normal function here but via function
                 --AddonSelector_MultiSelect())
-                return IsShiftKeyDown()
+                return isShiftKeyPressed
             end)
             local enabledClick = enabled:GetHandler("OnClicked")
             name:SetMouseEnabled(true)
@@ -1955,6 +2026,7 @@ local function AddonSelector_HookSingleControlForMultiSelectByShiftKey(control)-
                 --Check shift key, or not. If yes: Mark/unmark all addons from first clicked row to SHIFT + clicked row.
                 -- Else save clicked name sortIndex + addonIndex
                 local retVar = AddonSelector_MultiSelect(control, enabled, button)
+
                 --Set preventer variables in order to suppress duplicate code run at the checkbox
                 AddonSelector.noAddonNumUpdate = true
                 AddonSelector.noAddonCheckBoxUpdate = true
@@ -2737,12 +2809,13 @@ function ZO_AddOnManager:GetRowSetupFunction()
         else
             control:SetHandler("OnMouseEnter", function(ctrl) OnAddonRowMouseEnterStartNarrate(ctrl) end,   "AddonSelectorAddonRowOnMouseEnter")
         end
-
+--[[
         if control:GetHandler("OnMouseExit") ~= nil then
             ZO_PostHookHandler(control, "OnMouseExit", function(ctrl) OnAddonRowMouseExitStopNarrate(ctrl) end)
         else
             control:SetHandler("OnMouseExit", function(ctrl) OnAddonRowMouseExitStopNarrate(ctrl) end,      "AddonSelectorAddonRowOnMouseExit")
         end
+]]
 
         local retVar = func(control, data)
         AddonSelector_HookSingleControlForMultiSelectByShiftKey(control)
@@ -3046,7 +3119,9 @@ local function searchAddOnSlashCommandHandlder(args)
     end
 end
 
-
+local function ShowLAMAddonSettings()
+    LibAddonMenu2:OpenToPanel(nil)
+end
 -------------------------------------------------------------------
 --  OnAddOnLoaded  --
 -------------------------------------------------------------------
@@ -3081,6 +3156,11 @@ local function OnAddOnLoaded(event, addonName)
     SLASH_COMMANDS["/addonsearch"]      = searchAddOnSlashCommandHandlder
     SLASH_COMMANDS["/addonselector"]    = searchAddOnSlashCommandHandlder
     SLASH_COMMANDS["/asap"]             = AddonSelector_ShowActivePackInChat
+    if LibAddonMenu2 ~= nil then
+        SLASH_COMMANDS["/addonsettings"] =  ShowLAMAddonSettings
+        SLASH_COMMANDS["/lam"] =            ShowLAMAddonSettings
+    end
+
     --Keybinding
     ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_ADDON_SELECTOR", ADDON_NAME)
     ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        reloadUIStr)
