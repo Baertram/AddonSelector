@@ -115,7 +115,10 @@ local function AddNewChatNarrationText(newText, stopCurrent)
     if stopCurrent == true then
         StopNarration()
     end
-    if newText == nil or newText == "" then return end
+    --Remove any - from the text as it seems to make the text not "always" be read?
+    local newTextClean = string.gsub(newText, "-", "")
+
+    if newTextClean == nil or newTextClean == "" then return end
     --PlaySound(SOUNDS.TREE_HEADER_CLICK)
     --[[
     if LibDebugLogger == nil and DebugLogViewer == nil then
@@ -135,7 +138,7 @@ local function AddNewChatNarrationText(newText, stopCurrent)
         --LibDebugLogger:SetBlockChatOutputEnabled(true)
     end
     ]]
-    RequestReadTextChatToClient(newText)
+    RequestReadTextChatToClient(newTextClean)
 end
 
 local function OnAddonRowMouseExitStopNarrate(control)
