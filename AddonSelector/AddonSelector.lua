@@ -114,7 +114,7 @@ local function AddNewChatNarrationText(newText, stopCurrent)
         StopNarration()
     end
     if newText == nil or newText == "" then return end
-    PlaySound(SOUNDS.TREE_HEADER_CLICK)
+    --PlaySound(SOUNDS.TREE_HEADER_CLICK)
     --[[
     if LibDebugLogger == nil and DebugLogViewer == nil then
         --Using this API does no always properly work
@@ -138,7 +138,7 @@ end
 
 local function OnAddonRowMouseExitStopNarrate(control)
 --d("[AddonSelector]OnAddonRowMouseExitStopNarrate")
-    StopNarration()
+    --StopNarration()
 end
 
 local function OnAddonRowMouseEnterStartNarrate(control)
@@ -189,9 +189,7 @@ local function OnAddonRowMouseEnterStartNarrate(control)
     end
 
 --d(">>Text: " .. tos(narrateAboutAddonText))
-    if narrateAboutAddonText ~= nil and narrateAboutAddonText ~= "" then
-        AddNewChatNarrationText(narrateAboutAddonText, true)
-    end
+    AddNewChatNarrationText(narrateAboutAddonText, true)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
