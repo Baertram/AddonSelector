@@ -97,10 +97,12 @@ local function StopNarration(UItoo)
 --d(">StopNarration-UItoo: " ..tostring(UItoo))
     UItoo = UItoo or false
     if IsAccessibilityChatReaderEnabled() then
+        ClearActiveNarration()
         RequestReadPendingNarrationTextToClient(NARRATION_TYPE_TEXT_CHAT)
         ClearNarrationQueue(NARRATION_TYPE_TEXT_CHAT)
     end
     if UItoo == true and IsAccessibilityUIReaderEnabled() then
+        ClearActiveNarration()
         RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
         ClearNarrationQueue(NARRATION_TYPE_UI_SCREEN)
     end
@@ -150,8 +152,6 @@ local function OnAddonRowMouseEnterStartNarrate(control)
     --Get the addon name at the control
     local addonData
     local addonName
-    local isAddonEnabled
-    local isAddonMissingDependencies
 
     addonData = control.data
     if addonData == nil or addonData.addOnName == nil then
@@ -165,27 +165,29 @@ local function OnAddonRowMouseEnterStartNarrate(control)
         end
     end
     if addonName == nil and addonData ~= nil then
-        addonName = addonData.addOnName
+        addonName = addonData.strippedAddOnName
+        addonName = addonName or addonData.addOnName
     end
     if addonName == nil or addonName == "" then return end
 
     local narrateAboutAddonText = addonName
     local hasDependencyError = false
+    local isLibrary = false
     if addonData ~= nil then
         if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
-            narrateAboutAddonText = narrateAboutAddonText .. " - State: Dependency error"
+            narrateAboutAddonText = narrateAboutAddonText .. "   -   [State] Dependency error"
             hasDependencyError = true
         end
-        if hasDependencyError == false and addonData.isAddOnEnabled ~= nil and addonData.isAddOnEnabled == false then
-            narrateAboutAddonText = narrateAboutAddonText .. " - State: Disabled"
+        if hasDependencyError == false and addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
+            narrateAboutAddonText = narrateAboutAddonText .. "   -   [State] Disabled"
         end
         if addonData.isLibrary ~= nil and addonData.isLibrary == true then
             narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+            isLibrary = true
         end
-    else
-        if zo_strfind(addonName, "Lib", 1, true) ~= nil then
-            narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
-        end
+    end
+    if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
+        narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
     end
 
 --d(">>Text: " .. tos(narrateAboutAddonText))
