@@ -12,7 +12,6 @@ Added Screen Reader features
 ------------------------------------------------------------------------------------------------------------------------
 #1 Using the pack selection dropdown and selecting a pack will disable RETURN key (open chat) and ESC key? -> Because of remove fragment and add fragment maybe?
 
-
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -30,7 +29,7 @@ AddonSelector.noAddonCheckBoxUpdate = false
 AddonSelector.lastChangedAddOnVars = {}
 AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
-AddonSelector.version = "2.17"
+AddonSelector.version = "2.21"
 
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
@@ -38,6 +37,7 @@ AddonSelectorGlobal = AddonSelector
 
 local EM = EVENT_MANAGER
 local SM = SCENE_MANAGER
+local SNM = SCREEN_NARRATION_MANAGER
 
 local tos = tostring
 local strfor = string.format
@@ -94,6 +94,7 @@ local function IsAccessibilityUIReaderEnabled()
 	return IsAccessibilityModeEnabled() and IsAccessibilitySettingEnabled(ACCESSIBILITY_SETTING_SCREEN_NARRATION)
 end
 
+--[[
 local function StopNarration(UItoo)
 --d(">StopNarration-UItoo: " ..tostring(UItoo))
     UItoo = UItoo or false
@@ -106,14 +107,17 @@ local function StopNarration(UItoo)
         ClearNarrationQueue(NARRATION_TYPE_UI_SCREEN)
     end
 end
+]]
 
 local function AddNewChatNarrationText(newText, stopCurrent)
-    if IsAccessibilityChatReaderEnabled() == false then return end
+    if IsAccessibilityUIReaderEnabled() == false then return end
     stopCurrent = stopCurrent or false
 --d(">AddNewChatNarrationText-stopCurrent: " ..tostring(stopCurrent) ..", text: " ..tostring(newText))
     if stopCurrent == true then
-        StopNarration()
+        --StopNarration(true)
+        ClearActiveNarration()
     end
+
     --Remove any - from the text as it seems to make the text not "always" be read?
     local newTextClean = string.gsub(newText, "-", "")
 
@@ -137,26 +141,41 @@ local function AddNewChatNarrationText(newText, stopCurrent)
         --LibDebugLogger:SetBlockChatOutputEnabled(true)
     end
     ]]
-    RequestReadTextChatToClient(newTextClean)
+    --RequestReadTextChatToClient(newTextClean)
+
+    -- this current works when the addon manager is opened and the script is ran in chat
+    local addOnNarationData = {
+        canNarrate = function()
+            return true --ADDONS_FRAGMENT:IsShowing() -->Is currently showing
+        end,
+        selectedNarrationFunction = function()
+            return SNM:CreateNarratableObject(newText)
+        end,
+    }
+    SNM:RegisterCustomObject("ADD_ON_MANAGER", addOnNarationData)
+	SNM:QueueCustomEntry("ADD_ON_MANAGER")
+    RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
 end
 --AddonSelector.AddNewChatNarrationText = AddNewChatNarrationText
 
 local function OnUpdateDoNarrate(uniqueId, delay, callbackFunc)
     local updaterName = chatNarrationUpdaterName ..tostring(uniqueId)
     EM:UnregisterForUpdate(updaterName)
-    if IsAccessibilityChatReaderEnabled() == false or callbackFunc == nil then return end
+    if IsAccessibilityUIReaderEnabled() == false or callbackFunc == nil then return end
     delay = delay or 1000
     EM:RegisterForUpdate(updaterName, delay, function()
-        if IsAccessibilityChatReaderEnabled() == false then EM:UnregisterForUpdate(updaterName) return end
+        if IsAccessibilityUIReaderEnabled() == false then EM:UnregisterForUpdate(updaterName) return end
         callbackFunc()
         EM:UnregisterForUpdate(updaterName)
     end)
 end
 
+--[[
 local function OnAddonRowMouseExitStopNarrate(control)
 --d("[AddonSelector]OnAddonRowMouseExitStopNarrate")
-    StopNarration()
+    StopNarration(true)
 end
+]]
 
 local function getAddonNameAndData(control)
     if control == nil then return nil, nil end
@@ -186,7 +205,7 @@ end
 local function OnAddonRowClickedNarrateNewState(control, newState)
 --d("[AddonSelector]OnAddonRowClickedNarrateNewState-newState: " ..tos(newState))
     if control == nil then return end
-    if not IsAccessibilityChatReaderEnabled() then return end
+    if not IsAccessibilityUIReaderEnabled() then return end
 
         local addonName, addonData = getAddonNameAndData(control)
         if addonName == nil or addonData == nil then return end
@@ -199,21 +218,21 @@ local function OnAddonRowClickedNarrateNewState(control, newState)
                 narrateAddonStateText = "[New state] Enabled,   " ..addonName
             end
 --d(">addon state: " .. tos(narrateAddonStateText))
-            OnUpdateDoNarrate("OnAddonRowClicked", 250, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+            OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
         else
             zo_callLater(function()
                 --addonName, addonData = getAddonNameAndData(control)
                 local oldIndex = addonData.index
                 --local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
                 local newName, _, _, _, isEnabledNow = ADDON_MANAGER:GetAddOnInfo(oldIndex)
-d(">newName: " ..tos(newName))
+--d(">newName: " ..tos(newName))
                 if isEnabledNow == false then
                     narrateAddonStateText = "[New state] Disabled,   " ..addonName
                 else
                     narrateAddonStateText = "[New state] Enabled,   " ..addonName
                 end
 --d(">DELAYED: addon state: " .. tos(narrateAddonStateText))
-                OnUpdateDoNarrate("OnAddonRowClicked", 250, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+                OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
             end, 50)
         end
 end
@@ -221,7 +240,11 @@ end
 local function OnAddonRowMouseEnterStartNarrate(control)
 --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
     if control == nil then return end
-    if not IsAccessibilityChatReaderEnabled() then return end
+    if not IsAccessibilityUIReaderEnabled() then return end
+
+    --Did the control below the mouse change?
+    local mocCtrl = moc()
+    if mocCtrl == nil or control ~= mocCtrl then return end
 
     --Get the addon name at the control
     local addonName, addonData = getAddonNameAndData(control)
@@ -250,7 +273,7 @@ local function OnAddonRowMouseEnterStartNarrate(control)
     end
 
 --d(">>Text: " .. tos(narrateAboutAddonText))
-    OnUpdateDoNarrate("OnAddonRowMouseEnter", 250, function() AddNewChatNarrationText(narrateAboutAddonText, true)  end)
+    OnUpdateDoNarrate("OnAddonRowMouseEnter", 150, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
