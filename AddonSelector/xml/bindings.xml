@@ -20,6 +20,12 @@
             <Action name="ADDONS_PANEL_QUATERNARY" hideAction="true" inheritsBindFrom="UI_SHORTCUT_QUATERNARY">
                 <Down>ZO_AddOnManagerSecondaryButton_Callback()</Down>
             </Action>
+            <Action name="ADDONS_TOGGLE_ADDON_STATE" hideAction="true" inheritsBindFrom="UI_SHORTCUT_QUINARY">
+                <Down>AddonSelector_ToggleCurrentAddonState()</Down>
+            </Action>
+            <Action name="ADDONS_SEARCH" hideAction="true" inheritsBindFrom="UI_SHORTCUT_NEGATIVE">
+                <Down>AddonSelector_StartAddonSearch()</Down>
+            </Action>
         </Category>
     </Layer>
 </Bindings>

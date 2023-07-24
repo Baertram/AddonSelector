@@ -121,6 +121,22 @@
                     </OnInitialized>
                 </Control>
 
+                <Control name="$(parent)ToggleAddonStateButton" inherits="ZO_DialogButton">
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <OnInitialized>
+                        self:SetParent(ZO_AddOns)
+                        ZO_KeybindButtonTemplate_Setup(self, "ADDONS_TOGGLE_ADDON_STATE", function() AddonSelector_ToggleCurrentAddonState() end, AddonSelector_GetLocalizedText("ToggleAddonState"))
+                    </OnInitialized>
+                </Control>
+
+                <Control name="$(parent)StartAddonSearchButton" inherits="ZO_DialogButton">
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <OnInitialized>
+                        self:SetParent(ZO_AddOns)
+                        ZO_KeybindButtonTemplate_Setup(self, "ADDONS_SEARCH", function() AddonSelector_StartAddonSearch() end, AddonSelector_GetLocalizedText("AddonSearch"))
+                    </OnInitialized>
+                </Control>
+
             </Controls>
 		</Control>
 	</Controls>
