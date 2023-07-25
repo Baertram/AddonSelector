@@ -156,9 +156,16 @@ local langArray = {
         ["addonCategories"] = "Addon Kategorien",
         ["noCategory"]      = "-Keine Kategorie-",
         ["ToggleAddonState"] = "AddOn: An/Aus",
-        ["searchInstructions"] = "Tippe, um die Suche zu starten. Drücke die ENTER taste, um zur nächsten Fundstelle zu springen",
+        ["searchInstructions"] = "Der Cursor befindet sich im Suchfeld. Gib den Suchtext ein und drücke die ENTER Taste, um zur nächsten Fundstelle zu springen. Drücke die ESCAPE Taste, um das Suchfeld zu verlassen.",
         ["foundSearch"]         = "[Gefunden]",
         ["foundSearchLast"]     = "[Letzter Eintrag gefunden]",
+        ["closed"]              = "geschlossen",
+        ["currentText"]         = "Aktuell: ",
+        ["enableText"]          = "Aktiviere",
+        ["disableText"]         = "Deaktiviere",
+        ["enDisableCurrentStateTemplate"] = "%s alle AddOns. Aktueller Status  -   %s",
+        ["stateText"]           = "Status",
+        ["libraryText"]         = "Bibliothek",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -205,9 +212,16 @@ local langArray = {
         ["addonCategories"] = "Addon categories",
         ["noCategory"]      = "-No category-",
         ["ToggleAddonState"] = "AddOn: On/Off",
-        ["searchInstructions"] = "Type to start new search, press return key to jump to next found addon",
+        ["searchInstructions"] = "The cursor is in the searchbox. Type to start new search, press return key to jump to next found addon. Press the ESCAPE key to leave the searchbox again.",
         ["foundSearch"]         = "[Found]",
         ["foundSearchLast"]     = "[Found last entry]",
+        ["closed"]              = "closed",
+        ["currentText"]         = "Current: ",
+        ["enableText"]          = "Enable",
+        ["disableText"]         = "Disable",
+        ["enDisableCurrentStateTemplate"] = "%s all addons. Current state   -   %s",
+        ["stateText"]           = "State",
+        ["libraryText"]         = "Library",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
@@ -590,7 +604,6 @@ local savedGroupedByCharNameStr = AddonSelector_GetLocalizedText("SaveGroupedByC
 local autoReloadUIStr = AddonSelector_GetLocalizedText("autoReloadUIHint")
 local searchMenuStr = AddonSelector_GetLocalizedText("AddonSearch")
 searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
-AddonSelector._searchMenuStr = searchMenuStr
 local searchInstructions = AddonSelector_GetLocalizedText("searchInstructions")
 local searchFound = AddonSelector_GetLocalizedText("foundSearch")
 local searchFoundLast = AddonSelector_GetLocalizedText("foundSearchLast")
@@ -602,6 +615,14 @@ local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
 local packNameStr = AddonSelector_GetLocalizedText("packName")
 local addonCategoriesStr = AddonSelector_GetLocalizedText("addonCategories")
 local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
+local closedStr = AddonSelector_GetLocalizedText("closed")
+local currentTextStr = AddonSelector_GetLocalizedText("currentText")
+local enDisableCurrentStateTemplateText = AddonSelector_GetLocalizedText("enDisableCurrentStateTemplate")
+local enableText = AddonSelector_GetLocalizedText("enableText")
+local disableText = AddonSelector_GetLocalizedText("disableText")
+local stateText = AddonSelector_GetLocalizedText("stateText")
+local libraryText = AddonSelector_GetLocalizedText("libraryText")
+
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility
@@ -918,15 +939,15 @@ local function enableZO_AddOnsUI_controlNarration()
             local currentStateText2 = ""
             local currentState = enableAllAddonsCheckboxCtrl:GetState()
             if currentState == 1 then
-                currentStateText1 = "Disable"
+                currentStateText1 = disableText
                 currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
             else
-                currentStateText1 = "Enable"
+                currentStateText1 = enableText
                 currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
             end
             return currentStateText1, currentStateText2
         end
-        local narrateTextTemplate = "%s all addons. Current state   -   %s"
+        local narrateTextTemplate = enDisableCurrentStateTemplateText --"%s all addons. Current state   -   %s"
         onMouseEnterDoNarrate(enableAllAddonsCheckboxCtrl, narrateTextTemplate, narrateTextFunc)
         onMouseEnterDoNarrate(enableAllAddonTextCtrl, narrateTextTemplate, narrateTextFunc)
     end
@@ -1046,22 +1067,22 @@ local function OnAddonRowMouseEnterStartNarrate(control)
     local hasDependencyError = false
     local isLibrary = false
     if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
-        narrateAboutAddonText = narrateAboutAddonText .. "   [State] Dependency error"
+        narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE5) .. " " .. GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION)) -- Dependency missing
         hasDependencyError = true
     end
     if hasDependencyError == false then
         if addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
-            narrateAboutAddonText = narrateAboutAddonText .. "   [State] Disabled"
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE3)) --Disabled
         elseif addonData.addOnEnabled ~= nil and addonData.addOnEnabled == true then
-            narrateAboutAddonText = narrateAboutAddonText .. "    [State] Enabled"
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE2)) --Enabled
         end
     end
     if addonData.isLibrary ~= nil and addonData.isLibrary == true then
-        narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
         isLibrary = true
     end
     if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
-        narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
+        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
     end
 
     --d(">>Text: " .. tos(narrateAboutAddonText))
@@ -3253,6 +3274,7 @@ end
 
 --Start an addon search: Set mouse cursor to search box so you can start to type directly
 function AddonSelector_StartAddonSearch()
+    AddonSelector.selectedAddonSearchResult = nil
     if AddonSelector.searchBox == nil then return end
     local searchBox = AddonSelector.searchBox
     searchBox:Clear()
@@ -3479,6 +3501,7 @@ function AddonSelector.Initialize()
         AddonSelectorToggleAddonStateButton:ClearAnchors()
         AddonSelectorToggleAddonStateButton:SetAnchor(TOPLEFT, AddonSelectorDeselectAddonsButton, TOPRIGHT, 5, 0)
         --Start addon search button
+        AddonSelectorStartAddonSearchButton:SetText(searchMenuStr)
         AddonSelectorStartAddonSearchButton:ClearAnchors()
         AddonSelectorStartAddonSearchButton:SetAnchor(TOPLEFT, AddonSelectorSelectAddonsButton, TOPRIGHT, 5, 0)
         --With API101038 - "Advanced error messages" checkbox
@@ -3541,6 +3564,18 @@ function AddonSelector.Initialize()
 
         end, 500) -- Attention: Delay needs to be 500 as AddonSelector_HookForMultiSelectByShiftKey was enabled!!!
     end)
+
+    --PreHook the Addonmanagers OnEffectivelyHidden function
+    if ADDON_MANAGER_OBJECT.control:GetHandler("OnHide") == nil then
+        ADDON_MANAGER_OBJECT.control:SetHandler("OnHide", function(ctrl)
+            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. closedStr, true)
+        end)
+    else
+        ZO_PostHookHandler(ADDON_MANAGER_OBJECT.control, "OnHide", function(ctrl)
+            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. closedStr, true)
+        end)
+    end
+
     --[[
     ZO_PreHook("ZO_ScrollList_ScrollRelative", function(self, delta, onScrollCompleteCallback, animateInstantly)
         if self == ZOAddOnsList then
