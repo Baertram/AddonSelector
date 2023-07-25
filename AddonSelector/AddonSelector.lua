@@ -31,6 +31,11 @@ AddonSelector.alreadyFound = {}
 AddonSelector.activeUpdateControlEvents = {}
 AddonSelector.version = "2.22"
 
+AddonSelector.numAddonsEnabled = 0
+AddonSelector.numAddonsTotal = 0
+
+AddonSelector.AddedAddonsFragment = false
+
 AddonSelectorGlobal = AddonSelector
 --TODO:Remove comment for quicker debugging
 --ASG = AddonSelectorGlobal
@@ -60,16 +65,19 @@ local addonsWhichShouldNotBeDisabled = {
     ["LibDialog"] =     true,
     ["LibCustomMenu"] = true,
 }
-local addonsWhichShouldNotBeDisabledCount = 2 --entries in addonsWhichShouldNotBeDisabled
 --Get the current addonIndex of the "AddonSelector" addon
 local thisAddonIndex = 0
 --Needed dependencies index
 local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
+local addonListWasOpenedByAddonSelector = false
+
+local wasSearchNextDoneByReturnKey = false --variable to suppress the OnMouseEnter narration ona ddon rows if return key was used to jump to next search result
 local onMouseEnterHandlers_ZOAddOns_done = {}
 
 --Do not narrate any text if mouse is moved above this control at ZO_AddOns
 local ZOAddOns_BlacklistedNarrationChilds = {
+    ["ZO_AddOnsTitle"]                      = true, --Title
     ["ZO_AddOnsSectionBar"]                 = true, --Top bar where Votans Addon List adds buttons to scroll to addons/libraries
     ["ZO_AddOnsList"]                       = true, --The scroll list with the addon rows
     ["ZO_AddOnsBGLeft"]                     = true, --The left background
@@ -146,7 +154,9 @@ local langArray = {
         ["addonCategories"] = "Addon Kategorien",
         ["noCategory"]      = "-Keine Kategorie-",
         ["ToggleAddonState"] = "AddOn: An/Aus",
-        ["searchInstructions"] = "Tippe, um die Suche zu starten. Drücke die ENTER taste, um zur nächsten Fundstelle zu springen"
+        ["searchInstructions"] = "Tippe, um die Suche zu starten. Drücke die ENTER taste, um zur nächsten Fundstelle zu springen",
+        ["foundSearch"]         = "[Gefunden]",
+        ["foundSearchLast"]     = "[Letzter Eintrag gefunden]",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -193,7 +203,9 @@ local langArray = {
         ["addonCategories"] = "Addon categories",
         ["noCategory"]      = "-No category-",
         ["ToggleAddonState"] = "AddOn: On/Off",
-        ["searchInstructions"] = "Type to start new search, press return key to jump to next found addon"
+        ["searchInstructions"] = "Type to start new search, press return key to jump to next found addon",
+        ["foundSearch"]         = "[Found]",
+        ["foundSearchLast"]     = "[Found last entry]",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
@@ -576,7 +588,10 @@ local savedGroupedByCharNameStr = AddonSelector_GetLocalizedText("SaveGroupedByC
 local autoReloadUIStr = AddonSelector_GetLocalizedText("autoReloadUIHint")
 local searchMenuStr = AddonSelector_GetLocalizedText("AddonSearch")
 searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
+AddonSelector._searchMenuStr = searchMenuStr
 local searchInstructions = AddonSelector_GetLocalizedText("searchInstructions")
+local searchFound = AddonSelector_GetLocalizedText("foundSearch")
+local searchFoundLast = AddonSelector_GetLocalizedText("foundSearchLast")
 local clearSearchHistoryStr = AddonSelector_GetLocalizedText("searchClearHistory")
 local reloadUIStr = AddonSelector_GetLocalizedText("ReloadUI")
 local deletePackTitleStr = AddonSelector_GetLocalizedText("deletePackTitle")
@@ -613,6 +628,16 @@ local function IsAccessibilityUIReaderEnabled()
 	return IsAccessibilityModeEnabled() and IsAccessibilitySettingEnabled(ACCESSIBILITY_SETTING_SCREEN_NARRATION)
 end
 
+local function checkActiveSearchByReturnKey()
+d("[AddonSelector]wasSearchNextDoneByReturnKey: " ..tos(wasSearchNextDoneByReturnKey))
+    if wasSearchNextDoneByReturnKey == true then
+d(">>Search active!")
+        --wasSearchNextDoneByReturnKey = false
+        return false
+    end
+    return true
+end
+
 --[[
 local function StopNarration(UItoo)
 --d(">StopNarration-UItoo: " ..tostring(UItoo))
@@ -628,6 +653,7 @@ local function StopNarration(UItoo)
 end
 ]]
 
+local customNarrateEntryNumber = 0
 local function AddNewChatNarrationText(newText, stopCurrent)
     if IsAccessibilityUIReaderEnabled() == false then return end
     stopCurrent = stopCurrent or false
@@ -671,8 +697,10 @@ local function AddNewChatNarrationText(newText, stopCurrent)
             return SNM:CreateNarratableObject(newText)
         end,
     }
-    SNM:RegisterCustomObject("ADD_ON_MANAGER", addOnNarationData)
-	SNM:QueueCustomEntry("ADD_ON_MANAGER")
+    customNarrateEntryNumber = customNarrateEntryNumber + 1
+    local customNarrateEntryName = "ADD_ON_MANAGER_" .. tostring(customNarrateEntryNumber)
+    SNM:RegisterCustomObject(customNarrateEntryName, addOnNarationData)
+	SNM:QueueCustomEntry(customNarrateEntryName)
     RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
 end
 --AddonSelector.AddNewChatNarrationText = AddNewChatNarrationText
@@ -722,30 +750,54 @@ local function getAddonNameAndData(control)
 end
 
 local function isAddonRow(rowControl)
-    if rowControl == nil then return false end
+    if rowControl == nil then return false, nil end
     if rowControl:GetOwningWindow() ~= ZO_AddOns then
 --d("<isAddonRow: no ZO_AddOns owner!")
-        return false
+        return false, nil
     end
 
     local addonName, addonData = getAddonNameAndData(rowControl)
-    if addonName ~= nil and addonData ~= nil and addonData.addOnName ~= nil then return true end
-    return false
+    if addonName ~= nil and addonData ~= nil and addonData.addOnName ~= nil then return true, addonData end
+    return false, nil
 end
 
-local function narrateCurrentlyScrolledToAddonName(scrollToIndex)
+local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
 --d("[AddonSelector]narrateCurrentlyScrolledToAddonName-scrollIndex: " ..tos(scrollToIndex))
-    if scrollToIndex == nil then return end
+    lastFound = lastFound or false
+    if scrollToIndex == nil then
+        wasSearchNextDoneByReturnKey = false
+        return
+    end
     local addonList = ZOAddOnsList.data
-    if addonList == nil then return end
+    if addonList == nil then
+        wasSearchNextDoneByReturnKey = false
+        return
+    end
     local addonEntry = addonList[scrollToIndex]
-    if addonEntry == nil then return end
+    if addonEntry == nil then
+        wasSearchNextDoneByReturnKey = false
+        return
+    end
     local addonData = addonEntry.data
     local addonName = getAddonNameFromData(addonData)
 --d(">addonName: " ..tos(addonName))
-    if addonName == nil or addonName == "" then return end
+    if addonName == nil or addonName == "" then
+        wasSearchNextDoneByReturnKey = false
+        return
+    end
+
+    local foundText = ""
+    if lastFound == true then
+        foundText = searchFoundLast .. " "
+    else
+        foundText = searchFound .. " "
+    end
+
     --Higher delay as pressing the return key will narrate "return" and stops the found addon name then from playing...
-    OnUpdateDoNarrate("OnAddonSelector_AddonSearch", 150, function() AddNewChatNarrationText("[Found] " .. addonName, true)  end)
+    OnUpdateDoNarrate("OnAddonSelector_AddonSearch", 150, function()
+        wasSearchNextDoneByReturnKey = false
+        AddNewChatNarrationText(foundText .. addonName, false)
+    end)
 end
 
 local function getZOAddOnsUI_ControlText(control)
@@ -804,6 +856,9 @@ local function getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplat
         narrateText = string.format(narrateTextTemplate, unpack({narrateTextFunc()}))
     elseif narrateTextTemplate ~= nil and narrateTextTemplate ~= "" and narrateTextFunc == nil then
         narrateText = narrateTextTemplate
+    elseif narrateTextTemplate == nil and narrateTextFunc ~= nil and type(narrateTextFunc) == "function" then
+        narrateTextFunc()
+        return
     end
     if narrateText == nil or narrateText == "" then
         narrateText = getZOAddOnsUI_ControlText(control)
@@ -811,24 +866,33 @@ local function getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplat
     return narrateText
 end
 
-local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFunc)
+local function narrateAddonsEnabledTotal()
+    local numAddonsEnabled = AddonSelector.numAddonsEnabled
+    local numAddonsTotal = AddonSelector.numAddonsTotal
+    --AddonSelector.numAddonsTotal = 0
+    AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] - " ..tostring(numAddonsEnabled) .. " - " ..GetString(SI_ADDON_MANAGER_ENABLED)
+            .. "   [" ..GetString(SI_TRADINGHOUSESORTFIELD2) .. "] - "..tos(numAddonsTotal), false)
+end
+
+local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFunc, stopNarration)
     if control == nil then return end
+    if stopNarration == nil then stopNarration = true else stopNarration = false end
     if not onMouseEnterHandlers_ZOAddOns_done[control] then
         local onMouseEnterHandler = control:GetHandler("OnMouseEnter")
         if onMouseEnterHandler == nil then
             control:SetHandler("OnMouseEnter", function(ctrl)
---d("[AddonSelector]OnMouseEnter - 1 - name: " ..ctrl:GetName())
+                --d("[AddonSelector]OnMouseEnter - 1 - name: " ..ctrl:GetName())
                 local narrateAddonUIControlText = getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplate, narrateTextFunc)
                 if narrateAddonUIControlText ~= nil then
-                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, true)  end)
+                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end, "AddonSelector_NarrateUIControlOnMouseEnter")
         else
             ZO_PostHookHandler(control, "OnMouseEnter", function(ctrl)
---d("[AddonSelector]OnMouseEnter - 2 - name: " ..ctrl:GetName())
+                --d("[AddonSelector]OnMouseEnter - 2 - name: " ..ctrl:GetName())
                 local narrateAddonUIControlText = getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplate, narrateTextFunc)
                 if narrateAddonUIControlText ~= nil then
-                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, true)  end)
+                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end)
         end
@@ -856,6 +920,11 @@ local function enableZO_AddOnsUI_controlNarration()
         onMouseEnterDoNarrate(enableAllAddonTextCtrl, narrateTextTemplate, narrateTextFunc)
     end
 
+    --Title
+    if ZO_AddOnsTitle ~= nil then
+        ZO_AddOnsTitle:SetMouseEnabled(true)
+        onMouseEnterDoNarrate(ZO_AddOnsTitle, nil, narrateAddonsEnabledTotal)
+    end
 
     --Search box
     if AddonSelector.searchBox ~= nil then
@@ -907,43 +976,50 @@ local function enableZO_AddOnsUI_controlNarration()
     end
 end
 
-local function OnAddonRowClickedNarrateNewState(control, newState)
+local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
 --d("[AddonSelector]OnAddonRowClickedNarrateNewState-newState: " ..tos(newState))
     if control == nil then return end
     if not IsAccessibilityUIReaderEnabled() then return end
 
-        local addonName, addonData = getAddonNameAndData(control)
-        if addonName == nil or addonData == nil then return end
+    local addonName
+    if addonData ~= nil then
+        addonName = getAddonNameFromData(addonData)
+    else
+        addonName, addonData = getAddonNameAndData(control)
+    end
+    if addonName == nil or addonData == nil then return end
 
-        local narrateAddonStateText
-        if newState ~= nil then
-            if newState == TRISTATE_CHECK_BUTTON_UNCHECKED then
+    local narrateAddonStateText
+    if newState ~= nil then
+        if newState == TRISTATE_CHECK_BUTTON_UNCHECKED then
+            narrateAddonStateText = "[New state] Disabled,   " ..addonName
+        else
+            narrateAddonStateText = "[New state] Enabled,   " ..addonName
+        end
+--d(">addon state: " .. tos(narrateAddonStateText))
+        OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+    else
+--d(">addonName: " ..tos(addonName))
+        zo_callLater(function()
+            --addonName, addonData = getAddonNameAndData(control)
+            local oldIndex = addonData.index
+            --local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
+            local newName, _, _, _, isEnabledNow = ADDON_MANAGER:GetAddOnInfo(oldIndex)
+--d(">newName: " ..tos(newName))
+            if isEnabledNow == false then
                 narrateAddonStateText = "[New state] Disabled,   " ..addonName
             else
                 narrateAddonStateText = "[New state] Enabled,   " ..addonName
             end
---d(">addon state: " .. tos(narrateAddonStateText))
-            OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
-        else
-            zo_callLater(function()
-                --addonName, addonData = getAddonNameAndData(control)
-                local oldIndex = addonData.index
-                --local name, title, author, description, enabled, state, isOutOfDate, isLibrary = AddOnManager:GetAddOnInfo(i)
-                local newName, _, _, _, isEnabledNow = ADDON_MANAGER:GetAddOnInfo(oldIndex)
---d(">newName: " ..tos(newName))
-                if isEnabledNow == false then
-                    narrateAddonStateText = "[New state] Disabled,   " ..addonName
-                else
-                    narrateAddonStateText = "[New state] Enabled,   " ..addonName
-                end
 --d(">DELAYED: addon state: " .. tos(narrateAddonStateText))
-                OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
-            end, 50)
-        end
+            OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+        end, 50)
+    end
 end
 
 local function OnAddonRowMouseEnterStartNarrate(control)
---d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
+    --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
+    if checkActiveSearchByReturnKey() == false then return end
     if control == nil then return end
     if not IsAccessibilityUIReaderEnabled() then return end
 
@@ -977,7 +1053,7 @@ local function OnAddonRowMouseEnterStartNarrate(control)
         narrateAboutAddonText = "[Library] " .. narrateAboutAddonText
     end
 
---d(">>Text: " .. tos(narrateAboutAddonText))
+    --d(">>Text: " .. tos(narrateAboutAddonText))
     OnUpdateDoNarrate("OnAddonRowMouseEnter", 150, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
 end
 
@@ -1192,7 +1268,7 @@ end
 
 -- Toggles Enabled state when a row is clicked
 -->Using  Votans Addon List function ADD_ON_MANAGER:OnEnabledButtonClicked so that dependencies are enabled too
-local function Addon_Toggle_Enabled(rowControl)
+local function Addon_Toggle_Enabled(rowControl, addonData)
 --d("Addon_Toggle_Enabled")
     if not areAllAddonsEnabled(true) then return end
 
@@ -1217,7 +1293,7 @@ local function Addon_Toggle_Enabled(rowControl)
     --Accessibility
     --Do not narrate if SHIFT key is pressed to "multi-select" addons (set end spot to enable/disable)?
     if not IsShiftKeyDown() then
-        OnAddonRowClickedNarrateNewState(rowControl, newState)
+        OnAddonRowClickedNarrateNewState(rowControl, newState, addonData)
     end
 end
 
@@ -1774,6 +1850,9 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
     isAddonCategorySearched = isAddonCategorySearched or false
 --d("[AddonSelector]SearchAddon, searchType: " .. tos(searchType) .. ", searchValue: " .. tos(searchValue) .. ", hideNonFound: " ..tos(doHideNonFound).. ", isAddonCategorySearched: " ..tos(isAddonCategorySearched))
 
+    wasSearchNextDoneByReturnKey = false
+d("[AddonSelector]search done FALSE 1: " ..tos(wasSearchNextDoneByReturnKey))
+
     if isAddonCategorySearched == true then
         --searchValue is the category name of the addon AddonCategory. The index to scroll to is defined via table
         --AddonCategory.indexCategories[categoryName] = addonsIndexInAddonsList
@@ -1788,11 +1867,24 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
         if indexToScrollTo == nil then return end
         if indexToScrollTo ~= -1 then
             -->Scroll to the searchValue's index now
+            wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 2: " ..tos(wasSearchNextDoneByReturnKey))
             scrollAddonsScrollBarToIndex(indexToScrollTo)
+            wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 3: " ..tos(wasSearchNextDoneByReturnKey))
+
+            AddNewChatNarrationText("[Scrolled to] Category: " ..tos(searchValue), true)
         else
             --Scroll to the top -> Unassigned addons (no category)
+            wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 4: " ..tos(wasSearchNextDoneByReturnKey))
             AddonSelector_ScrollTo(true)
+            wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 5: " ..tos(wasSearchNextDoneByReturnKey))
+
+            AddNewChatNarrationText("[Scrolled to] AddOns", true)
         end
+        wasSearchNextDoneByReturnKey = false
         return
     end
 
@@ -1817,6 +1909,10 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
         AddonSelector.alreadyFound = {}
         --Unregister all update events
         unregisterOldEventUpdater()
+        wasSearchNextDoneByReturnKey = false
+d("[AddonSelector]search done FALSE 2: " ..tos(wasSearchNextDoneByReturnKey))
+
+        AddNewChatNarrationText("Search ended", true)
         return
     end
 
@@ -1878,12 +1974,17 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
     --Check all found sortIndices and use the first one for the next scroll, where the value is false
     if alreadyFound[toSearch] ~= nil then
 --d(">found toSearch entries: " ..tos(#alreadyFound[toSearch]))
+        local resetWasDone = false
         for index, wasScrolledToBeforeData in ipairs(alreadyFound[toSearch]) do
             for scrollToIndex, wasScrolledToBefore in pairs(wasScrolledToBeforeData) do
                 if wasScrolledToBefore == false then
 --d(">scrolling to index: " ..tos(scrollToIndex))
                     --Scroll to the found addon now, if it was not found before
+                    wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
                     scrollAddonsScrollBarToIndex(scrollToIndex)
+                    wasSearchNextDoneByReturnKey = true
+d("[AddonSelector]search done 7: " ..tos(wasSearchNextDoneByReturnKey))
                     --Set this entry to true so we know a scroll-to has taken place already to this sortIndex
                     AddonSelector.alreadyFound[toSearch][index][scrollToIndex] = true
                     --Check if all entries in the list are true now, so we scrolled to all of them already. Clear the list then
@@ -1896,11 +1997,12 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
                         end
                     end
                     --Are all entries in this search term table true?
-                    local resetWasDone = false
+                    resetWasDone = false
                     if trueCounter~=0 and entryCounter~=0 and trueCounter == entryCounter then
                         --Reset the search term table for a new scroll-to from the beginning
                         AddonSelector.alreadyFound[toSearch] = nil
                         resetWasDone = true
+--d(">all entries found and scrolled to!")
                     end
                     --Change the shown row name and put [ ] around the addon name so one sees the currently selected row
                     --[[
@@ -1929,9 +2031,18 @@ d(">scrollToIndex: " ..tos(scrollToIndex) .. ", approximatelyCurrentAddonSortInd
                         changeAddonControlName(scrollToIndex, true)
                     end, delay)
                     ]]
-                    narrateCurrentlyScrolledToAddonName(scrollToIndex)
+
+                    --Slightly delay the narration as the other narration is active already, telling us the addons enabled count
+                    if addonListWasOpenedByAddonSelector == true then
+                        zo_callLater(function()
+                            narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
+                        end, 1000)
+                    else
+                        narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
+                    end
 
                     changeAddonControlName(scrollToIndex, true)
+
                     --Abort now as scroll-to was done
                     return
                 end
@@ -1941,6 +2052,7 @@ d(">scrollToIndex: " ..tos(scrollToIndex) .. ", approximatelyCurrentAddonSortInd
 end
 
 local function showAddOnsList()
+    addonListWasOpenedByAddonSelector = false
     if not SM then return end
     if not ADDONS_FRAGMENT then return end
     if ADDONS_FRAGMENT and ADDONS_FRAGMENT.control and not ADDONS_FRAGMENT.control:IsHidden() then return end
@@ -1948,6 +2060,8 @@ local function showAddOnsList()
     ZO_SceneManager_ToggleGameMenuBinding()
     --Show the addons
     SM:AddFragment(ADDONS_FRAGMENT)
+    addonListWasOpenedByAddonSelector = true
+    AddonSelector.AddedAddonsFragment = true
     return true
 end
 
@@ -1974,19 +2088,23 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     end
     --Search for the addonName or category
     AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false, isAddonCategorySearched)
+    addonListWasOpenedByAddonSelector = false
 end
 
 --Add the active addon count to the header text
-local function AddonSelectorUpdateCount(delay)
+local function AddonSelectorUpdateCount(delay, doNarrate)
 --d("[AddonSelector]AddonSelectorUpdateCount, noAddonNumUpdate: " .. tos(AddonSelector.noAddonNumUpdate))
     if AddonSelector.noAddonNumUpdate then return false end
     delay = delay or 100
+    doNarrate = doNarrate or false
     zo_callLater(function()
         if not ZOAddOnsList or not ZOAddOnsList.data then return false end
         local addonRows = ZOAddOnsList.data
         if addonRows == nil then return false end
         local countFound = 0
         local countActive = 0
+        AddonSelector.numAddonsEnabled = 0
+        AddonSelector.numAddonsTotal = 0
         ADDON_MANAGER = ADDON_MANAGER or GetAddOnManager()
         ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
         AddonSelector.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
@@ -2001,9 +2119,17 @@ local function AddonSelectorUpdateCount(delay)
                 end
             end
         end
+
+        AddonSelector.numAddonsEnabled = countActive
+        AddonSelector.numAddonsTotal = countFound
+        if doNarrate == true then
+            narrateAddonsEnabledTotal()
+        end
+
         --Update the addon manager title with the number of active/total addons
         --d("[AddonSelector] active/found: " .. tos(countActive) .. "/" .. tos(countFound))
         ZO_AddOnsTitle:SetText(GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. " (" .. tos(countActive) .. "/" .. tos(countFound) .. ")")
+        ZO_AddOnsTitle:SetMouseEnabled(true)
     end, delay)
 end
 
@@ -3116,22 +3242,31 @@ end
 --below the mouse cursor
 function AddonSelector_ToggleCurrentAddonState()
     if not areAllAddonsEnabled(true) then return end
---d("[AddonSelector_ToggleCurrentAddonState]")
-    local rowCtrl = moc()
-    if rowCtrl ~= nil and rowCtrl:IsMouseEnabled() then
-        --Check if rowControl is an addon row
-        if not isAddonRow(rowCtrl) then
-            return
-        end
 
-        local enabledBtn = rowCtrl:GetNamedChild("Enabled")
-        if enabledBtn == nil then
-            rowCtrl = rowCtrl:GetParent()
-            enabledBtn = rowCtrl:GetNamedChild("Enabled")
-            if enabledBtn == nil then return end
+    --todo 2023-07-25, somehow after scrolling the moc() row is not the correct one below the cursor, if this function is called by the keybind!
+    --It's most likely that the reused pool of rowControls of the addon list interferes.
+    --Maybe a bigger delay helps or some refreshdata or refreshvisible functions need to be called?
+
+    zo_callLater(function()
+--d("[AddonSelector_ToggleCurrentAddonState]")
+        local rowCtrl = WINDOW_MANAGER:GetMouseOverControl()
+--d("rowCtrl: " .. tos(rowCtrl:GetName()))
+        if rowCtrl ~= nil and rowCtrl:IsMouseEnabled() then
+            --Check if rowControl is an addon row
+            local isAddonRowControl, addonData = isAddonRow(rowCtrl)
+            if not isAddonRowControl then
+                return
+            end
+
+            local enabledBtn = rowCtrl:GetNamedChild("Enabled")
+            if enabledBtn == nil then
+                rowCtrl = rowCtrl:GetParent()
+                enabledBtn = rowCtrl:GetNamedChild("Enabled")
+                if enabledBtn == nil then return end
+            end
+            Addon_Toggle_Enabled(rowCtrl, addonData)
         end
-        Addon_Toggle_Enabled(rowCtrl)
-    end
+    end, 0) --call 1 frame later to assure moc() got the correct ctrl of the scrollable, resused list row pool!
 end
 
 --[[
@@ -3308,7 +3443,7 @@ function AddonSelector.Initialize()
         AddonSelectorOnShow_HideStuff()
 
         --Update the count/total number at the addon manager titel
-        AddonSelectorUpdateCount(250)
+        AddonSelectorUpdateCount(250, true)
         --Clear the search table
         AddonSelector.searchBox:SetText("")
         --Reset the searched table completely
@@ -3447,6 +3582,7 @@ local function searchAddOnSlashCommandHandlder(args)
             openGameMenuAndAddOnsAndThenSearch(tos(options[1]))
         end
     end
+    addonListWasOpenedByAddonSelector = false
 end
 
 local function ShowLAMAddonSettings()
