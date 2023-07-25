@@ -3339,14 +3339,17 @@ function AddonSelector_ToggleCurrentAddonState()
 
     --Is an addon search active and was a result found
     if AddonSelector.selectedAddonSearchResult ~= nil then
-
         local searchBox = AddonSelector.searchBox
         if searchBox ~= nil and searchBox:GetText() ~= "" then
             --1 addon row was selected with the surrounding [>  <] tags. Toggle this addon's state!
             rowCtrl = AddonSelector.selectedAddonSearchResult.control
-            if rowCtrl == nil or AddonSelector.selectedAddonSearchResult.sortIndex == nil then return end
+            if rowCtrl == nil or AddonSelector.selectedAddonSearchResult.sortIndex == nil then
+                AddonSelector.selectedAddonSearchResult = nil
+                return
+            end
         else
             AddonSelector.selectedAddonSearchResult = nil
+            wasSearchNextDoneByReturnKey = false
         end
     end
 
@@ -3370,6 +3373,11 @@ d(">sortIndex changed, expected:  " ..tos(sortIndexSearchSaved) .. "/ got: " ..t
 d(">>found new rowControl: " .. tos(rowControlOfSortIndex:GetName()))
                             AddonSelector.selectedAddonSearchResult.control = rowControlOfSortIndex
                             rowCtrl = rowControlOfSortIndex
+
+                            isAddonRowControl, addonData = isAddonRow(rowCtrl)
+                            if not isAddonRowControl or addonData == nil then
+                                return 
+                            end
                         else
                             AddonSelector.selectedAddonSearchResult = nil
                             return
