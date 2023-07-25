@@ -165,6 +165,7 @@ local langArray = {
         ["disableText"]         = "Deaktiviere",
         ["enDisableCurrentStateTemplate"] = "%s alle AddOns. Aktueller Status  -   %s",
         ["stateText"]           = "Status",
+        ["newStateText"]        = "Neuer Status",
         ["libraryText"]         = "Bibliothek",
     },
 ---------------------------------------------------------------------------------------------------------------------
@@ -221,6 +222,7 @@ local langArray = {
         ["disableText"]         = "Disable",
         ["enDisableCurrentStateTemplate"] = "%s all addons. Current state   -   %s",
         ["stateText"]           = "State",
+        ["newStateText"]        = "New state",
         ["libraryText"]         = "Library",
     },
 ---------------------------------------------------------------------------------------------------------------------
@@ -621,6 +623,7 @@ local enDisableCurrentStateTemplateText = AddonSelector_GetLocalizedText("enDisa
 local enableText = AddonSelector_GetLocalizedText("enableText")
 local disableText = AddonSelector_GetLocalizedText("disableText")
 local stateText = AddonSelector_GetLocalizedText("stateText")
+local newStateText = AddonSelector_GetLocalizedText("newStateText")
 local libraryText = AddonSelector_GetLocalizedText("libraryText")
 
 
@@ -960,7 +963,7 @@ local function enableZO_AddOnsUI_controlNarration()
 
     --Search box
     if AddonSelector.searchBox ~= nil then
-        onMouseEnterDoNarrate(AddonSelector.searchBox, searchMenuStr .. " %s", function() getZOAddOnsUI_ControlText(AddonSelector.searchBox)  end)
+        onMouseEnterDoNarrate(AddonSelector.searchBox, searchMenuStr .. " %s", function() return getZOAddOnsUI_ControlText(AddonSelector.searchBox)  end)
     end
 
     --Pack name edit box
@@ -1024,9 +1027,9 @@ local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
     local narrateAddonStateText
     if newState ~= nil then
         if newState == TRISTATE_CHECK_BUTTON_UNCHECKED then
-            narrateAddonStateText = "[New state] Disabled,   " ..addonName
+            narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE3) .. ",   " ..addonName -- disabled
         else
-            narrateAddonStateText = "[New state] Enabled,   " ..addonName
+            narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE2) ..",   " ..addonName --enabled
         end
 --d(">addon state: " .. tos(narrateAddonStateText))
         OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
@@ -1039,9 +1042,9 @@ local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
             local newName, _, _, _, isEnabledNow = ADDON_MANAGER:GetAddOnInfo(oldIndex)
 --d(">newName: " ..tos(newName))
             if isEnabledNow == false then
-                narrateAddonStateText = "[New state] Disabled,   " ..addonName
+                narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE3) ..",   " ..addonName
             else
-                narrateAddonStateText = "[New state] Enabled,   " ..addonName
+                narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE2) ..",   " ..addonName
             end
 --d(">DELAYED: addon state: " .. tos(narrateAddonStateText))
             OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
