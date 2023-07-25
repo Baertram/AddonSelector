@@ -2062,7 +2062,7 @@ d(">scrollToIndex: " ..tos(scrollToIndex) .. ", approximatelyCurrentAddonSortInd
                     if addonListWasOpenedByAddonSelector == true then
                         zo_callLater(function()
                             narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
-                        end, 2000)
+                        end, 3500)
                     else
                         narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
                     end
@@ -3278,6 +3278,7 @@ function AddonSelector_ToggleCurrentAddonState()
         if searchBox ~= nil and searchBox:GetText() ~= "" then
             --1 addon row was selected with the surrounding [>  <] tags. Toggle this addon's state!
             rowCtrl = AddonSelector.selectedAddonSearchResult.control
+            if rowCtrl == nil or AddonSelector.selectedAddonSearchResult.sortIndex == nil then return end
         else
             AddonSelector.selectedAddonSearchResult = nil
         end
@@ -3288,10 +3289,26 @@ d("[AddonSelector_ToggleCurrentAddonState]")
 d("rowCtrl: " .. tos(rowCtrl:GetName()))
         if rowCtrl ~= nil and rowCtrl:IsMouseEnabled() then
             --Check if rowControl is an addon row and get it's data,
-            --as getting it latr would result in wrong data because of the scroll list's re-used row control pool!
+            --as getting it later would result in wrong data because of the scroll list's re-used row control pool!
             local isAddonRowControl, addonData = isAddonRow(rowCtrl)
             if not isAddonRowControl or addonData == nil then
                 return
+            else
+                if AddonSelector.selectedAddonSearchResult ~= nil then
+                    --Did the rows scroll and the sortIndex at the pool's rowControl changed
+                    local sortIndexSearchSaved = AddonSelector.selectedAddonSearchResult.sortIndex
+                    if sortIndexSearchSaved ~= addonData.sortIndex then
+d(">sortIndex changed, expected:  " ..tos(sortIndexSearchSaved) .. "/ got: " ..tos(addonData.sortIndex))
+                        local rowControlOfSortIndex = (ZOAddOnsList.data[sortIndexSearchSaved] ~= nil and ZOAddOnsList.data[sortIndexSearchSaved].control) or nil
+                        if rowControlOfSortIndex ~= nil then
+d(">>found new rowControl: " .. tos(rowControlOfSortIndex:GetName()))
+                            AddonSelector.selectedAddonSearchResult.control = rowControlOfSortIndex
+                        else
+                            AddonSelector.selectedAddonSearchResult = nil
+                            return
+                        end
+                    end
+                end
             end
 
             local enabledBtn = rowCtrl:GetNamedChild("Enabled")
