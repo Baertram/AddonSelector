@@ -658,9 +658,9 @@ local function IsAccessibilityUIReaderEnabled()
 end
 
 local function checkActiveSearchByReturnKey()
-d("[AddonSelector]wasSearchNextDoneByReturnKey: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]wasSearchNextDoneByReturnKey: " ..tos(wasSearchNextDoneByReturnKey))
     if wasSearchNextDoneByReturnKey == true then
-d(">>Search active!")
+--d(">>Search active!")
         --wasSearchNextDoneByReturnKey = false
         return false
     end
@@ -1928,7 +1928,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
     local wasAnythingFound = false
     AddonSelector.selectedAddonSearchResult = nil
     wasSearchNextDoneByReturnKey = false
-d("[AddonSelector]search done FALSE 1: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done FALSE 1: " ..tos(wasSearchNextDoneByReturnKey))
 
     if isAddonCategorySearched == true then
         --searchValue is the category name of the addon AddonCategory. The index to scroll to is defined via table
@@ -1945,19 +1945,19 @@ d("[AddonSelector]search done FALSE 1: " ..tos(wasSearchNextDoneByReturnKey))
         if indexToScrollTo ~= -1 then
             -->Scroll to the searchValue's index now
             wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 2: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 2: " ..tos(wasSearchNextDoneByReturnKey))
             scrollAddonsScrollBarToIndex(indexToScrollTo)
             wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 3: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 3: " ..tos(wasSearchNextDoneByReturnKey))
 
             AddNewChatNarrationText("[Scrolled to] Category: " ..tos(searchValue), true)
         else
             --Scroll to the top -> Unassigned addons (no category)
             wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 4: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 4: " ..tos(wasSearchNextDoneByReturnKey))
             AddonSelector_ScrollTo(true)
             wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 5: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 5: " ..tos(wasSearchNextDoneByReturnKey))
 
             AddNewChatNarrationText("[Scrolled to] AddOns", true)
         end
@@ -2060,7 +2060,7 @@ d("[AddonSelector]search done 5: " ..tos(wasSearchNextDoneByReturnKey))
 --d(">scrolling to index: " ..tos(scrollToIndex))
                     --Scroll to the found addon now, if it was not found before
                     wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
                     scrollAddonsScrollBarToIndex(scrollToIndex)
 
                     AddonSelector.selectedAddonSearchResult = {
@@ -2069,7 +2069,7 @@ d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
                     }
 
                     wasSearchNextDoneByReturnKey = true
-d("[AddonSelector]search done 7: " ..tos(wasSearchNextDoneByReturnKey))
+--d("[AddonSelector]search done 7: " ..tos(wasSearchNextDoneByReturnKey))
                     --Set this entry to true so we know a scroll-to has taken place already to this sortIndex
                     AddonSelector.alreadyFound[toSearch][index][scrollToIndex] = true
                     --Check if all entries in the list are true now, so we scrolled to all of them already. Clear the list then
@@ -3354,8 +3354,8 @@ function AddonSelector_ToggleCurrentAddonState()
     end
 
     zo_callLater(function()
-d("[AddonSelector_ToggleCurrentAddonState]")
-d("rowCtrl: " .. tos(rowCtrl:GetName()))
+--d("[AddonSelector_ToggleCurrentAddonState]")
+--d("rowCtrl: " .. tos(rowCtrl:GetName()))
         if rowCtrl ~= nil and rowCtrl:IsMouseEnabled() then
             --Check if rowControl is an addon row and get it's data,
             --as getting it later would result in wrong data because of the scroll list's re-used row control pool!
@@ -3367,16 +3367,16 @@ d("rowCtrl: " .. tos(rowCtrl:GetName()))
                     --Did the rows scroll and the sortIndex at the pool's rowControl changed
                     local sortIndexSearchSaved = AddonSelector.selectedAddonSearchResult.sortIndex
                     if sortIndexSearchSaved ~= addonData.sortIndex then
-d(">sortIndex changed, expected:  " ..tos(sortIndexSearchSaved) .. "/ got: " ..tos(addonData.sortIndex))
+--d(">sortIndex changed, expected:  " ..tos(sortIndexSearchSaved) .. "/ got: " ..tos(addonData.sortIndex))
                         local rowControlOfSortIndex = (ZOAddOnsList.data[sortIndexSearchSaved] ~= nil and ZOAddOnsList.data[sortIndexSearchSaved].control) or nil
                         if rowControlOfSortIndex ~= nil then
-d(">>found new rowControl: " .. tos(rowControlOfSortIndex:GetName()))
+--d(">>found new rowControl: " .. tos(rowControlOfSortIndex:GetName()))
                             AddonSelector.selectedAddonSearchResult.control = rowControlOfSortIndex
                             rowCtrl = rowControlOfSortIndex
 
                             isAddonRowControl, addonData = isAddonRow(rowCtrl)
                             if not isAddonRowControl or addonData == nil then
-                                return 
+                                return
                             end
                         else
                             AddonSelector.selectedAddonSearchResult = nil
