@@ -73,6 +73,8 @@ local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 local addonListWasOpenedByAddonSelector = false
 
 local wasSearchNextDoneByReturnKey = false --variable to suppress the OnMouseEnter narration ona ddon rows if return key was used to jump to next search result
+AddonSelector.selectedAddonSearchResult = nil
+
 local onMouseEnterHandlers_ZOAddOns_done = {}
 
 --Do not narrate any text if mouse is moved above this control at ZO_AddOns
@@ -761,9 +763,8 @@ local function isAddonRow(rowControl)
     return false, nil
 end
 
-local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
---d("[AddonSelector]narrateCurrentlyScrolledToAddonName-scrollIndex: " ..tos(scrollToIndex))
-    lastFound = lastFound or false
+
+local function getAddonEntryByScrollToIndex(scrollToIndex)
     if scrollToIndex == nil then
         wasSearchNextDoneByReturnKey = false
         return
@@ -778,9 +779,19 @@ local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
         wasSearchNextDoneByReturnKey = false
         return
     end
+    return addonEntry
+end
+
+
+local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
+    --d("[AddonSelector]narrateCurrentlyScrolledToAddonName-scrollIndex: " ..tos(scrollToIndex))
+    lastFound = lastFound or false
+    local addonEntry = getAddonEntryByScrollToIndex(scrollToIndex)
+    if addonEntry == nil then return end
+
     local addonData = addonEntry.data
     local addonName = getAddonNameFromData(addonData)
---d(">addonName: " ..tos(addonName))
+    --d(">addonName: " ..tos(addonName))
     if addonName == nil or addonName == "" then
         wasSearchNextDoneByReturnKey = false
         return
@@ -1734,6 +1745,14 @@ local function eventUpdateFunc(p_sortIndexOfControl, p_addSelection, p_eventUpda
                 local selectedAddonData = addonList[p_sortIndexOfControl].data
                 newAddonText = selectedAddonData.addOnName
             end
+
+            if AddonSelector.selectedAddonSearchResult ~= nil then
+                AddonSelector.selectedAddonSearchResult.control = nil
+                if p_addSelection == true and AddonSelector.selectedAddonSearchResult.sortIndex ~= nil and AddonSelector.selectedAddonSearchResult.sortIndex == p_sortIndexOfControl then
+                    AddonSelector.selectedAddonSearchResult.control = selectedAddonControl
+                end
+            end
+
             selectedAddonControlName:SetText(newAddonText)
             --Unregister the update function again now
             EM:UnregisterForUpdate(p_eventUpdateName)
@@ -1850,6 +1869,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
     isAddonCategorySearched = isAddonCategorySearched or false
 --d("[AddonSelector]SearchAddon, searchType: " .. tos(searchType) .. ", searchValue: " .. tos(searchValue) .. ", hideNonFound: " ..tos(doHideNonFound).. ", isAddonCategorySearched: " ..tos(isAddonCategorySearched))
 
+    AddonSelector.selectedAddonSearchResult = nil
     wasSearchNextDoneByReturnKey = false
 d("[AddonSelector]search done FALSE 1: " ..tos(wasSearchNextDoneByReturnKey))
 
@@ -1983,6 +2003,12 @@ d("[AddonSelector]search done FALSE 2: " ..tos(wasSearchNextDoneByReturnKey))
                     wasSearchNextDoneByReturnKey = true
 d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
                     scrollAddonsScrollBarToIndex(scrollToIndex)
+
+                    AddonSelector.selectedAddonSearchResult = {
+                        sortIndex   =  scrollToIndex,
+                        control     = nil, --Will be set at function eventUpdateFunc as the [>  <] surrounding tags will be placed!
+                    }
+
                     wasSearchNextDoneByReturnKey = true
 d("[AddonSelector]search done 7: " ..tos(wasSearchNextDoneByReturnKey))
                     --Set this entry to true so we know a scroll-to has taken place already to this sortIndex
@@ -2036,7 +2062,7 @@ d(">scrollToIndex: " ..tos(scrollToIndex) .. ", approximatelyCurrentAddonSortInd
                     if addonListWasOpenedByAddonSelector == true then
                         zo_callLater(function()
                             narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
-                        end, 1000)
+                        end, 2000)
                     else
                         narrateCurrentlyScrolledToAddonName(scrollToIndex, resetWasDone)
                     end
@@ -3243,18 +3269,28 @@ end
 function AddonSelector_ToggleCurrentAddonState()
     if not areAllAddonsEnabled(true) then return end
 
-    --todo 2023-07-25, somehow after scrolling the moc() row is not the correct one below the cursor, if this function is called by the keybind!
-    --It's most likely that the reused pool of rowControls of the addon list interferes.
-    --Maybe a bigger delay helps or some refreshdata or refreshvisible functions need to be called?
+    local rowCtrl = WINDOW_MANAGER:GetMouseOverControl()
+
+    --Is an addon search active and was a result found
+    if AddonSelector.selectedAddonSearchResult ~= nil then
+
+        local searchBox = AddonSelector.searchBox
+        if searchBox ~= nil and searchBox:GetText() ~= "" then
+            --1 addon row was selected with the surrounding [>  <] tags. Toggle this addon's state!
+            rowCtrl = AddonSelector.selectedAddonSearchResult.control
+        else
+            AddonSelector.selectedAddonSearchResult = nil
+        end
+    end
 
     zo_callLater(function()
---d("[AddonSelector_ToggleCurrentAddonState]")
-        local rowCtrl = WINDOW_MANAGER:GetMouseOverControl()
---d("rowCtrl: " .. tos(rowCtrl:GetName()))
+d("[AddonSelector_ToggleCurrentAddonState]")
+d("rowCtrl: " .. tos(rowCtrl:GetName()))
         if rowCtrl ~= nil and rowCtrl:IsMouseEnabled() then
-            --Check if rowControl is an addon row
+            --Check if rowControl is an addon row and get it's data,
+            --as getting it latr would result in wrong data because of the scroll list's re-used row control pool!
             local isAddonRowControl, addonData = isAddonRow(rowCtrl)
-            if not isAddonRowControl then
+            if not isAddonRowControl or addonData == nil then
                 return
             end
 
