@@ -960,7 +960,7 @@ local function enableZO_AddOnsUI_controlNarration()
 
     --Search box
     if AddonSelector.searchBox ~= nil then
-        onMouseEnterDoNarrate(AddonSelector.searchBox, searchMenuStr)
+        onMouseEnterDoNarrate(AddonSelector.searchBox, searchMenuStr .. " %s", function() getZOAddOnsUI_ControlText(AddonSelector.searchBox)  end)
     end
 
     --Pack name edit box
@@ -3148,7 +3148,7 @@ function AddonSelector.CreateControlReferences()
                 else
                     narrateText = "["..narrateText .. "]  " .. currentText
                 end
-                OnUpdateDoNarrate("OnAddonSearchLeftClicked", 150, function() AddNewChatNarrationText(narrateText, true)  end)
+                OnUpdateDoNarrate("OnAddonSearchLeftClicked", 0, function() AddNewChatNarrationText(narrateText, true)  end)
             end
         end
     end)
@@ -3273,14 +3273,15 @@ function ZO_AddOnManager:GetRowSetupFunction()
 end
 
 --Start an addon search: Set mouse cursor to search box so you can start to type directly
+local onMouseUpHandlerOfSearchBox
 function AddonSelector_StartAddonSearch()
     AddonSelector.selectedAddonSearchResult = nil
     if AddonSelector.searchBox == nil then return end
     local searchBox = AddonSelector.searchBox
     searchBox:Clear()
-    local onMouseUpHandler = searchBox:GetHandler("OnMouseUp")
-    if onMouseUpHandler == nil then return end
-    onMouseUpHandler(searchBox, MOUSE_BUTTON_INDEX_LEFT, true)
+    onMouseUpHandlerOfSearchBox = onMouseUpHandlerOfSearchBox or searchBox:GetHandler("OnMouseUp")
+    if onMouseUpHandlerOfSearchBox == nil then return end
+    onMouseUpHandlerOfSearchBox(searchBox, MOUSE_BUTTON_INDEX_LEFT, true)
     searchBox:TakeFocus()
 end
 
