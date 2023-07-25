@@ -806,12 +806,71 @@ local function getAddonEntryByScrollToIndex(scrollToIndex)
     return addonEntry
 end
 
+local function getAddonNarrateTextByData(addonData, prefixStr)
+    if addonData == nil then return end
+
+    local addonName = getAddonNameFromData(addonData)
+    if addonName == nil then return end
+
+    local narrateAboutAddonText = addonName
+    local hasDependencyError = false
+    local isLibrary = false
+    if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
+        narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE5) .. " " .. GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION)) -- Dependency missing
+        hasDependencyError = true
+    end
+    if hasDependencyError == false then
+        if addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE3)) --Disabled
+        elseif addonData.addOnEnabled ~= nil and addonData.addOnEnabled == true then
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE2)) --Enabled
+        end
+    end
+    if addonData.isLibrary ~= nil and addonData.isLibrary == true then
+        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
+        isLibrary = true
+    end
+    if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
+        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
+    end
+
+    if prefixStr ~= nil and prefixStr ~= "" then
+        narrateAboutAddonText = prefixStr .. narrateAboutAddonText
+    end
+
+    return narrateAboutAddonText
+end
+
+local function OnAddonRowMouseEnterStartNarrate(control, prefixStr)
+    --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
+    if checkActiveSearchByReturnKey() == false then return end
+    if control == nil then return end
+    if not IsAccessibilityUIReaderEnabled() then return end
+
+    --Did the control below the mouse change?
+    local mocCtrl = moc()
+    if mocCtrl == nil or control ~= mocCtrl then return end
+
+
+    --Get the addon name at the control
+    local addonName, addonData = getAddonNameAndData(control)
+    if addonName == nil or addonData == nil then return end
+
+    local narrateAboutAddonText = getAddonNarrateTextByData(addonData, prefixStr)
+    if narrateAboutAddonText == nil then return end
+
+    --d(">>Text: " .. tos(narrateAboutAddonText))
+    OnUpdateDoNarrate("OnAddonRowMouseEnter", 150, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
+end
+
 
 local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
     --d("[AddonSelector]narrateCurrentlyScrolledToAddonName-scrollIndex: " ..tos(scrollToIndex))
     lastFound = lastFound or false
     local addonEntry = getAddonEntryByScrollToIndex(scrollToIndex)
-    if addonEntry == nil then return end
+    if addonEntry == nil then
+        return
+    end
 
     local addonData = addonEntry.data
     local addonName = getAddonNameFromData(addonData)
@@ -828,10 +887,16 @@ local function narrateCurrentlyScrolledToAddonName(scrollToIndex, lastFound)
         foundText = searchFound .. " "
     end
 
+    local narrateAboutAddonText = getAddonNarrateTextByData(addonData, foundText)
+    if narrateAboutAddonText == nil or narrateAboutAddonText == foundText then
+        wasSearchNextDoneByReturnKey = false
+        return
+    end
+
     --Higher delay as pressing the return key will narrate "return" and stops the found addon name then from playing...
     OnUpdateDoNarrate("OnAddonSelector_AddonSearch", 150, function()
         wasSearchNextDoneByReturnKey = false
-        AddNewChatNarrationText(foundText .. addonName, false)
+        AddNewChatNarrationText(narrateAboutAddonText, false)
     end)
 end
 
@@ -1050,46 +1115,6 @@ local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
             OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
         end, 50)
     end
-end
-
-local function OnAddonRowMouseEnterStartNarrate(control)
-    --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
-    if checkActiveSearchByReturnKey() == false then return end
-    if control == nil then return end
-    if not IsAccessibilityUIReaderEnabled() then return end
-
-    --Did the control below the mouse change?
-    local mocCtrl = moc()
-    if mocCtrl == nil or control ~= mocCtrl then return end
-
-    --Get the addon name at the control
-    local addonName, addonData = getAddonNameAndData(control)
-    if addonName == nil or addonData == nil then return end
-
-    local narrateAboutAddonText = addonName
-    local hasDependencyError = false
-    local isLibrary = false
-    if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
-        narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE5) .. " " .. GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION)) -- Dependency missing
-        hasDependencyError = true
-    end
-    if hasDependencyError == false then
-        if addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
-            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE3)) --Disabled
-        elseif addonData.addOnEnabled ~= nil and addonData.addOnEnabled == true then
-            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE2)) --Enabled
-        end
-    end
-    if addonData.isLibrary ~= nil and addonData.isLibrary == true then
-        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
-        isLibrary = true
-    end
-    if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
-        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
-    end
-
-    --d(">>Text: " .. tos(narrateAboutAddonText))
-    OnUpdateDoNarrate("OnAddonRowMouseEnter", 150, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -2029,8 +2054,8 @@ d("[AddonSelector]search done 6: " ..tos(wasSearchNextDoneByReturnKey))
                     scrollAddonsScrollBarToIndex(scrollToIndex)
 
                     AddonSelector.selectedAddonSearchResult = {
-                        sortIndex   =  scrollToIndex,
-                        control     = nil, --Will be set at function eventUpdateFunc as the [>  <] surrounding tags will be placed!
+                        sortIndex   =   scrollToIndex,
+                        control     =   ZOAddOnsList.data[scrollToIndex], --Will be re-set at function eventUpdateFunc as the [>  <] surrounding tags will be placed!
                     }
 
                     wasSearchNextDoneByReturnKey = true
