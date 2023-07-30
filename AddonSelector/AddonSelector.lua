@@ -1113,6 +1113,7 @@ end
 
 local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
     noPackUpdate = noPackUpdate or false
+--d("[AS]onAddonPackSelected - RefreshData()")
     ADDON_MANAGER_OBJECT:RefreshData()
     ADDON_MANAGER_OBJECT.isDirty = true
     if ADDON_MANAGER_OBJECT.RefreshMultiButton then
@@ -1951,6 +1952,7 @@ local function AddonSelector_MultiSelect(control, addonEnabledCBox, button)
         --Enable the update of the addon count after the loop again
         AddonSelector.noAddonNumUpdate = false
         --Refresh the visible data
+--d("[AS]AddonSelector_MultiSelect - RefreshData()")
         ADDON_MANAGER_OBJECT:RefreshData()
         ZO_ScrollList_RefreshVisible(ZOAddOnsList)
         return true
@@ -2002,6 +2004,7 @@ local function AddonSelector_CheckLastChangedMultiSelectAddOn(rowControl)
             end
         end
         --Refresh the visible data
+--d("[AS]AddonSelector_CheckLastChangedMultiSelectAddOn - RefreshData()")
         ADDON_MANAGER_OBJECT:RefreshData()
         ZO_ScrollList_RefreshVisible(ZOAddOnsList)
         --Update the active addons count
@@ -3404,8 +3407,7 @@ local function OnAddOnLoaded(event, addonName)
 
     ZO_PreHook(AddonSelector.comboBox, "AddMenuItems", function(selfVar) -- ZO_ComboBox
         if not AddonSelector or not AddonSelector.comboBox or selfVar ~= AddonSelector.comboBox then return end
-
-d("AddMenuItems")
+--d("AddMenuItems")
         local settings = AddonSelector.acwsv
         local saveGroupedByCharacterName = settings.saveGroupedByCharacterName
         local showGroupedByCharacterName = settings.showGroupedByCharacterName
