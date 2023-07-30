@@ -1,7 +1,7 @@
 --The global variable of the addon
 AddonSelectorGlobal = {}
 local ADDON_NAME	= "AddonSelector"
-AddonSelector.name = ADDON_NAME
+AddonSelectorGlobal.name = ADDON_NAME
 
 
 --Language and fallback language
