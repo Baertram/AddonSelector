@@ -72,6 +72,7 @@ AddonSelectorGlobal.langArray = {
 		["openDropdownStr"]	    = "Klicken, um die Auswahlbox zu öffnen",
         ["openedStr"]           = "Geöffnet",
         ["closedStr"]           = "Geschlossen",
+        ["chosenStr"]           = "Ausgewählt",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -132,6 +133,7 @@ AddonSelectorGlobal.langArray = {
 		["openDropdownStr"]	    = "Click to open the dropdown box",
         ["openedStr"]           = "Opened",
         ["closedStr"]           = "Closed",
+        ["chosenStr"]           = "Chosen",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
