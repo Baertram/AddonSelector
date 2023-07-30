@@ -101,6 +101,7 @@ local ZOAddOns_AddonSelector_BlacklistedNarrationChilds = {
 }
 
 --The "Enable all addons" checkbox introduced with API101031
+local ZOAddOns                      = ZO_AddOns
 local ZOAddOnsList                  = ZO_AddOnsList
 local enableAllAddonsCheckboxHooked = false
 local enableAllAddonTextCtrl =          ZO_AddOnsList2Row1Text
@@ -160,7 +161,6 @@ local langArray = {
         ["foundSearch"]         = "[Gefunden]",
         ["foundSearchLast"]     = "[Letzter Eintrag gefunden]",
         ["searchedForStr"]      = "["..GetString(SI_SCREEN_NARRATION_EDIT_BOX_SEARCH_NAME).."]",
-        ["closed"]              = "geschlossen",
         ["currentText"]         = "Aktuell: ",
         ["enableText"]          = "Aktiviere",
         ["disableText"]         = "Deaktiviere",
@@ -168,6 +168,9 @@ local langArray = {
         ["stateText"]           = "Status",
         ["newStateText"]        = "Neuer Status",
         ["libraryText"]         = "Bibliothek",
+		["openDropdownStr"]	    = "Klicken, um die Auswahlbox zu öffnen",
+        ["openedStr"]           = "Geöffnet",
+        ["closedStr"]           = "Geschlossen",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -218,7 +221,6 @@ local langArray = {
         ["foundSearch"]         = "[Found]",
         ["foundSearchLast"]     = "[Found last entry]",
         ["searchedForStr"]      = "["..GetString(SI_SCREEN_NARRATION_EDIT_BOX_SEARCH_NAME).."]",
-        ["closed"]              = "closed",
         ["currentText"]         = "Current: ",
         ["enableText"]          = "Enable",
         ["disableText"]         = "Disable",
@@ -226,6 +228,9 @@ local langArray = {
         ["stateText"]           = "State",
         ["newStateText"]        = "New state",
         ["libraryText"]         = "Library",
+		["openDropdownStr"]	    = "Click to open the dropdown box",
+        ["openedStr"]           = "Opened",
+        ["closedStr"]           = "Closed",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
@@ -620,7 +625,6 @@ local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
 local packNameStr = AddonSelector_GetLocalizedText("packName")
 local addonCategoriesStr = AddonSelector_GetLocalizedText("addonCategories")
 local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
-local closedStr = AddonSelector_GetLocalizedText("closed")
 local currentTextStr = AddonSelector_GetLocalizedText("currentText")
 local enDisableCurrentStateTemplateText = AddonSelector_GetLocalizedText("enDisableCurrentStateTemplate")
 local enableText = AddonSelector_GetLocalizedText("enableText")
@@ -628,7 +632,20 @@ local disableText = AddonSelector_GetLocalizedText("disableText")
 local stateText = AddonSelector_GetLocalizedText("stateText")
 local newStateText = AddonSelector_GetLocalizedText("newStateText")
 local libraryText = AddonSelector_GetLocalizedText("libraryText")
+local openDropdownStr = AddonSelector_GetLocalizedText("openDropdownStr")
+local openedStr = AddonSelector_GetLocalizedText("openedStr")
+local closedStr = AddonSelector_GetLocalizedText("closedStr")
 
+
+
+------------------------------------------------------------------------------------------------------------------------
+-- Helper functions
+------------------------------------------------------------------------------------------------------------------------
+local function checkIfMenuOwnerIsZOAddOns()
+    local menuOwner = GetMenuOwner()
+    if menuOwner ~= nil and menuOwner:GetOwningWindow() == ZOAddOns then return true end
+    return false
+end
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility
@@ -734,6 +751,7 @@ local function AddNewChatNarrationText(newText, stopCurrent)
 end
 --AddonSelector.AddNewChatNarrationText = AddNewChatNarrationText
 
+
 local function OnUpdateDoNarrate(uniqueId, delay, callbackFunc)
     local updaterName = chatNarrationUpdaterName ..tostring(uniqueId)
     EM:UnregisterForUpdate(updaterName)
@@ -780,7 +798,7 @@ end
 
 local function isAddonRow(rowControl)
     if rowControl == nil then return false, nil end
-    if rowControl:GetOwningWindow() ~= ZO_AddOns then
+    if rowControl:GetOwningWindow() ~= ZOAddOns then
 --d("<isAddonRow: no ZO_AddOns owner!")
         return false, nil
     end
@@ -994,6 +1012,7 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
                     OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end, "AddonSelector_NarrateUIControlOnMouseEnter")
+            onMouseEnterHandlers_ZOAddOns_done[control] = true
         else
             ZO_PostHookHandler(control, "OnMouseEnter", function(ctrl)
                 --d("[AddonSelector]OnMouseEnter - 2 - name: " ..ctrl:GetName())
@@ -1002,8 +1021,15 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
                     OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end)
+            onMouseEnterHandlers_ZOAddOns_done[control] = true
         end
     end
+end
+
+local function onMenuItemMouseEnterNarrate(menuItem)
+    --Get the ZO_Menu.items[i] text and narrate it OnMouseEnter
+    local narrateText = menuItem.name
+    onMouseEnterDoNarrate(menuItem, narrateText, nil, true)
 end
 
 local function enableZO_AddOnsUI_controlNarration()
@@ -1035,22 +1061,22 @@ local function enableZO_AddOnsUI_controlNarration()
 
     --Search box
     if AddonSelector.searchBox ~= nil then
-        onMouseEnterDoNarrate(AddonSelector.searchBox, searchMenuStr .. " %s", function() return getZOAddOnsUI_ControlText(AddonSelector.searchBox)  end)
+        onMouseEnterDoNarrate(AddonSelector.searchBox, "["..searchMenuStr .. " %s]", function() return getZOAddOnsUI_ControlText(AddonSelector.searchBox)  end)
     end
 
     --Pack name edit box
     if AddonSelector.editBox ~= nil then
-        onMouseEnterDoNarrate(AddonSelector.editBox, packNameStr .. " %s", function() return getZOAddOnsUI_ControlText(AddonSelector.editBox) end)
+        onMouseEnterDoNarrate(AddonSelector.editBox, "["..packNameStr .. " %s]", function() return getZOAddOnsUI_ControlText(AddonSelector.editBox) end)
     end
 
     --Pack name dropdown box
     if AddonSelector.ddl ~= nil then
-        onMouseEnterDoNarrate(AddonSelector.ddl, selectPackStr .. " %s", function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
+        onMouseEnterDoNarrate(AddonSelector.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
     end
 
 
 
-    local controlsParent = ZO_AddOns
+    local controlsParent = ZOAddOns
     if controlsParent ~= nil then
 --d("enableZO_AddOnsUI_controlNarration")
         for i=1, controlsParent:GetNumChildren(), 1 do
@@ -1724,8 +1750,16 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
 
     --Update the flag for the filters and resort of the addon list
     ZO_AddOnManager.isDirty = true
+d("[AddonSelector]Fragment removed")
+    --Remove the addons fragment from the scene, to refresh it properly
     SM:RemoveFragment(ADDONS_FRAGMENT)
+d("[AddonSelector]Fragment added")
+    --Add the addons fragment to the scene, to refresh it properly
     SM:AddFragment(ADDONS_FRAGMENT)
+
+--Attempt to fix ESC and RETURN key and other global keybinds not woring aftr you have used an AddonManager keybind
+    -->Maybe because of the remove and add fragment?
+    ADDON_MANAGER_OBJECT:RefreshKeybinds()
 end
 
 --Scroll the scrollbar to an index
@@ -3101,19 +3135,7 @@ end
 function AddonSelector.CreateControlReferences()
     local settings = AddonSelector.acwsv
     -- Create Controls:
-    local addonSelector = CreateControlFromVirtual("AddonSelector", ZO_AddOns, "AddonSelectorVirtualTemplate", nil)
-
-    --[[
-    local addonSelector = CreateControlFromVirtual("AddonSelector", GuiRoot, "AddonSelectorTLC")
-    addonSelector:SetHidden(true)
-    ADDONS_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
-        if newState == SCENE_FRAGMENT_SHOWING then
-            addonSelector:SetHidden(false)
-        elseif newState == SCENE_FRAGMENT_HIDING then
-            addonSelector:SetHidden(true)
-        end
-    end)
-    ]]
+    local addonSelector = CreateControlFromVirtual("AddonSelector", ZOAddOns, "AddonSelectorVirtualTemplate", nil)
 
     -- Assign references:
     AddonSelector.addonSelectorControl = addonSelector
@@ -3121,6 +3143,8 @@ function AddonSelector.CreateControlReferences()
     AddonSelector.editBox 	= addonSelector:GetNamedChild("EditBox")
     AddonSelector.ddl 		= addonSelector:GetNamedChild("ddl")
     AddonSelector.comboBox	= AddonSelector.ddl.m_comboBox
+    local savedPacksComboBox = AddonSelector.comboBox
+
     AddonSelector.saveBtn 	= addonSelector:GetNamedChild("Save")
     AddonSelector.deleteBtn 	= addonSelector:GetNamedChild("Delete")
     --AddonSelector.autoReloadBtn = addonSelector:GetNamedChild("AutoReloadUI")
@@ -3132,7 +3156,7 @@ function AddonSelector.CreateControlReferences()
     --<Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
     local offsetX = (PP ~= nil and 40) or 100
     local offsetY = (PP ~= nil and -7) or 65
-    AddonSelector.settingsOpenDropdown:SetAnchor(TOPLEFT, ZO_AddOns, TOP, offsetX, offsetY)
+    AddonSelector.settingsOpenDropdown:SetAnchor(TOPLEFT, ZOAddOns, TOP, offsetX, offsetY)
 
     AddonSelector.searchBox 	= addonSelector:GetNamedChild("SearchBox")
     AddonSelector.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
@@ -3266,6 +3290,16 @@ function AddonSelector.CreateControlReferences()
     AddonSelector.settingsOpenDropdown:SetHandler("OnMouseEnter", OnMouseEnter)
     AddonSelector.settingsOpenDropdown:SetHandler("OnMouseExit", OnMouseExit)
     AddonSelector.selectedPackNameLabel:SetHandler("OnMouseUp", OnClick_SelectedPackNameLabel)
+
+
+    SecurePostHook(savedPacksComboBox, "ShowDropdownInternal", function(comboBoxCtrl)
+        local currentSelectedEntryText = savedPacksComboBox.currentSelectedItemText
+        OnUpdateDoNarrate("OnSavedPackDropdown", 50, function() AddNewChatNarrationText("["..openedStr.."]   -   " .. currentSelectedEntryText, true)  end)
+    end)
+    SecurePostHook(savedPacksComboBox, "HideDropdownInternal", function(comboBoxCtrl)
+        local currentSelectedEntryText = savedPacksComboBox.currentSelectedItemText
+        OnUpdateDoNarrate("OnSavedPackDropdown", 100, function() AddNewChatNarrationText("["..closedStr.."]   -   " .. currentSelectedEntryText, true)  end)
+    end)
 end
 
 
@@ -3534,9 +3568,9 @@ function AddonSelector.Initialize()
         end)
         --EM:RegisterForEvent("AddonSelectorMultiselectHookOnShow", EVENT_ACTION_LAYER_PUSHED, function(...) AddonSelector_HookForMultiSelectByShiftKey(...) end)
 
-        if ZO_AddOns ~= nil then
-            ZO_AddOns:SetMouseEnabled(true)
-            ZO_AddOns:SetMovable(true)
+        if ZOAddOns ~= nil then
+            ZOAddOns:SetMouseEnabled(true)
+            ZOAddOns:SetMovable(true)
         end
     end
 
@@ -3773,10 +3807,11 @@ local function OnAddOnLoaded(event, addonName)
     ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        reloadUIStr)
     ZO_CreateStringId("SI_BINDING_NAME_SHOWACTIVEPACK",         AddonSelector_GetLocalizedText("ShowActivePack"))
 
-    --Hook the scrollable combobox OnMouseEnter function to show the menu entry to delete the pack of the row
+    --Hook the scrollable combobox OnMouseEnter function to show the menu entry to select/delete the pack of the row
     --SecurePostHook("ZO_ScrollableComboBox_Entry_OnMouseEnter", PackScrollableComboBox_Entry_OnMouseEnter)
     AddonSelector.LCM = AddonSelector.LCM or LibCustomMenu
     checkIfGlobalPacksShouldBeShown()
+
 
     ZO_PreHook(ZO_ComboBox, "AddMenuItems", function(selfVar)
         if not AddonSelector or not AddonSelector.comboBox or selfVar ~= AddonSelector.comboBox then return end
@@ -3786,6 +3821,46 @@ local function OnAddOnLoaded(event, addonName)
         local showGlobalPacks = settings.showGlobalPacks
         local showSubMenuAtGlobalPacks = settings.showSubMenuAtGlobalPacks
         if showSubMenuAtGlobalPacks == false and (saveGroupedByCharacterName == false and showGroupedByCharacterName == false) then return false end
+
+        -- Does not work! Maybe because of LibCustomMenu
+        --[[
+        --Add narration
+        local items = selfVar:GetItems()
+        for index, item in ipairs(items) do
+            --Add the narration of the ZO_Menu.item's name OnMouseEnter of the combobox via comboBox:SetItemOnEnter()
+            selfVar:SetItemEnabled(item, true)
+            selfVar:SetItemOnEnter(item, function(itemCtrl)
+d("[AddonSelector]SetItemOnEnter - index: " .. tos(index))
+                AddonSelector._savedPackComboBoxItemOnEnter = itemCtrl
+                onMenuItemMouseEnterNarrate(itemCtrl)
+            end)
+        end
+        ]]
+        --Trying via LibCustomMenu.submenu:SetSelectedIndex(control.index) hook as this will be called OnMouseEnter
+        --Normal entries
+        SecurePostHook("ZO_Menu_EnterItem", function(itemCtrl)
+            if checkIfMenuOwnerIsZOAddOns() == false then return end
+
+            --d("[AddonSelector]ZO_Menu_EnterItem - itemCtrl: " .. tos(itemCtrl))
+            local currentMenuItemText = ZO_Menu_GetSelectedText()
+            if currentMenuItemText ~= nil then
+                OnUpdateDoNarrate("OnAddonZOMenuItemEnter", 25, function() AddNewChatNarrationText(strfor("["..selectPackStr .. "]    %s", currentMenuItemText), true)  end)
+            end
+        end)
+        --Submenu entries
+        SecurePostHook(AddonSelector.LCM.submenu, "SetSelectedIndex", function(submenuTab, index)
+            if submenuTab == nil or index == nil then return end
+            if checkIfMenuOwnerIsZOAddOns() == false then return end
+
+            --d("[AddonSelector]LCM.submenu.SetSelectedIndex - index: " .. tos(index))
+            local currentMenuItem = submenuTab.items[index]
+            local currentMenuItemText = (currentMenuItem ~= nil and currentMenuItem.nameLabel ~= nil) and currentMenuItem.nameLabel:GetText()
+            if currentMenuItemText ~= nil then
+                OnUpdateDoNarrate("OnAddonZOMenuItemEnter", 25, function() AddNewChatNarrationText(currentMenuItemText, true)  end)
+            end
+        end)
+
+
 
         for i = 1, #selfVar.m_sortedItems do
             local subMenuEntries = {}
@@ -3875,7 +3950,20 @@ local function OnAddOnLoaded(event, addonName)
             end
         end
         return true
+    end) -- ZO_PreHook ZO_Menu.items
+
+
+    --For debugging to see if fragment remove and add to SCENE_MANAGER will call this
+    ADDONS_FRAGMENT:RegisterCallback("StateChange",   function(oldState, newState)
+        if newState == SCENE_FRAGMENT_SHOWING then
+d("[AddonSelector]Addons Fragment - Showing")
+            --PushActionLayerByName("Addons")
+        elseif newState == SCENE_FRAGMENT_HIDING then
+d("[AddonSelector]Addons Fragment - Hiding")
+            --RemoveActionLayerByName("Addons")
+        end
     end)
+
 
 	EM:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 end
