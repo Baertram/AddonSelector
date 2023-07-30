@@ -8,7 +8,12 @@
 ## DependsOn: LibCustomMenu>=713 LibDialog>=126
 ## OptionalDependsOn: AddonCategory
 
+## Addon strings / translated texts
+lang/strings.lua
+
 ## Addon source
 xml/AddonSelector.xml
 AddonSelector.lua
+
+## Keybindings
 xml/bindings.xml
