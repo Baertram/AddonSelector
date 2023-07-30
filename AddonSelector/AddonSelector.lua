@@ -16,15 +16,19 @@ Added Screen Reader features
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 ]]
+
+--TODO:Remove comment for quicker debugging
+--ASG = AddonSelectorGlobal
+
+
+local AddonSelector = AddonSelectorGlobal
+AddonSelector.version = "2.22"
+
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
 local ADDON_MANAGER_OBJECT
 
-local AddonSelector = AddonSelectorGlobal
-
-AddonSelector.version = "2.22"
-
---Variables
+--Addon variables
 AddonSelector.firstControl     = nil
 AddonSelector.firstControlData = nil
 AddonSelector.noAddonNumUpdate = false
@@ -38,9 +42,8 @@ AddonSelector.numAddonsTotal = 0
 
 AddonSelector.AddedAddonsFragment = false
 
---TODO:Remove comment for quicker debugging
---ASG = AddonSelectorGlobal
 
+--ZOs local pointer variables
 local EM = EVENT_MANAGER
 local SM = SCENE_MANAGER
 local SNM = SCREEN_NARRATION_MANAGER
@@ -55,10 +58,12 @@ local tins = gTab.insert
 --local trem = gTab.remove
 local tsor = gTab.sort
 
+
 --Constant for the global pack name
 local GLOBAL_PACK_NAME = "$G"
 local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 local SEARCH_TYPE_NAME = "name"
+
 
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
@@ -73,15 +78,18 @@ local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
 local addonListWasOpenedByAddonSelector = false
 
+
 --The "Enable all addons" checkbox introduced with API101031
 local ZOAddOns                      = ZO_AddOns
 local ZOAddOnsList                  = ZO_AddOnsList
 local enableAllAddonsCheckboxHooked = false
-local enableAllAddonTextCtrl =          ZO_AddOnsList2Row1Text
-local enableAllAddonsCheckboxCtrl   =   ZO_AddOnsList2Row1Checkbox
+local enableAllAddonTextCtrl        = ZO_AddOnsList2Row1Text     --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
+local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 
 
---Language and strings
+------------------------------------------------------------------------------------------------------------------------
+--Language and strings - local references to lang/strings.lua
+------------------------------------------------------------------------------------------------------------------------
 local charNamePackColorTemplate = "|cc9b636%s|r"
 local charNamePackColorDef = ZO_ColorDef:New("C9B636")
 local globalPackColorTemplate = "|c7EC8E3%s|r"
