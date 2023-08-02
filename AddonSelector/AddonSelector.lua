@@ -132,7 +132,7 @@ local chosenStr = AddonSelector_GetLocalizedText("chosenStr")
 ------------------------------------------------------------------------------------------------------------------------
 local function checkIfMenuOwnerIsZOAddOns()
     local menuOwner = GetMenuOwner()
-    if menuOwner ~= nil and menuOwner:GetOwningWindow() == ZOAddOns then return true end
+    if menuOwner ~= nil and menuOwner.GetOwningWindow ~= nil and menuOwner:GetOwningWindow() == ZOAddOns then return true end
     return false
 end
 
