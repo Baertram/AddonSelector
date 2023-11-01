@@ -16,7 +16,7 @@ AddonSelectorGlobal.langArray = {
     ------------------------------------------------------------------------------------------------------------------------
 	["de"] = { -- by Baertram
 		["packName"]			= "Pack Name:",
-		["selectPack"]			= "Pack wählen",
+		["selectPack"]			= "Wählen",
     	["ERRORpackMissing"] 	= "ADDON SELECTOR: Pack Name fehlt.",
         ["autoReloadUIHint"]	= "Autom. Reload UI nach Pack Auswahl!",
         ["autoReloadUIHintTooltip"] = "Auto-Reload UI: Wenn diese Option aktiviert wurde können keine AddOn Packs geändert oder gelöscht werden. Sie müssen diese Option deaktivieren, um AddOn Packs ändern oder löschen zu können.",
@@ -73,11 +73,23 @@ AddonSelectorGlobal.langArray = {
         ["openedStr"]           = "Geöffnet",
         ["closedStr"]           = "Geschlossen",
         ["chosenStr"]           = "Ausgewählt",
+        ["addPackTooltip"]      = "Tooltip zu Pack in Auswahlbox hinzufügen",
+        ["accountWide"]         = "Account weiter AddOn Pack",
+        ["characterWide"]       = "Charakter spezifischer AddOn Pack",
+        ["accountWides"]         = "Account weite AddOn Packs",
+        ["characterWides"]       = "Charakter spezifische AddOn Packs",
+        ["settingPattern"]       = "[Einstellung] %s",
+        ["searchHistoryPattern"] = "[Suche Historie] %s",
+        ["submenu"]              = "Untermenü",
+        ["entryMouseEnter"]      = "Eintrag unter der Maus",
+        ["entrySelected"]        = "Eintrag wurde ausgewählt",
+        ["entries"]              = "Einträge",
+        ["checkBox"]             = "Ankreuzfeld,"
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
 		["packName"]			= "Pack name:",
-		["selectPack"]			= "Select pack",
+		["selectPack"]			= "Select",
     	["ERRORpackMissing"] 	= "ADDON SELECTOR: Pack name missing.",
         ["autoReloadUIHint"]	= "Auto-Reload UI on pack selection.",
         ["autoReloadUIHintTooltip"] = "Auto-Reload UI: When ON this will prevent editing and deleting addon packs. You will need to turn it off to edit or delete packs!",
@@ -134,11 +146,23 @@ AddonSelectorGlobal.langArray = {
         ["openedStr"]           = "Opened",
         ["closedStr"]           = "Closed",
         ["chosenStr"]           = "Chosen",
+        ["addPackTooltip"]      = "Add tooltip to pack in dropdown box",
+        ["accountWide"]         = "Account wide addOn pack",
+        ["accountWides"]         = "Account wide addOn packs",
+        ["characterWide"]       = "Charakter specific addOn packs",
+        ["characterWides"]      = "Charakter specific addOn pack",
+        ["settingPattern"]       = "[Setting] %s",
+        ["searchHistoryPattern"] = "[Search history] %s",
+        ["submenu"]              = "Submenu",
+        ["entryMouseEnter"]      = "Entry below mouse",
+        ["entrySelected"]        = "Entry was selected",
+        ["entries"]              = "entries",
+        ["checkBox"]             = "Checkbox,"
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
         ["packName"]            = "Nombre del conjunto:",
-        ["selectPack"]          = "Selecciona conjunto",
+        ["selectPack"]          = "Selecciona",
         ["ERRORpackMissing"]    = "ADDON SELECTOR: Falta nombre de conjunto",
         ["autoReloadUIHint"]    = "Recargar interfaz al seleccionar un conjunto.",
         ["autoReloadUIHintTooltip"] = "Recarga automática: Si está seleccionado, impide editar o suprimir conjuntos. Tiene que estar deseleccionado si quieres editar o suprimir conjuntos",
@@ -175,7 +199,7 @@ AddonSelectorGlobal.langArray = {
 ---------------------------------------------------------------------------------------------------------------------
     ["fr"] = { --by Kwisatz
         ["packName"]            = "Nom du profil :",
-        ["selectPack"]          = "Sélectionner profil",
+        ["selectPack"]          = "Sélectionner",
         ["ERRORpackMissing"]    = "ADDON SELECTOR : Pas de nom de profil",
         ["autoReloadUIHint"]    = "Recharger l'interface après sélection d'un profil.",
         ["autoReloadUIHintTooltip"] = "Recharge automatique : Sélectionné, interdit l'édition ou la suppression des profils. Doit être déselectionné pour éditer ou supprimer un profil",
@@ -333,7 +357,7 @@ AddonSelectorGlobal.langArray = {
     --Brazilian
     ["br"] = { -- by Anntauri
         ["packName"]            = "Nome do pacote:",
-        ["selectPack"]          = "Selecionar pacote",
+        ["selectPack"]          = "Selecionar",
         ["ERRORpackMissing"]    = "ADDON SELECTOR: Nome do pacote não existe.",
         ["autoReloadUIHint"]    = "Atualizar interface na seleção de pacote.",
         ["autoReloadUIHintTooltip"] = "Atualização automática: se estiver ativo, isto irá te impedir de editar e deletar pacotes. Você precisa desativar essa opção para editar e deletar pacotes!",
@@ -371,7 +395,7 @@ AddonSelectorGlobal.langArray = {
     --Portuguese
     ["pt"] = {
         ["packName"] = "Nome do Pacote:",
-        ["selectPack"] = "Escolha pacote",
+        ["selectPack"] = "Escolha",
         ["ERRORpackMissing"] = "ADDON SELECTOR: Faltando Nome do Pacote.",
         ["autoReloadUIHint"]	= "Auto-Relê UI na seleção do pacote.",
         ["autoReloadUIHintTooltip"] = "Auto-Relê UI: Quando ativada, você também pode evitar a edição ou exclusão de pacotes complementares.",
@@ -453,7 +477,7 @@ AddonSelectorGlobal.langArray = {
     --Italian
     ["it"] = { --by horizonxael
         ["packName"] = "Nome del profilo :",
-        ["selectPack"] = "Seleziona il profilo",
+        ["selectPack"] = "Seleziona",
         ["ERRORpackMissing"] = "ADDON SELECTOR : Nessun nome profilo",
         ["autoReloadUIHint"] = "Ricaricare l'interfaccia dopo aver selezionato un profilo.",
         ["autoReloadUIHintTooltip"] = "Ricaricamento automatico: selezionato, vieta la modifica o l'eliminazione dei profili. Deve essere deselezionato per modificare o eliminare un profilo",
@@ -501,6 +525,7 @@ langArray["fx"] = langArray["pl"] --inofficial pl "debug language" -> by general
 
 --The language strings in client language and fallback language
 local langArrayInClientLang = langArray[lang]
+local clientLangFound = (langArrayInClientLang ~= nil and true) or false
 local langArrayInFallbackLang = langArray[fallbackLang]
 
 
@@ -509,6 +534,5 @@ local langArrayInFallbackLang = langArray[fallbackLang]
 
 --Get localized texts
 function AddonSelector_GetLocalizedText(textToFind)
-    return langArrayInClientLang[textToFind] or langArrayInFallbackLang[textToFind] or "N/A"
+    return (clientLangFound and langArrayInClientLang[textToFind]) or langArrayInFallbackLang[textToFind] or "N/A"
 end
-

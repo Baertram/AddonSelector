@@ -2,15 +2,15 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2023-07-24
-AddonSelector v2.22
+2023-10-30
+AddonSelector v2.23
 
-Added Screen Reader features
+Recoded the whole addon packs dropdown using LibScrollableMenu
+and recoded the whole narration features.
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
 ------------------------------------------------------------------------------------------------------------------------
-#1 Using the pack selection dropdown and selecting a pack will disable RETURN key (open chat) and ESC key? -> Because of remove fragment and add fragment maybe?
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -22,7 +22,7 @@ Added Screen Reader features
 
 
 local AddonSelector = AddonSelectorGlobal
-AddonSelector.version = "2.22"
+AddonSelector.version = "2.23"
 
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -52,6 +52,7 @@ local tos = tostring
 local strfor = string.format
 local strlow = string.lower
 local strgma = string.gmatch
+local strsub = string.sub
 local zopsf = zo_plainstrfind
 local gTab = table
 local tins = gTab.insert
@@ -59,17 +60,20 @@ local tins = gTab.insert
 local tsor = gTab.sort
 
 
---Constant for the global pack name
+--Constant for the global packs
 local GLOBAL_PACK_NAME = "$G"
+--Constant for the charater saved packs
+local CHARACTER_PACK_CHARNAME_IDENTIFIER = "_charName"
+
 local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 local SEARCH_TYPE_NAME = "name"
-
 
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
-    ["LibDialog"] =     true,
-    ["LibCustomMenu"] = true,
+    ["LibDialog"] =         true,
+    ["LibCustomMenu"] =     true,
+    ["LibScrollableMenu"] = true,
 }
 --Get the current addonIndex of the "AddonSelector" addon
 local thisAddonIndex = 0
@@ -78,11 +82,15 @@ local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
 local addonListWasOpenedByAddonSelector = false
 
+--Textures
+local reloadUITexture = "/esoui/art/miscellaneous/eso_icon_warning.dds"
+local reloadUITextureStr = "|cFF0000".. zo_iconFormatInheritColor(reloadUITexture, 24, 24) .."|r"
 
 --The "Enable all addons" checkbox introduced with API101031
 local ZOAddOns                      = ZO_AddOns
 local ZOAddOnsList                  = ZO_AddOnsList
 local enableAllAddonsCheckboxHooked = false
+local enableAllAddonsParent         = ZO_AddOnsList2Row1         --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 local enableAllAddonTextCtrl        = ZO_AddOnsList2Row1Text     --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 
@@ -92,8 +100,11 @@ local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-re
 ------------------------------------------------------------------------------------------------------------------------
 local charNamePackColorTemplate = "|cc9b636%s|r"
 local charNamePackColorDef = ZO_ColorDef:New("C9B636")
+local packNameCharacter = strfor(charNamePackColorTemplate, GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL))
 local globalPackColorTemplate = "|c7EC8E3%s|r"
-local packNameGlobal = strfor(globalPackColorTemplate, AddonSelector_GetLocalizedText("packGlobal"))
+local packGlobalStr = AddonSelector_GetLocalizedText("packGlobal")
+local packNameGlobal = strfor(globalPackColorTemplate, packGlobalStr)
+local packCharNameStr = AddonSelector_GetLocalizedText("packCharName")
 local selectPackStr = AddonSelector_GetLocalizedText("selectPack")
 local selectedPackNameStr = AddonSelector_GetLocalizedText("selectedPackName")
 local deletePackAlertStr = AddonSelector_GetLocalizedText("deletePackAlert")
@@ -101,13 +112,14 @@ local deletePackErrorStr = AddonSelector_GetLocalizedText("deletePackError")
 local savedGroupedByCharNameStr = AddonSelector_GetLocalizedText("SaveGroupedByCharacterName")
 local autoReloadUIStr = AddonSelector_GetLocalizedText("autoReloadUIHint")
 local searchMenuStr = AddonSelector_GetLocalizedText("AddonSearch")
-searchMenuStr = string.sub(searchMenuStr, 1, -2) --remove last char
+searchMenuStr = strsub(searchMenuStr, 1, -2) --remove last char
 local searchInstructions = AddonSelector_GetLocalizedText("searchInstructions")
 local searchFound = AddonSelector_GetLocalizedText("foundSearch")
 local searchFoundLast = AddonSelector_GetLocalizedText("foundSearchLast")
 local searchedForStr = AddonSelector_GetLocalizedText("searchedForStr")
 local clearSearchHistoryStr = AddonSelector_GetLocalizedText("searchClearHistory")
-local reloadUIStr = AddonSelector_GetLocalizedText("ReloadUI")
+local reloadUIStrWithoutIcon = strlow(AddonSelector_GetLocalizedText("ReloadUI"))
+local reloadUIStr = reloadUIStrWithoutIcon .. reloadUITextureStr
 local deletePackTitleStr = AddonSelector_GetLocalizedText("deletePackTitle")
 local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
 local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
@@ -125,7 +137,32 @@ local openDropdownStr = AddonSelector_GetLocalizedText("openDropdownStr")
 local openedStr = AddonSelector_GetLocalizedText("openedStr")
 local closedStr = AddonSelector_GetLocalizedText("closedStr")
 local chosenStr = AddonSelector_GetLocalizedText("chosenStr")
+local addPackTooltipStr = AddonSelector_GetLocalizedText("addPackTooltip")
+local characterWideStr = AddonSelector_GetLocalizedText("characterWide")
+local accountWideStr = AddonSelector_GetLocalizedText("accountWide")
+local characterWidesStr = AddonSelector_GetLocalizedText("characterWides")
+local accountWidesStr = AddonSelector_GetLocalizedText("accountWides")
+local settingStr = AddonSelector_GetLocalizedText("settingPattern")
+local currentlyStr = GetString(SI_COLOR_PICKER_CURRENT)
+local searchHistoryStr = AddonSelector_GetLocalizedText("searchHistoryPattern")
+local submenuStr = AddonSelector_GetLocalizedText("submenu")
+local submenuOpenedStr = submenuStr .. " " .. openedStr
+local submenuClosedStr = submenuStr .. " " .. closedStr
+local entriesStr = AddonSelector_GetLocalizedText("entries")
+local entryMouseEnterStr = AddonSelector_GetLocalizedText("entryMouseEnter")
+local entrySelectedStr = AddonSelector_GetLocalizedText("entrySelected")
+local checkboxStr = AddonSelector_GetLocalizedText("checkBox")
 
+--Boolean to on/off texts for narration
+local booleanToOnOff = {
+    [false] = GetString(SI_CHECK_BUTTON_OFF):upper(),
+    [true]  = GetString(SI_CHECK_BUTTON_ON):upper(),
+}
+--Prefix strings for narration, based on e.g. ZO_Menu Owner control
+local prefixStrings = {
+    ["AddonSelectorSettingsOpenDropdown"] = settingStr,
+    ["AddonSelectorSearchBox"] =            searchHistoryStr,
+}
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Helper functions
@@ -136,6 +173,27 @@ local function checkIfMenuOwnerIsZOAddOns()
     return false
 end
 
+local function getOwnerPrefixStr(ownerCtrl)
+    if not ownerCtrl or not ownerCtrl.GetName then return "" end
+    return prefixStrings[ownerCtrl:GetName()] or ""
+end
+
+local function sortNonNumberKeyTableAndBuildSortedLookup(tab)
+    local addonPackToIndex = {}
+    for k, v in pairs(tab) do
+        tins(addonPackToIndex, k)
+    end
+    tsor(addonPackToIndex)
+    return addonPackToIndex
+end
+
+local function updateEnableAllAddonsCtrls()
+    enableAllAddonsParent = enableAllAddonsParent or GetControl("ZO_AddOnsList2Row1")
+    if enableAllAddonsParent == nil then return end
+    enableAllAddonsCheckboxCtrl = enableAllAddonsCheckboxCtrl or GetControl(enableAllAddonsParent, "Checkbox")
+    enableAllAddonTextCtrl = enableAllAddonTextCtrl or GetControl(enableAllAddonsParent, "Text")
+end
+updateEnableAllAddonsCtrls()
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility - Narration
@@ -155,6 +213,7 @@ local ZOAddOns_BlacklistedNarrationChilds = {
     ["ZO_AddOnsDivider"]                    = true, --The divider
     ["ZO_AddOnsCharacterSelectDropdown"]    = true, --Character selection dropdown box
     ["AddOnSelector"]                       = true, --this addon here -> Will be added separately
+    ["ZO_AddOnsAdvancedUIErrors"]           = true, --Enhanced UI errors: Checkbox & label
 }
 --Do not narrate any text if mouse is moved above this control at ZO_AddOns -> AddOnSelector
 local ZOAddOns_AddonSelector_BlacklistedNarrationChilds = {
@@ -298,6 +357,16 @@ local function GetKeybindNarration(keybindButtonInfoTable)
     return keybindNarration
 end
 
+
+local function narrateKeybindButtonsInfoTable(keybindButtonInfoTable, narrationStart)
+    narrationStart = narrationStart or ""
+    local keybindNarrationOfDialog = GetKeybindNarration(keybindButtonInfoTable)
+    local narrations = {}
+    ZO_AppendNarration(narrations, SNM:CreateNarratableObject(narrationStart, 250))
+    ZO_AppendNarration(narrations, keybindNarrationOfDialog)
+    SNM:NarrateText(narrations, NARRATION_TYPE_UI_SCREEN)
+end
+
 local function AddDialogTitleBodyKeybindNarration(title, body, onlyConfirmButton)
     if IsAccessibilityUIReaderEnabled() == false then return end
     onlyConfirmButton = onlyConfirmButton or false
@@ -319,11 +388,7 @@ local function AddDialogTitleBodyKeybindNarration(title, body, onlyConfirmButton
             name = GetString(SI_DIALOG_DISMISS),
         }
     }
-    local keybindNarrationOfDialog = GetKeybindNarration(keybindButtonInfoTable)
-    local narrations = {}
-    ZO_AppendNarration(narrations, SNM:CreateNarratableObject(narrationStart, 250))
-    ZO_AppendNarration(narrations, keybindNarrationOfDialog)
-    SNM:NarrateText(narrations, NARRATION_TYPE_UI_SCREEN)
+    narrateKeybindButtonsInfoTable(keybindButtonInfoTable, narrationStart)
 end
 
 local function OnUpdateDoNarrate(uniqueId, delay, callbackFunc)
@@ -336,6 +401,10 @@ local function OnUpdateDoNarrate(uniqueId, delay, callbackFunc)
         callbackFunc()
         EM:UnregisterForUpdate(updaterName)
     end)
+end
+
+local function isAddonPackDropdownOpen()
+    return AddonSelector.ddl.m_comboBox:IsDropdownVisible()
 end
 
 local function getAddonNameFromData(addonData)
@@ -382,6 +451,34 @@ local function isAddonRow(rowControl)
     return false, nil
 end
 
+--Only count submenu entries which aren't a header or divider
+local function countSubmenuEntries(entries)
+    if ZO_IsTableEmpty(entries) then return 0 end
+    local dividerEntry = AddonSelector.LSM.DIVIDER
+    local count = 0
+    for k, v in ipairs(entries) do
+        if not v.disabled and not v.isDivider and not v.isHeader and v.name ~= dividerEntry then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
+    local entryText = data.label or data.name
+    local charName = data.charName
+    local isGlobalPack        = (charName == GLOBAL_PACK_NAME and true) or false
+    local globalOrCharPackStr = ""
+    if isGlobalPack == true then
+        globalOrCharPackStr = packGlobalStr.. ", " .. packNameStr
+    else
+        globalOrCharPackStr = packCharNameStr
+        if not data.isCharacterPackHeader then
+            globalOrCharPackStr = globalOrCharPackStr .. ": '"..charName.."' - "
+        end
+    end
+    return globalOrCharPackStr .. ": " .. entryText
+end
 
 local function getAddonEntryByScrollToIndex(scrollToIndex)
     if scrollToIndex == nil then
@@ -438,8 +535,9 @@ end
 
 local function OnAddonRowMouseEnterStartNarrate(control, prefixStr)
     --d("[AddonSelector]OnAddonRowMouseEnterStartNarrate")
-    if checkActiveSearchByReturnKey() == false then return end
     if control == nil then return end
+    if checkActiveSearchByReturnKey() == false then return end
+    if isAddonPackDropdownOpen() then return end
     if not IsAccessibilityUIReaderEnabled() then return end
 
     --Did the control below the mouse change?
@@ -455,7 +553,7 @@ local function OnAddonRowMouseEnterStartNarrate(control, prefixStr)
     if narrateAboutAddonText == nil then return end
 
     --d(">>Text: " .. tos(narrateAboutAddonText))
-    OnUpdateDoNarrate("OnAddonRowMouseEnter", 150, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
+    OnUpdateDoNarrate("OnAddonRowMouseEnter", 75, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
 end
 
 
@@ -493,7 +591,7 @@ local function narrateCurrentlyScrolledToAddonName(scrollToIndex, wasLastFoundRe
     end
 
     --Higher delay as pressing the return key will narrate "return" and stops the found addon name then from playing...
-    OnUpdateDoNarrate("OnAddonSelector_AddonSearch", 150, function()
+    OnUpdateDoNarrate("OnAddonSelector_AddonSearch", 75, function()
         wasSearchNextDoneByReturnKey = false
         AddNewChatNarrationText(narrateAboutAddonText, false)
     end)
@@ -503,16 +601,16 @@ local function getZOAddOnsUI_ControlText(control)
     if control == nil then return end
     local retText
     local retTextSuffix
-    --[[
-    if control.GetState ~= nil then --button?
-        local currentState = control:GetState()
-        if currentState == 1 then -- enabled
-            retTextSuffix = " [Current state]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
-        else --disabled
-            retTextSuffix = " [Current state]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
+    --Checkbox at parent?
+    local parentCtrl = control:GetParent()
+    if parentCtrl.GetState ~= nil then
+        local currentState = parentCtrl:GetState()
+        if currentState == BSTATE_PRESSED then
+            retTextSuffix = " [" .. checkboxStr .. " " .. currentlyStr .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
+        else
+            retTextSuffix = " [" .. checkboxStr .. " " .. currentlyStr .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
         end
     end
-    ]]
 
     if control.GetText ~= nil then --Label
 --d(">GetText")
@@ -551,13 +649,25 @@ end
 
 local function getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplate, narrateTextFunc)
     local narrateText
-    if narrateTextTemplate ~= nil and narrateTextTemplate ~= "" and narrateTextFunc ~= nil and type(narrateTextFunc) == "function" then
-        narrateText = string.format(narrateTextTemplate, unpack({narrateTextFunc()}))
-    elseif narrateTextTemplate ~= nil and narrateTextTemplate ~= "" and narrateTextFunc == nil then
-        narrateText = narrateTextTemplate
-    elseif narrateTextTemplate == nil and narrateTextFunc ~= nil and type(narrateTextFunc) == "function" then
-        narrateTextFunc()
+    --is the control a kybind?
+    if control.GetKeybind ~= nil then
+        --Get the keybind and the narrateText and narrate both
+        --local keyBind = control:GetKeybind()
+        local narrationData = {}
+        table.insert(narrationData, control:GetKeybindButtonNarrationData())
+        narrateKeybindButtonsInfoTable(narrationData, "")
         return
+
+    else
+        if isAddonPackDropdownOpen() then return end
+        if narrateTextTemplate ~= nil and narrateTextTemplate ~= "" and narrateTextFunc ~= nil and type(narrateTextFunc) == "function" then
+            narrateText = string.format(narrateTextTemplate, unpack({narrateTextFunc()}))
+        elseif narrateTextTemplate ~= nil and narrateTextTemplate ~= "" and narrateTextFunc == nil then
+            narrateText = narrateTextTemplate
+        elseif narrateTextTemplate == nil and narrateTextFunc ~= nil and type(narrateTextFunc) == "function" then
+            narrateTextFunc()
+            return
+        end
     end
     if narrateText == nil or narrateText == "" then
         narrateText = getZOAddOnsUI_ControlText(control)
@@ -583,7 +693,7 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
                 --d("[AddonSelector]OnMouseEnter - 1 - name: " ..ctrl:GetName())
                 local narrateAddonUIControlText = getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplate, narrateTextFunc)
                 if narrateAddonUIControlText ~= nil then
-                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
+                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end, "AddonSelector_NarrateUIControlOnMouseEnter")
             onMouseEnterHandlers_ZOAddOns_done[control] = true
@@ -592,7 +702,7 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
                 --d("[AddonSelector]OnMouseEnter - 2 - name: " ..ctrl:GetName())
                 local narrateAddonUIControlText = getNarrateTextOfControlAndNarrateFunc(control, narrateTextTemplate, narrateTextFunc)
                 if narrateAddonUIControlText ~= nil then
-                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
+                    OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
             end)
             onMouseEnterHandlers_ZOAddOns_done[control] = true
@@ -600,10 +710,95 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
     end
 end
 
+--[[
 local function onMenuItemMouseEnterNarrate(menuItem)
     --Get the ZO_Menu.items[i] text and narrate it OnMouseEnter
     local narrateText = menuItem.name
     onMouseEnterDoNarrate(menuItem, narrateText, nil, true)
+end
+]]
+
+local function narrateDropdownOnMouseEnter()
+    onMouseEnterDoNarrate(AddonSelector.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
+   --return "Test text", false
+end
+
+local entryMouseEnterTextForSubmenuOpen, entryOnMouseEnterDone, entryOnSelectedDone
+
+local function narrateDropdownOnSubmenuHidden(scrollHelper, ctrl)
+--d("Submenu closed: " ..tos(entryOnSelectedDone) .. ", entryOnMouseEnterDone: " ..tos(entryOnMouseEnterDone))
+    local submenuClosedText = "["..submenuClosedStr.."]"
+    return submenuClosedText, false
+end
+
+local function narrateDropdownOnSubmenuShown(scrollHelper, ctrl, anchorPoint)
+    --d("OnSubmenuOpened - anchorPoint: " ..tos(anchorPoint))
+    --This will unfortunately fire AFTER the entry was selected which opens the submenu (only logical ;-) ) so we need to
+    --add the text of this here, to the last text of the narrateDropdownOnEntryMouseEnter
+    local anchoredToStr = ""
+    if anchorPoint == LEFT then
+        anchoredToStr = "   - " .. GetString(SI_KEYCODE_NARRATIONTEXTPS4125)
+    elseif anchorPoint == RIGHT then
+        anchoredToStr = "   -" .. GetString(SI_KEYCODE_NARRATIONTEXTPS4126)
+    end
+    local submenuOpenedText = "["..submenuOpenedStr.."]" .. anchoredToStr
+
+    --Add text from narrateDropdownOnEntryMouseEnter?
+    if entryMouseEnterTextForSubmenuOpen ~= nil then
+        submenuOpenedText = entryMouseEnterTextForSubmenuOpen .. "   -   " .. submenuOpenedText
+        entryMouseEnterTextForSubmenuOpen = nil
+    end
+    return submenuOpenedText, false --do not stop any other narration (e.g. OnMousEnter on a menu entry)
+end
+
+local function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl, data, hasSubmenu, comingFromCheckbox)
+--d("OnEntryMouseEnter - hasSubmenu: " ..tos(hasSubmenu) .. ", comingFomrCheckbox: " ..tos(comingFromCheckbox) .. ", name: " ..tos(data.label or data.name))
+    entryOnMouseEnterDone = true
+    entryMouseEnterTextForSubmenuOpen = nil
+    local entryTextWithoutPrefix = getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
+
+    local entryMouseEnterText = "["..entryMouseEnterStr.."]" .. entryTextWithoutPrefix
+
+    --Was a checkbox OnMouseEnter raised?
+    comingFromCheckbox = true
+    if comingFromCheckbox == true and entryControl.GetState ~= nil then
+        local currentStateText = ""
+        local currentCheckboxState = entryControl:GetState()
+        if currentCheckboxState == BSTATE_PRESSED then
+            currentStateText = GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
+        else
+            currentStateText = GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
+        end
+        currentStateText = currentTextStr ..":   " .. currentStateText
+        entryMouseEnterText = entryMouseEnterText .. "  [" .. checkboxStr .. "] " .. currentStateText
+    end
+
+    --Got a submenu that opens?
+    if hasSubmenu == true and data and data.entries ~= nil then
+        local submenuEntriesCount = tos(countSubmenuEntries(data.entries))
+        entryMouseEnterText = entryMouseEnterText .. " (" .. submenuEntriesCount .. entriesStr .. ")"
+
+        --If a submenu opens: The narrateDropdownOnSubmenuShown will be called. So narrate the total text of the entry selected here, and the
+        --submenu opened right/left at this function!
+        entryMouseEnterTextForSubmenuOpen = entryMouseEnterText
+        --Do not narrate here, but do this together with the OnSubmenuOpen text at narrateDropdownOnSubmenuShown
+        return
+    end
+
+    return entryMouseEnterText, false --do not stop narration of e.g. submenu opened
+end
+
+local function narrateDropdownOnEntrySelected(scrollhelperObject, entryControl, data, hasSubmenu)
+    entryOnSelectedDone = true
+    --d("OnEntrySelected - hasSubmenu: " ..tos(hasSubmenu))
+    local entryTextWithoutPrefix = getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
+    local entrySelectedText = "["..entrySelectedStr.."]" .. entryTextWithoutPrefix
+    return entrySelectedText, true --stop narration of others, if you select an entry
+end
+
+local function narrateDropdownOnCheckboxUpdated(scrollhelperObject, checkboxControl, data)
+    --d("OnCHeckboxUpdated")
+    return narrateDropdownOnEntryMouseEnter(scrollhelperObject, checkboxControl, data, nil, true)
 end
 
 local function enableZO_AddOnsUI_controlNarration()
@@ -611,21 +806,21 @@ local function enableZO_AddOnsUI_controlNarration()
     if enableAllAddonsCheckboxCtrl ~= nil then
         local function narrateTextFunc()
             --As the same row ZO_AddOnsList2Row1 will contain the "Libraries" text, if you scroll down (due to the row control pool) we need to check for the checkbox's visibility!
-            if ZO_AddOnsList2Row1Checkbox:IsHidden() then
-                OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(GetString(SI_ADDON_MANAGER_SECTION_LIBRARIES), true)  end)
+            if enableAllAddonsCheckboxCtrl:IsHidden() then
+                OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(GetString(SI_ADDON_MANAGER_SECTION_LIBRARIES), true)  end)
             else
                 local currentStateText1 = ""
                 local currentStateText2 = ""
                 local currentState = enableAllAddonsCheckboxCtrl:GetState()
-                if currentState == 1 then
-                    currentStateText1 = disableText
+                if currentState == BSTATE_PRESSED then
+                    currentStateText1 = enableText
                     currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
                 else
-                    currentStateText1 = enableText
+                    currentStateText1 = disableText
                     currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
                 end
                 local narrateText = strfor(enDisableCurrentStateTemplateText, currentStateText1, currentStateText2) --"%s all addons. Current state   -   %s"
-                OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 150, function() AddNewChatNarrationText(narrateText, true)  end)
+                OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateText, true)  end)
             end
         end
         onMouseEnterDoNarrate(enableAllAddonsCheckboxCtrl, nil, narrateTextFunc)
@@ -649,11 +844,11 @@ local function enableZO_AddOnsUI_controlNarration()
     end
 
     --Pack name dropdown box
+    --[[
     if AddonSelector.ddl ~= nil then
         onMouseEnterDoNarrate(AddonSelector.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
     end
-
-
+    ]]
 
     local controlsParent = ZOAddOns
     if controlsParent ~= nil then
@@ -688,6 +883,18 @@ local function enableZO_AddOnsUI_controlNarration()
     end
 end
 
+local function OnControlClickedNarrate(control, stopNarration)
+    if control == nil then return end
+    if not IsAccessibilityUIReaderEnabled() then return end
+    if isAddonPackDropdownOpen() then return end
+
+    stopNarration = stopNarration or false
+    local narrateAddonUIControlText = getNarrateTextOfControlAndNarrateFunc(control, nil, nil)
+    if narrateAddonUIControlText ~= nil then
+        OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
+    end
+end
+
 local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
 --d("[AddonSelector]OnAddonRowClickedNarrateNewState-newState: " ..tos(newState))
     if control == nil then return end
@@ -709,7 +916,7 @@ local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
             narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE2) ..",   " ..addonName --enabled
         end
 --d(">addon state: " .. tos(narrateAddonStateText))
-        OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+        OnUpdateDoNarrate("OnAddonRowClicked", 75, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
     else
 --d(">addonName: " ..tos(addonName))
         zo_callLater(function()
@@ -724,7 +931,7 @@ local function OnAddonRowClickedNarrateNewState(control, newState, addonData)
                 narrateAddonStateText = "[" .. newStateText .. "] " .. GetString(SI_ADDONLOADSTATE2) ..",   " ..addonName
             end
 --d(">DELAYED: addon state: " .. tos(narrateAddonStateText))
-            OnUpdateDoNarrate("OnAddonRowClicked", 150, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
+            OnUpdateDoNarrate("OnAddonRowClicked", 75, function() AddNewChatNarrationText(narrateAddonStateText, true)  end)
         end, 50)
     end
 end
@@ -762,6 +969,12 @@ local function stripText(text)
     return text:gsub("|c%x%x%x%x%x%x", "")
 end
 ]]
+
+local function updatePackDataWithAddons(packData, addonTable)
+    if packData == nil then return end
+    packData.addonTable = packData.addonTable or addonTable
+    return packData
+end
 
 -- Create the pack table or nil it out if it exists.
 -- Distinguish between packs grouped for charactes or general packs
@@ -805,7 +1018,7 @@ local function getSVTableForPacksOfCharname(charName)
     local addonPacksOfChar = AddonSelector.acwsv.addonPacksOfChar
     if addonPacksOfChar then
         for charId, packsData in pairs(addonPacksOfChar) do
-            local addonPacksCharName = packsData["_charName"]
+            local addonPacksCharName = packsData[CHARACTER_PACK_CHARNAME_IDENTIFIER]
             if addonPacksCharName ~= GLOBAL_PACK_NAME and addonPacksCharName == charName then
                 return addonPacksOfChar[charId], charId
             end
@@ -877,6 +1090,11 @@ local function deselectComboBoxEntry()
         comboBox:SetSelectedItem("")
         comboBox.m_selectedItemData = nil
     end
+end
+
+local function selectPreviouslySelectedPack(beforeSelectedPackData)
+    beforeSelectedPackData = beforeSelectedPackData or AddonSelector.currentlySelectedPackData
+    AddonSelector.comboBox:SelectItem(beforeSelectedPackData, true) --ignore the callback for entry selected!
 end
 
 --Check if dependencies of an addon are given and enable them, if not already enabled
@@ -1035,6 +1253,10 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
         packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
         packNameText = packNameText .. currentlySelectedPackName
         packNameLabel:SetText(packNameText)
+
+        if not wasDeleted then
+            AddonSelector.currentlySelectedPackData = AddonSelector.comboBox:GetSelectedItemData()
+        end
     end
 end
 
@@ -1078,7 +1300,7 @@ local function ChangeDeleteButtonEnabledState(autoreloadUICheckboxState, skipSta
     end
     newDeleteButtonEnabledState = not checkedBool
     --New enabled state of delete button would be enabled?
-    if newDeleteButtonEnabledState then
+    if newDeleteButtonEnabledState == true then
         --Check if the user selected any dropdown entry yet. If not, disable the button
         local itemData = AddonSelector.comboBox:GetSelectedItemData()
         if itemData == nil then
@@ -1087,7 +1309,6 @@ local function ChangeDeleteButtonEnabledState(autoreloadUICheckboxState, skipSta
         end
     end
     deleteBtn:SetMouseEnabled(newDeleteButtonEnabledState)
-    deleteBtn:SetKeyboardEnabled(newDeleteButtonEnabledState)
     deleteBtn:SetEnabled(newDeleteButtonEnabledState)
 end
 
@@ -1099,7 +1320,6 @@ local function ChangeSaveButtonEnabledState(newEnabledState)
     if saveButton then
         saveButton:SetEnabled(newEnabledState)
         saveButton:SetMouseEnabled(newEnabledState)
-        saveButton:SetKeyboardEnabled(newEnabledState)
     end
 end
 
@@ -1132,13 +1352,15 @@ local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
         ChangeSaveButtonEnabledState(true)
     end
 
-    --Delay a bit to overwrite other OnMosueEnter narrate texts!
+    --Delay a bit to overwrite other OnMouseEnter narrate texts!
+    --[[
     suppressOnMouseEnterNarration = true
     local narrateAddonSelectedPackText = strfor("["..selectedPackNameStr.. "]", addonPackName)
     OnUpdateDoNarrate("OnAddonPackSelected", 150, function()
         suppressOnMouseEnterNarration = false
         AddNewChatNarrationText(narrateAddonSelectedPackText, true)
     end)
+    ]]
 end
 
 
@@ -1176,9 +1398,6 @@ end
 local function loadAddonPack(packName, packData)
     -- Clear the edit box:
     AddonSelector.editBox:Clear()
-
-    --TODO: Remove after debugging
-    --AddonSelector.SelectedPackData = packData
 
     local somethingDone = updateAddonsEnabledStateByPackData(packData)
 --d(">somethingDone: " ..tos(somethingDone))
@@ -1531,7 +1750,7 @@ local function getAddonCategoryCategories()
             addonCategoriesIndices[categoryName] = categorysIndexInAddonsList
         end
         --Sort the output table by category name
-        table.sort(addonCategories)
+        tsor(addonCategories)
     end
     return addonCategories, addonCategoriesIndices
 end
@@ -2148,7 +2367,7 @@ local function ShowConfirmationDialog(dialogName, title, body, callbackYes, call
     --Check if the dialog exists already, and if not register it
     local existingDialogs = libDialog.dialogs
     if forceUpdate or existingDialogs[ADDON_NAME] == nil or existingDialogs[ADDON_NAME][dialogName] == nil then
-        libDialog:RegisterDialog(ADDON_NAME, dialogName, title, body, callbackYes, callbackNo, callbackSetup, forceUpdate)
+        libDialog:RegisterDialog(ADDON_NAME, dialogName, title, body, callbackYes, callbackNo, callbackSetup, forceUpdate, callbackNo)
     end
     --Show the dialog now
     libDialog:ShowDialog(ADDON_NAME, dialogName, data)
@@ -2160,42 +2379,375 @@ end
 -- addons & compare them against the selected addon pack.
 -- Enable all addons that are in the selected addon pack, disable the rest.
 -->Called by ItemSelectedClickHelper of the dropdown box entries/items
-local function OnClickDDL(comboBox, packName, packData, selectionChanged)
---d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
+local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem) --comboBox, itemName, item, selectionChanged, oldItem
+--[[
+AddonSelector._onClickDDlData = {
+    comboBox = comboBox,
+    packName = packName,
+    packData = packData,
+    selectionChanged = selectionChanged,
+    oldItem = oldItem,
+}
+d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
+]]
     loadAddonPack(packName, packData)
 end
 
--- Create ItemEntry table for the ddl
-function AddonSelector.CreateItemEntry(packName, addonTable, isCharacterPackHeader, charName)
-	return {name = packName, callback = OnClickDDL, addonTable = addonTable, isCharacterPackHeader=isCharacterPackHeader, charName=charName}
+local function OnAbort_Do(wasSave, wasDelete, itemData, charId, beforeSelectedPackData)
+    wasSave = wasSave or false
+    wasDelete = wasDelete or false
+    AddonSelector._debugItemData = itemData
+    AddonSelector._debugCharId = charId
+    AddonSelector._debugBeforeSelectedPackData = beforeSelectedPackData
+    if wasDelete == true and itemData ~= nil and beforeSelectedPackData ~= nil and itemData ~= beforeSelectedPackData then
+--d(">OnAbort_Do - Delete")
+        --Change the combobox SelectedItemText to beforeSelectedPackData.label or .name
+        selectPreviouslySelectedPack(beforeSelectedPackData)
+    end
 end
 
--- Called on load or when a new addon pack is saved & added to the comboBox
--- Clear & re-add all items, including new ones. Easier/quicker than
--- trying to see if an item already exists & editing it. Just adding
--- a new item would result in duplicates when editing a pack.
-function AddonSelector.UpdateDDL(wasDeleted)
-    wasDeleted = wasDeleted or false
-    --local addonPacks = AddonSelector.acwsv.addonPacks
-    local packTable = {}
-    local settings = AddonSelector.acwsv
-    local wasItemAdded = false
+local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, buttonWasPressed)
+    buttonWasPressed = buttonWasPressed or false
+    if not itemData then
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, deletePackAlertStr)
+        return
+    end
+    local function deleteError(reason)
+        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, strfor(deletePackErrorStr, reason))
+    end
+    if not itemData.name or itemData.name == "" then
+        deleteError("Pack name")
+        return
+    end
+    if not itemData.charName or itemData.charName == "" then
+        deleteError("Pack charName")
+        return
+    end
 
-    --Show the addon packs saved per character?
-    if settings.showGroupedByCharacterName == true or settings.saveGroupedByCharacterName == true then
-        for _, addonPacks in pairs(settings.addonPacksOfChar) do
-            local charName = addonPacks._charName
-            local itemData = AddonSelector.CreateItemEntry("[" .. charName .. "]", addonPacks, true, charName)
-            tins(packTable, itemData)
-            wasItemAdded = true
+    local wasDeleted = false
+    local selectedPackName = itemData.name
+    local selectedCharName = itemData.charName
+    local isGlobalPack = (selectedCharName == GLOBAL_PACK_NAME) or false
+
+    --Save grouped by charactername
+    if isGlobalPack == true then
+        AddonSelector.acwsv.addonPacks[selectedPackName] = nil
+        wasDeleted = true
+    else
+        if charId == nil then
+            deleteError("CharId nil")
+            return
+        end
+        if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
+            AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
+            wasDeleted = true
         end
     end
 
-    --Show the addon packs saved without character?
-    if settings.showGlobalPacks == true then
-        for packName, addonTable in pairs(settings.addonPacks) do
-            local itemData = AddonSelector.CreateItemEntry(packName, addonTable, false, GLOBAL_PACK_NAME)
-            tins(packTable, itemData)
+    if wasDeleted == true then
+        --Was the pack deleted which was currently selected, or any other?
+        local currentlySelectedPackWasDeleted = (buttonWasPressed == true or (beforeSelectedPackData ~= nil and itemData == beforeSelectedPackData) and true) or false
+--d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
+        clearAndUpdateDDL(currentlySelectedPackWasDeleted)
+        --Select the before selected pack again -> No "selected" callback so it does not accidently reloads the UI or changes any enabled/disabled addons
+        if not currentlySelectedPackWasDeleted and beforeSelectedPackData ~= nil then
+            selectPreviouslySelectedPack(beforeSelectedPackData)
+        else
+            --Disable the "delete pack" button
+            ChangeDeleteButtonEnabledState(nil, false)
+            --Disable the "save pack" button
+            ChangeSaveButtonEnabledState(false)
+        end
+    end
+end
+
+-- When delete is clicked, remove the selected addon pack
+local function OnClick_Delete(itemData, buttonWasPressed)
+    buttonWasPressed = buttonWasPressed or false
+    --d("[AddonSelector]OnClick_Delete")
+    --todo: If itemData was passed in this was called from "Selecting an item in the dropdown -> e.g. submenu -> delete pack".
+    --Selecting this menu entry will select the packName to delete to the dropdown's ItemSelectedText!
+    --We need to overwrite this one with the before selected packname again (if any was selected!) so that aborting or deleting the
+    --pack will not show the currently deleted packName at the dropdown
+    local itemDataWasProvided = itemData ~= nil
+    local currentlySelectedPackData
+    if itemDataWasProvided == true then
+        currentlySelectedPackData = AddonSelector.currentlySelectedPackData
+    end
+
+    itemData = itemData or AddonSelector.comboBox:GetSelectedItemData()
+    if not itemData then return end
+    --Debuggin
+    --AddonSelector._SelectedItemDataOnDelete = itemData
+
+    --If the character name (could be _G for global packs too!) is missing at the pack (old saved packs e.g.): Add it here
+    if itemData.charName == nil then
+        itemData.charName                           = itemData.addonTable ~= nil and itemData.addonTable._charName
+        itemData.charNameWasAddedByContextMenuClick = true --identifier to show the charname was added during click on "Delete pack"
+    end
+
+    --Deleting a pack could be done for all kinds of packs, so we always need to check for the selected charName of the item!
+    --local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
+    local charId, charName, svTable
+    charName = itemData.charName
+    if charName == nil then return end
+    if charName == currentCharName or charName == GLOBAL_PACK_NAME then
+        svTable = getSVTableForPacks()
+        charId = (charName ~= GLOBAL_PACK_NAME and currentCharId)
+    else
+        svTable, charId = getSVTableForPacksOfCharname(charName)
+    end
+    if not svTable then return end
+
+    --d("[AddonSelector]charName: " ..tos(charName) .. ", charId: " ..tos(charId))
+
+    local packCharName
+    if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
+    local selectedPackName = itemData.name
+    --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
+    local addonPackName = "\'" .. selectedPackName .. "\'"
+    local deletePackQuestion = strfor(AddonSelector_GetLocalizedText("deletePackBody"), tos(addonPackName))
+    ShowConfirmationDialog("DeleteAddonPackDialog",
+            (deletePackTitleStr) .. "\n[" .. (packCharName and strfor(charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
+            deletePackQuestion,
+            function() OnClick_DeleteDo(itemData, charId, currentlySelectedPackData, buttonWasPressed) end,
+            function() OnAbort_Do(false, true, itemData, charId, currentlySelectedPackData) end,
+            nil,
+            nil,
+            true
+    )
+end
+
+--[[
+local function customAddonPackSortFunc(entryA, entryB)
+    if entryA.isCharacterPackHeader == true and entryB.isCharacterPackHeader == true then
+        return entryA.name < entryB.name
+    elseif entryA.isCharacterPackHeader == true and not entryB.isCharacterPackHeader then
+        return true
+    elseif not entryA.isCharacterPackHeader and entryB.isCharacterPackHeader == true then
+        return false
+    end
+    return entryA.name < entryB.name
+end
+]]
+
+-- Create ItemEntry table for the ddl (dropdown box, ZO_ComboBox entries)
+function AddonSelector.CreateItemEntry(packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData)
+    local isSubmenu = (entriesSubmenu ~= nil and true) or false
+    local isCharacterPackHeader = (isCharacterPack and isSubmenuMainEntry and true) or false
+    local settings = AddonSelector.acwsv
+
+    local entry = {
+        name = packName,
+        label = label, --optional, might be nil. If nil name will be used instead
+        addonTable = addonTable,
+        tooltip = function()
+            if tooltip == nil or not settings.addPackTooltip then return end
+            return tooltip
+        end,
+
+
+        --Is character saved pack?
+        isCharacterPackHeader=isCharacterPackHeader,
+        charName=charName,
+
+        --Submenu?
+        isSubmenuMainEntry = isSubmenuMainEntry,
+        isSubmenu=isSubmenu,
+        entries=entriesSubmenu,
+
+        --Header (non-clickable. Only headerline)
+        isHeader = isHeader,
+
+        --Icon
+        icon = iconData
+    }
+
+    if not isSubmenu then
+        entry.callback = OnClickDDL
+    end
+    --Enable the main entry, which got a submenu, to be clickable too (add a callback to it)
+    -->But do not allow to click a "Character saved packs" line!
+    if isSubmenuMainEntry == true and not isCharacterPack then
+        entry.callback = function(comboBox, ...)
+            OnClickDDL(comboBox, packName, entry, nil, nil)
+        end
+    end
+
+    return entry
+end
+local createItemEntry = AddonSelector.CreateItemEntry
+
+-- Called on load or when a new addon pack is saved & added to the comboBox
+-- Clear & re-add all items + submenus, including new ones. Easier/quicker than
+-- trying to see if an item already exists & editing it. Just adding
+-- a new item would result in duplicates when editing a pack.
+-->Uses LibScrollableMenu now as LibCustomMenu uses ZO_Menu and since API101040 ZO_ComboBox is a multiselect scrollable comboxbox NOT using ZO_Menu anymore!!!
+function AddonSelector.UpdateDDL(wasDeleted)
+    wasDeleted = wasDeleted or false
+    local megaServer = GetWorldName()
+    --local addonPacks = AddonSelector.acwsv.addonPacks
+    local packTable = {} -- table with the pack entries and the submenus (if enabled)
+    local settings = AddonSelector.acwsv
+    local autoReloadUI = settings.autoReloadUI
+
+    local wasItemAdded = false
+    local saveGroupedByCharacterName = settings.saveGroupedByCharacterName
+    local showGroupedByCharacterName = settings.showGroupedByCharacterName
+    local showGlobalPacks = settings.showGlobalPacks
+    local showSubMenuAtGlobalPacks = settings.showSubMenuAtGlobalPacks
+
+    --local addonPacksComboBox = AddonSelector.comboBox
+
+    local subMenuEntries = {}
+    local addedSubMenuEntry = false
+
+    --Auto reload theUI if a pack is changed? Show that directly at the pack's entry text
+    local autoReloadUISuffix = ""
+
+    --Show the addon packs saved per character?
+    if showGroupedByCharacterName == true or saveGroupedByCharacterName == true then
+        --Create a header "Character packs"
+        local itemDataCharacterPackHeader = createItemEntry(packNameCharacter, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. characterWidesStr,
+                nil, false, true)
+        tins(packTable, itemDataCharacterPackHeader)
+
+
+        --Sort the character addon packs by their pack name
+        local addonPacksOfChar = settings.addonPacksOfChar
+        local addonPacksOfAllCharsSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacksOfChar)
+
+        for _, charId in ipairs(addonPacksOfAllCharsSortedLookup) do
+            local addonPacks = addonPacksOfChar[charId]
+
+            subMenuEntries = nil
+
+            local charName = addonPacks._charName
+            local numAddonsInPack = NonContiguousCount(addonPacks)
+            if charName ~= nil and numAddonsInPack > 1 then --count 1 will be the _charName entry!
+                if showGroupedByCharacterName == true then
+                    subMenuEntries = {}
+
+                    local addonPacksOfCharSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
+
+                    --The entry in the DDL is the characterName -> We need to add the submenu entries for each packName
+                    for _, packNameOfChar in pairs(addonPacksOfCharSortedLookup) do
+                        if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then
+                            local addonsInCharPack = addonPacks[packNameOfChar]
+                            tins(subMenuEntries, {
+                                name = packNameOfChar,
+                                label = (selectPackStr) .. ": " .. packNameOfChar,
+                                charName = charName,
+                                callback = OnClickDDL,
+                                isCharacterPackHeader = false,
+                                isCharacterPack = true,
+                                isGlobalPackHeader = false,
+                                isGlobalPack = false,
+                                addonTable = addonsInCharPack,
+                            })
+                            addedSubMenuEntry = true
+                        end
+                    end
+                    if not addedSubMenuEntry then subMenuEntries = nil end
+                end
+
+                --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
+                --"[" .. charName .. "]"
+                local label
+                local itemCharData = createItemEntry(charName, label, addonPacks, true,
+                        charName, "[" .. tostring(megaServer) .. "]"..characterWideStr..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
+                        subMenuEntries, subMenuEntries ~= nil, false)
+                tins(packTable, itemCharData)
+                wasItemAdded = true
+            end
+        end
+    end
+
+    --Show the addon packs saved without character? -> Global, server wide
+    if showGlobalPacks == true then
+        --Create a header "Global packs"
+        local itemDataGlobalPackHeader = createItemEntry(packNameGlobal, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. accountWidesStr,
+                nil, false, true)
+        tins(packTable, itemDataGlobalPackHeader)
+
+        local autoReloadUISuffixSubmenu = ""
+        if autoReloadUI == true then
+            autoReloadUISuffix = reloadUITextureStr
+            autoReloadUISuffixSubmenu = " & " .. reloadUIStr
+        end
+
+        --Sort the global addon packs by their pack name
+        local addonPacks = settings.addonPacks
+        local addonPacksSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
+        for _, packName in ipairs(addonPacksSortedLookup) do
+            local addonTable = addonPacks[packName]
+
+            subMenuEntries = nil
+            if showSubMenuAtGlobalPacks == true then
+                subMenuEntries = {
+                    {
+                        name    = packName,
+                        label   = (selectPackStr) .. autoReloadUISuffixSubmenu .. ": " .. packName,
+                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+--d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
+                            --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                            --Pass in the addonTable of the pack, else it won't load properly!
+                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                        end,
+                        charName = GLOBAL_PACK_NAME,
+                        addonTable = addonTable,
+                    },
+                }
+
+                if not autoReloadUI then
+                    subMenuEntries[#subMenuEntries+1] =
+                    {
+                        name    = "-",
+                        isDivider = true,
+                        callback = function() end,
+                        disabled = true,
+                    }
+                    subMenuEntries[#subMenuEntries+1] =
+                    {
+                        name    = packName,
+                        label   = (selectPackStr) .. " & " .. (reloadUIStr) .. ": " .. packName,
+                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                            ReloadUI("ingame")
+                        end,
+                        charName = GLOBAL_PACK_NAME,
+                        addonTable = addonTable,
+                    }
+                end
+
+                subMenuEntries[#subMenuEntries+1] =
+                    {
+                        name    = "-",
+                        isDivider = true,
+                        callback = function() end,
+                        disabled = true,
+                    }
+                subMenuEntries[#subMenuEntries+1] =
+                    {
+                        name    =  packName,
+                        label    = (deletePackTitleStr) .. " " .. packName,
+                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                            OnClick_Delete(packData, false)
+                        end,
+                        charName = GLOBAL_PACK_NAME,
+                        addonTable = addonTable,
+                    }
+
+                addedSubMenuEntry = true
+
+            end
+
+            local label = packName
+            local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
+            --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
+            local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'",
+                    subMenuEntries, subMenuEntries ~= nil, false, iconData)
+            tins(packTable, itemGlobalData)
             wasItemAdded = true
         end
     end
@@ -2204,18 +2756,10 @@ function AddonSelector.UpdateDDL(wasDeleted)
     AddonSelector.comboBox:ClearItems()
 
     if wasItemAdded == true then
-        tsor(packTable, function(entryA, entryB)
-            if entryA.isCharacterPackHeader == true and entryB.isCharacterPackHeader == true then
-                return entryA.name < entryB.name
-            elseif entryA.isCharacterPackHeader == true and not entryB.isCharacterPackHeader then
-                return true
-            elseif not entryA.isCharacterPackHeader and entryB.isCharacterPackHeader == true then
-                return false
-            end
-            return entryA.name < entryB.name
-        end)
+        --tsor(packTable, customAddonPackSortFunc) --Disabled as the sorting would move the headers to wrong places. Sorting is done for character and global packs before adding to the table packTable now
         AddonSelector.comboBox:AddItems(packTable)
     end
+
     --Update the currently selected packName label
     UpdateCurrentlySelectedPackName(wasDeleted, nil, nil)
 end
@@ -2230,7 +2774,6 @@ function AddonSelector_OnMouseUp(editControl, mouseButton, upInside, ctrlKey, al
             if currentCharName and currentCharName ~= "" then
                 editControl:SetText(currentCharName .. "_")
                 editControl:SetMouseEnabled(true)
-                editControl:SetKeyboardEnabled(true)
                 editControl:TakeFocus()
             end
         end
@@ -2244,7 +2787,7 @@ end
 function AddonSelector_TextChanged(editControl)
 	local newText = editControl:GetText()
     local newEnabledState = false
-    if newText and newText ~= "" then
+    if newText ~= nil and newText ~= "" then
         newEnabledState = true
         --Deactivate the delete button as the combobox was emptied (non selected entry)
         ChangeDeleteButtonEnabledState(nil, false)
@@ -2294,7 +2837,11 @@ local function OnClick_CheckBoxLabel(self, currentStateVar)
     end
     --Reenable/Disable delete button?
     ChangeDeleteButtonEnabledState(newState, nil)
+
+    --Auto ReloadUI was changed?
     if currentStateVar == "autoReloadUI" then
+        --Rebuild the dropdown entries
+        AddonSelector.UpdateDDL()
         updateAutoReloadUITexture(newState)
     end
 end
@@ -2331,7 +2878,8 @@ local function OnClick_SaveDo()
     -- Create a temporary copy of the itemEntry data so we can select it
     -- after the ddl is updated
     local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
-    local itemData = AddonSelector.CreateItemEntry(packName, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME)
+    --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
+    local itemData = createItemEntry(packName, label, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME, nil, nil, nil, true) --no submenu -- todo is false as 3rd param correct here?
 
     clearAndUpdateDDL()
     --Prevent reloadui for a currently new saved addon pack!
@@ -2387,7 +2935,7 @@ local function OnClick_Save()
                 "[".. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
                 savePackQuestion,
                 function() OnClick_SaveDo() end,
-                function() end,
+                function() OnAbort_Do(true, false, nil, nil, nil) end,
                 nil,
                 nil,
                 true
@@ -2395,92 +2943,6 @@ local function OnClick_Save()
     else
         OnClick_SaveDo()
     end
-end
-
-local function OnClick_DeleteDo(itemData, charId)
-    if not itemData then
-        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, deletePackAlertStr)
-        return
-    end
-    local function deleteError(reason)
-        ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, strfor(deletePackErrorStr, reason))
-    end
-    if not itemData.name or itemData.name == "" then
-        deleteError("Pack name")
-        return
-    end
-    if not itemData.charName or itemData.charName == "" then
-        deleteError("Pack charName")
-        return
-    end
-
-    local wasDeleted = false
-    local selectedPackName = itemData.name
-    local selectedCharName = itemData.charName
-    local isGlobalPack = (selectedCharName == GLOBAL_PACK_NAME) or false
-
-    --Save grouped by charactername
-    if isGlobalPack == true then
-        AddonSelector.acwsv.addonPacks[selectedPackName] = nil
-        wasDeleted = true
-    else
-        if charId == nil then
-            deleteError("CharId nil")
-            return
-        end
-        if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
-            AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
-            wasDeleted = true
-        end
-    end
-
-    if wasDeleted == true then
-        clearAndUpdateDDL(true)
-
-        --Disable the "save pack" button
-        ChangeSaveButtonEnabledState(false)
-        --Disable the "delete pack" button
-        ChangeDeleteButtonEnabledState(nil, false)
-    end
-end
-
--- When delete is clicked, remove the selected addon pack
-local function OnClick_Delete(itemData)
---d("[AddonSelector]OnClick_Delete")
-    itemData = itemData or AddonSelector.comboBox:GetSelectedItemData()
-    if not itemData then return end
-    --Debuggin
-    --AddonSelector._SelectedItemDataOnDelete = itemData
-
-    --Deleting a pack could be done for all kinds of packs, so we always need to check for the selected charName of the item!
-    --local saveGroupedByChar = AddonSelector.acwsv.saveGroupedByCharacterName
-    local charId, charName, svTable
-    charName = itemData.charName
-    if charName == currentCharName or charName == GLOBAL_PACK_NAME then
-        svTable = getSVTableForPacks()
-        charId = (charName ~= GLOBAL_PACK_NAME and currentCharId)
-    else
-        svTable, charId = getSVTableForPacksOfCharname(charName)
-    end
-    if not svTable then return end
-
-    --d("[AddonSelector]charName: " ..tos(charName) .. ", charId: " ..tos(charId))
-
-    local packCharName
-    if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
-    local selectedPackName = itemData.name
-    --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
-    local addonPackName = "\'" .. selectedPackName .. "\'"
-    local deletePackQuestion = strfor(AddonSelector_GetLocalizedText("deletePackBody"), tos(addonPackName))
-    ShowConfirmationDialog("DeleteAddonPackDialog",
-        (deletePackTitleStr) .. "\n[" .. (packCharName and strfor(charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
-        deletePackQuestion,
-        function() OnClick_DeleteDo(itemData, charId) end,
-        function() end,
-        nil,
-        nil,
-        true
-    )
 end
 
 --OnMouseUp event for the selected pack name label
@@ -2497,16 +2959,12 @@ local function OnClick_SelectedPackNameLabel(self, button, upInside, ctrl, alt, 
     end
 end
 
-local function setMenuItemCheckboxState(checkboxIndex, newState, doClearAndUpdateDdl)
+local function setMenuItemCheckboxState(checkboxIndex, newState)
     newState = newState or false
-    doClearAndUpdateDdl = doClearAndUpdateDdl or false
     if newState == true then
         ZO_CheckButton_SetChecked(ZO_Menu.items[checkboxIndex].checkbox)
     else
         ZO_CheckButton_SetUnchecked(ZO_Menu.items[checkboxIndex].checkbox)
-    end
-    if doClearAndUpdateDdl == true then
-        clearAndUpdateDDL()
     end
 end
 
@@ -2632,6 +3090,13 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             MENU_ADD_OPTION_CHECKBOX)
     setMenuItemCheckboxState(cbAutoReloadUIindex, AddonSelector.acwsv.autoReloadUI)
 
+    --Add the pack tooltip after autoRealoadUI checkbox
+    local cbAddPackTooltipIndex = AddCustomMenuItem(addPackTooltipStr,
+            function(cboxCtrl)
+                OnClick_CheckBoxLabel(cboxCtrl, "addPackTooltip")
+            end,
+            MENU_ADD_OPTION_CHECKBOX)
+    setMenuItemCheckboxState(cbAddPackTooltipIndex, AddonSelector.acwsv.addPackTooltip)
 
     --Last pack loaded info
     local lastLoadedPackData = AddonSelector.acwsv.lastLoadedPackNameForCharacters and AddonSelector.acwsv.lastLoadedPackNameForCharacters[currentCharId]
@@ -2733,10 +3198,52 @@ function AddonSelector.CreateControlReferences()
     -- Assign references:
     AddonSelector.addonSelectorControl = addonSelector
 
-    AddonSelector.editBox 	= addonSelector:GetNamedChild("EditBox")
-    AddonSelector.ddl 		= addonSelector:GetNamedChild("ddl")
+    AddonSelector.ddl 		= addonSelector:GetNamedChild("ddl") --<Control name="$(parent)ddl" inherits="ZO_ComboBox" mouseEnabled="true" >
+    --LibScrollableMenu - Add scrollable menu + submenu possibility at the dropdown list (ZO_ComboBox)
+    -->No more need to overwrite AddonSelector.ddl.m_comboBox:AddMenuItems below in this addon's code!
+    -->Just use AddonSelector.ddl.m_comboBox:AddItems(tableWithMenuAndSubmenuEntries) instead, or in this addon use AddonSelector.UpdateDDL as it already exists to do the AddItems() call
+    --AddonSelector.ddl = CreateControlFromVirtual  ZO_ComboBox
+--		table	narrate:optional				Table or function returning a table with key = narration event and value = function called for that narration event.
+--												The functions signature/parameters always is scrollHelperObject, control, data:nilable, isSubmenu:nilable
+--												-> The function either builds your narrateString and narrates it in your addon.
+--												   Or you must return a string as 1st return param (and optionally a boolean "stopCurrentNarration" as 2nd return param. If this is nil it will be set to false!)
+--												    and let the library here narrate it for you via the UI narration
+--												Optional narration events can be:
+--												"OnDropdownMouseEnter" 	function(scrollhelperObject, dropdownControl)  Build your narrateString and narrate it now, or return a string and let the library narrate it for you end
+--												"OnDropdownMouseExit"	function(scrollhelperObject, dropdownControl) end
+--												"OnMenuShow"			function(scrollhelperObject, dropdownControl) end
+--												"OnMenuHide"			function(scrollhelperObject, dropdownControl) end
+--												"OnSubMenuShow"			function(scrollhelperObject, parentControl) end
+--												"OnSubMenuHide"			function(scrollhelperObject, parentControl) end
+--												"OnEntryMouseEnter"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+--												"OnEntryMouseExit"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+--												"OnEntrySelected"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+--												"OnCheckboxUpdated"		function(scrollhelperObject, checkboxControl, data) end
+--			Example:	narrate = { ["OnDropdownMouseEnter"] = myAddonsNarrateDropdownOnMouseEnter, ... }
+    AddonSelector.ddl.scrollHelper = AddCustomScrollableComboBoxDropdownMenu(addonSelector, AddonSelector.ddl,
+            {   visibleRowsDropdown = 15,
+                visibleRowsSubmenu = 15,
+                sortEntries = false,
+
+                narrate = {
+                    ["OnDropdownMouseEnter"] =  narrateDropdownOnMouseEnter,
+                    --["OnDropdownMouseExit"] =   narrateDropdownOnMouseExit,
+					--["OnMenuShow"] =			narrateDropdownOnOpened,
+					--["OnMenuHide"] =			narrateDropdownOnClosed,
+					["OnSubMenuShow"] =			narrateDropdownOnSubmenuShown,
+					["OnSubMenuHide"] =		    narrateDropdownOnSubmenuHidden,
+					["OnEntryMouseEnter"] =		narrateDropdownOnEntryMouseEnter,
+					--["OnEntryMouseExit"] =	narrateDropdownOnEntryMouseExit,
+					["OnEntrySelected"] =		narrateDropdownOnEntrySelected,
+					["OnCheckboxUpdated"] =		narrateDropdownOnCheckboxUpdated,
+                }
+            }
+    ) --Entries will be added at AddonSelector.UpdateDDL(wasDeleted)
+
     AddonSelector.comboBox	= AddonSelector.ddl.m_comboBox
     local savedPacksComboBox = AddonSelector.comboBox
+
+    AddonSelector.editBox 	= addonSelector:GetNamedChild("EditBox")
 
     AddonSelector.saveBtn 	= addonSelector:GetNamedChild("Save")
     AddonSelector.deleteBtn 	= addonSelector:GetNamedChild("Delete")
@@ -2825,7 +3332,7 @@ function AddonSelector.CreateControlReferences()
     AddonSelector.saveModeTexture:SetHandler("OnMouseExit", onMouseExitTooltip)
 
     AddonSelector.autoReloadUITexture = addonSelector:GetNamedChild("AutoReloadUITexture")
-    AddonSelector.autoReloadUITexture:SetTexture("/esoui/art/miscellaneous/eso_icon_warning.dds")
+    AddonSelector.autoReloadUITexture:SetTexture(reloadUITexture)
     AddonSelector.autoReloadUITexture:SetColor(1, 0, 0, 0.6)
     AddonSelector.autoReloadUITexture:SetMouseEnabled(true)
     AddonSelector.autoReloadUITexture.tooltipText = autoReloadUIStr
@@ -2865,15 +3372,17 @@ function AddonSelector.CreateControlReferences()
     local function OnMouseExit()
         ZO_Tooltips_HideTextTooltip()
     end
+    --[[
     local function OnMouseUp_SettingsLabel(settingsLabel, mouseButton, upInside)
         ZO_Tooltips_HideTextTooltip()
         if not upInside or not mouseButton == MOUSE_BUTTON_INDEX_LEFT then return end
         AddonSelector_ShowSettingsDropdown(AddonSelector.settingsOpenDropdown)
     end
+    ]]
 
     -- SetHandlers:
     AddonSelector.saveBtn:SetHandler("OnMouseUp", OnClick_Save)
-    AddonSelector.deleteBtn:SetHandler("OnMouseUp", function() OnClick_Delete() end)
+    AddonSelector.deleteBtn:SetHandler("OnMouseUp", function() OnClick_Delete(nil, true) end)
     --AddonSelector.autoReloadBtn:SetHandler("OnMouseUp", OnClick_AutoReload)
     --AddonSelector.autoReloadBtn:SetHandler("OnMouseEnter", OnMouseEnter)
     --AddonSelector.autoReloadBtn:SetHandler("OnMouseExit", OnMouseExit)
@@ -2889,10 +3398,12 @@ function AddonSelector.CreateControlReferences()
         local currentSelectedEntryText = savedPacksComboBox.currentSelectedItemText
         OnUpdateDoNarrate("OnSavedPackDropdown", 50, function() AddNewChatNarrationText("["..openedStr.."]   -   " .. currentSelectedEntryText, true)  end)
     end)
+    --[[
     SecurePostHook(savedPacksComboBox, "HideDropdownInternal", function(comboBoxCtrl)
         local currentSelectedEntryText = savedPacksComboBox.currentSelectedItemText
-        OnUpdateDoNarrate("OnSavedPackDropdown", 100, function() AddNewChatNarrationText("["..closedStr.."]   -   " .. currentSelectedEntryText, true)  end)
+        OnUpdateDoNarrate("OnSavedPackDropdown", 100, function() AddNewChatNarrationText("["..closedStr.."]   -   " .. currentSelectedEntryText, false)  end)
     end)
+    ]]
 end
 
 
@@ -3035,13 +3546,9 @@ end
 ]]
 
 --====================================--
---====  Initialize ====--
+--====  SavedVariables ====--
 --====================================--
-function AddonSelector.Initialize()
-    --Libraries
-    AddonSelector.LDIALOG = LibDialog
-    AddonSelector.LCM = LibCustomMenu
-
+function AddonSelector.LoadSaveVariables()
     local svName = "AddonSelectorSavedVars"
     local SAVED_VAR_VERSION = 1
     local defaultSavedVars = {
@@ -3063,6 +3570,7 @@ function AddonSelector.Initialize()
         lastMassMarkingSavedProfileTime = nil,  --timeStamp of last saved backup before mass-marking
         lastLoadedPackNameForCharacters = {}, --charName, packName, and timestamp as the pack was loaded with a ReloadUI
         packChangedBeforeReloadUI = false,
+        addPackTooltip = false,
     }
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
@@ -3117,13 +3625,26 @@ function AddonSelector.Initialize()
             }
         end
     end
+end
 
+--====================================--
+--====  Initialize ====--
+--====================================--
+function AddonSelector.Initialize()
+    --Libraries
+    AddonSelector.LDIALOG = LibDialog
+    AddonSelector.LCM = LibCustomMenu
+    AddonSelector.LSM = LibScrollableMenu
+
+    --Load the SavedVariables and do "after SV loaded checks"
+    AddonSelector.LoadSaveVariables()
+
+    --Create the controls, and update them
     AddonSelector.CreateControlReferences()
-    AddonSelector.UpdateDDL()
-    AddonSelector.ChangeLayout()
+    AddonSelector.UpdateDDL() --Add the entries to the packs dropdown list / combobox -> Uses LibScrollableMenu now
+    AddonSelector.ChangeLayout() --Change the layout of the Addon's list and controls so that AddonSelector got space to be inserted
 
-    -- Very hacky, but easiest method: Wipe out the games
-    -- TYPE_ID = 1 dataType and recreate it using my own template.
+    -- Very hacky, but easiest method: Wipe out the game's TYPE_ID = 1 dataType and recreate it using my own template.
     -- Done to make the row controls mouseEnabled
     --[[ Disabled on advice by Votan, 31.08.2018, Exchanged with code lines below
     ADDON_MANAGER_OBJECT.list.dataTypes = {}
@@ -3179,15 +3700,34 @@ function AddonSelector.Initialize()
         --Toggle Addon On/Off button
         AddonSelectorToggleAddonStateButton:ClearAnchors()
         AddonSelectorToggleAddonStateButton:SetAnchor(TOPLEFT, AddonSelectorDeselectAddonsButton, TOPRIGHT, 5, 0)
+
         --Start addon search button
         AddonSelectorStartAddonSearchButton:SetText(searchMenuStr)
         AddonSelectorStartAddonSearchButton:ClearAnchors()
         AddonSelectorStartAddonSearchButton:SetAnchor(TOPLEFT, AddonSelectorSelectAddonsButton, TOPRIGHT, 5, 0)
-        --With API101038 - "Advanced error messages" checkbox
+        --With API101038 - "Advanced error messages" checkbox - reacnhor 1 frame later, or it won't move properly
         zo_callLater(function()
             ZO_AddOnsAdvancedUIErrors:ClearAnchors()
             ZO_AddOnsAdvancedUIErrors:SetAnchor(TOPLEFT, ZO_AddOnsCurrentBindingsSaved, TOPRIGHT, 10, 0)
-        end)
+        end, 0)
+
+        if not ZO_AddOnsAdvancedUIErrors.wasHookedByAddonSelector then
+            ZO_AddOnsAdvancedUIErrors.wasHookedByAddonSelector = true
+
+            onMouseEnterDoNarrate(ZO_AddOnsAdvancedUIErrors.label)
+            onMouseEnterDoNarrate(ZO_AddOnsAdvancedUIErrors)
+            ZO_PostHookHandler(ZO_AddOnsAdvancedUIErrors, "OnMouseUp", function(ctrl, button, upInside)
+                if upInside and button == MOUSE_BUTTON_INDEX_LEFT then
+                    OnControlClickedNarrate(ctrl, true)
+                end
+            end)
+            ZO_PostHookHandler(ZO_AddOnsAdvancedUIErrors.label, "OnMouseUp", function(ctrl, button, upInside)
+                if upInside and button == MOUSE_BUTTON_INDEX_LEFT then
+                    OnControlClickedNarrate(ctrl, true)
+                end
+            end)
+        end
+
     end
     AddonSelector.OnShow_HideStuff = AddonSelectorOnShow_HideStuff
 
@@ -3216,8 +3756,7 @@ function AddonSelector.Initialize()
             --AddonSelector_HookForMultiSelectByShiftKey()
 
             --PostHook the new Enable All addons checkbox function so that the controls of Circonians Addon Selector get disabled/enabled
-            enableAllAddonsCheckboxCtrl = enableAllAddonsCheckboxCtrl or ZO_AddOnsList2Row1Checkbox
-            enableAllAddonTextCtrl = enableAllAddonTextCtrl or ZO_AddOnsList2Row1Text
+            updateEnableAllAddonsCtrls()
             if not enableAllAddonsCheckboxHooked and enableAllAddonsCheckboxCtrl ~= nil then
                 ZO_PostHookHandler(enableAllAddonsCheckboxCtrl, "OnMouseUp", function(checkboxCtrl, mouseButton, isUpInside)
                     if not isUpInside or mouseButton ~= MOUSE_BUTTON_INDEX_LEFT then return end
@@ -3275,7 +3814,8 @@ function AddonSelector.Initialize()
     ]]
 
 
-    --Update the keybind descriptor for the 2nd keybind to use the 3rd keybind, as AddonSelector also uses 2nd keybind since years!
+    --Update the keybind descriptor for the 2nd keybind ("Clear unused") to use the 4th keybind instead, as AddonSelector also uses 2nd (and recently also 3rd -> Enable/Disable addon below mouse cursor)
+    --keybinds since years!
     --[[
     local secondaryKeybindDescriptor =
     {
@@ -3328,7 +3868,7 @@ function AddonSelector_ShowActivePackInChat()
     if charNameOfSelectedPack == nil or charNameOfSelectedPack == "" or charNameOfSelectedPack == GLOBAL_PACK_NAME then
         charNameOfSelectedPack = ", " .. packNameGlobal
     else
-        charNameOfSelectedPack = ", " .. (AddonSelector_GetLocalizedText("packCharName")) .. ": " ..tos(charNameOfSelectedPack)
+        charNameOfSelectedPack = ", " .. packCharNameStr .. ": " ..tos(charNameOfSelectedPack)
     end
     d("[" .. ADDON_NAME .. "]" .. currentPackInfoText .. charNameOfSelectedPack)
 end
@@ -3359,7 +3899,7 @@ end
 --  OnAddOnLoaded  --
 -------------------------------------------------------------------
 local function OnAddOnLoaded(event, addonName)
-	if addonName ~= ADDON_NAME then return end
+    if addonName ~= ADDON_NAME then return end
     ADDON_MANAGER = ADDON_MANAGER or GetAddOnManager()
     ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
     AddonSelector.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
@@ -3371,7 +3911,7 @@ local function OnAddOnLoaded(event, addonName)
         addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
     end
 
-	--Load SavedVariables, update controls etc.
+    --Load SavedVariables, create and update controls etc.
     AddonSelector.Initialize()
 
     addonSelectorSelectAddonsButtonNameLabel = AddonSelectorSelectAddonsButton.nameLabel --GetControl(AddonSelectorSelectAddonsButton, "NameLabel")
@@ -3402,145 +3942,78 @@ local function OnAddOnLoaded(event, addonName)
     --Hook the scrollable combobox OnMouseEnter function to show the menu entry to select/delete the pack of the row
     --SecurePostHook("ZO_ScrollableComboBox_Entry_OnMouseEnter", PackScrollableComboBox_Entry_OnMouseEnter)
     AddonSelector.LCM = AddonSelector.LCM or LibCustomMenu
+    AddonSelector.LSM = AddonSelector.LSM or LibScrollableMenu
     checkIfGlobalPacksShouldBeShown()
-
-
-    ZO_PreHook(AddonSelector.comboBox, "AddMenuItems", function(selfVar) -- ZO_ComboBox
-        if not AddonSelector or not AddonSelector.comboBox or selfVar ~= AddonSelector.comboBox then return end
---d("AddMenuItems")
-        local settings = AddonSelector.acwsv
-        local saveGroupedByCharacterName = settings.saveGroupedByCharacterName
-        local showGroupedByCharacterName = settings.showGroupedByCharacterName
-        local showGlobalPacks = settings.showGlobalPacks
-        local showSubMenuAtGlobalPacks = settings.showSubMenuAtGlobalPacks
-        if showSubMenuAtGlobalPacks == false and (saveGroupedByCharacterName == false and showGroupedByCharacterName == false) then return false end
-
-        -- Does not work! Maybe because of LibCustomMenu
-        --[[
-        --Add narration
-        local items = selfVar:GetItems()
-        for index, item in ipairs(items) do
-            --Add the narration of the ZO_Menu.item's name OnMouseEnter of the combobox via comboBox:SetItemOnEnter()
-            selfVar:SetItemEnabled(item, true)
-            selfVar:SetItemOnEnter(item, function(itemCtrl)
-d("[AddonSelector]SetItemOnEnter - index: " .. tos(index))
-                AddonSelector._savedPackComboBoxItemOnEnter = itemCtrl
-                onMenuItemMouseEnterNarrate(itemCtrl)
-            end)
-        end
-        ]]
-        for i = 1, #selfVar.m_sortedItems do
-            local subMenuEntries = {}
-            local addedSubMenuEntry = false
-            local itemName
-            -- The variable item must be defined locally here, otherwise it won't work as an upvalue to the selection helper
-            local item = selfVar.m_sortedItems[i]
-
-            local function mainEntryOnClickCallback(control)
-                if item.isCharacterPackHeader == true then return end
-                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
-            end
-
-
-            --Packs are saved grouped below character names
-            if (saveGroupedByCharacterName == true or showGroupedByCharacterName == true) and item.isCharacterPackHeader == true then
-                local packDataOfChar = item.addonTable
-                local charName = packDataOfChar._charName
-                --The entry in the DDL is the characterName -> We need to add the submenu entries for each packName
-                if charName ~= nil and packDataOfChar ~= nil then
-                    itemName = item.name
-                    for packNameOfChar, addonsOfPack in pairs(packDataOfChar) do
-                        if packNameOfChar ~= "_charName" then
-                            tins(subMenuEntries, {
-                                label = (selectPackStr) .. ": " .. packNameOfChar,
-                                callback = function()
-                                    local packItem = AddonSelector.CreateItemEntry(packNameOfChar, addonsOfPack, false, charName)
-                                    selfVar:ItemSelectedClickHelper(packItem) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
-                                end,
-                            })
-                            addedSubMenuEntry = true
-                        end
-                    end
-                end
-            end
-
-            if showGlobalPacks == true and not item.isCharacterPackHeader then
-                --Packs are saved without character name grouping
-                --The entry in the DDL is the packname
-                itemName = item.name
-                if showSubMenuAtGlobalPacks == true then
-                    subMenuEntries = {
-                        {
-                            label = (selectPackStr) .. ": " .. itemName,
-                            callback = function()
-                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
-                            end,
-                        },
-                        {
-                            label = "-",
-                            callback = function() end,
-                            disabled = true,
-                        },
-                        {
-                            label = (selectPackStr) .. " & " .. (reloadUIStr) .. ": " .. itemName,
-                            callback = function()
-                                selfVar:ItemSelectedClickHelper(item) --will call "OnClickDDL", defined in "AddonSelector.CreateItemEntry" as callback of the entry
-                                ReloadUI("ingame")
-                            end,
-                        },
-                        {
-                            label = "-",
-                            callback = function() end,
-                            disabled = true,
-                        },
-                        {
-                            label =  (deletePackTitleStr) .. " " .. itemName,
-                            callback = function()
-                                if item.charName == nil then
-                                    local packDataOfChar = item.addonTable
-                                    local charName = packDataOfChar._charName
-                                    item.charName = charName
-                                    item.charNameWasAddedByContextMenuClick = true
-                                end
-                                OnClick_Delete(item)
-                            end,
-                        }
-                    }
-                    addedSubMenuEntry = true
-                else
-                    AddCustomMenuItem(itemName, mainEntryOnClickCallback, nil, nil, nil, nil, nil)
-                end
-            end
-
-            if addedSubMenuEntry == true then
-                AddCustomSubMenuItem(itemName, subMenuEntries, nil, nil, nil, nil, mainEntryOnClickCallback)
-            end
-        end
-        return true
-    end) -- ZO_PreHook ZO_Menu.items
-
 
     --Narrate ZO_Menu.items + submenus of LibCustomMenu
     --Trying via LibCustomMenu.submenu:SetSelectedIndex(control.index) hook as this will be called OnMouseEnter
-    --Normal entries
-    SecurePostHook("ZO_Menu_EnterItem", function(itemCtrl)
-        if checkIfMenuOwnerIsZOAddOns() == false or IsAccessibilityUIReaderEnabled() == false then return end
+    local function getNarratableZO_MenuItemText(itemCtrl, isSubMenuEntry)
+        isSubMenuEntry = isSubMenuEntry or false
+        local textToNarrate
+        local isCheckbox = false
+        local isSubmenu = false
+
+        local prefixStr = getOwnerPrefixStr(GetMenuOwner())
 
         --d("[AddonSelector]ZO_Menu_EnterItem - itemCtrl: " .. tos(itemCtrl))
-        local currentMenuItemText = ZO_Menu_GetSelectedText()
+        local currentMenuItemText = (isSubMenuEntry == false and ZO_Menu_GetSelectedText()) or (itemCtrl.nameLabel ~= nil and itemCtrl.nameLabel:GetText())
         if currentMenuItemText ~= nil then
-            OnUpdateDoNarrate("OnAddonZOMenuItemEnter", 25, function() AddNewChatNarrationText(strfor("["..selectPackStr .. "]    %s", currentMenuItemText), true)  end)
+            --Find out if a submenu exists or if the entry in the ZO_Menu is a checkbox or normal text
+            --It got a submenu? Check that first as the .checkbox will be "reused" for a submenu! But the control name won't be "Arror" at the suffix then
+            if GetControl(itemCtrl, "Arrow") ~= nil then
+                textToNarrate = "[" .. subMenuStr .. "]   " .. strfor(prefixStr, currentMenuItemText)
+                isSubmenu = true
+                --Checkbox?
+            else
+                --Checkbox is not a control of the item at the CustomMenu (only at submenus...)
+                --How to determine the checkbox? Via the name of the label: " |u16:0::|uTooltip zu Pack in Auswahlbox hinzufügen"
+                if (itemCtrl.checkbox ~= nil and itemCtrl.checkbox.GetState ~= nil and itemCtrl.checkbox:IsHidden() == false) or zo_plainstrfind(currentMenuItemText, "|u") == true then
+                    isCheckbox = true
+                else
+                    --Normal
+                    textToNarrate = strfor(prefixStr, currentMenuItemText)
+                end
+            end
+            if isCheckbox == true and isSubmenu == false then
+                --Get the checkbox via .checkBox or via the anchorTo
+                local checkBoxCtrl, currentCbState
+                if itemCtrl.checkbox ~= nil then
+                    checkBoxCtrl = itemCtrl.checkbox
+                else
+                    checkBoxCtrl = select(3, itemCtrl:GetAnchor()) --Get the relativeTo anchor control
+                end
+                if checkBoxCtrl ~= nil and checkBoxCtrl.GetState ~= nil then
+                    currentCbState = ZO_CheckButton_IsChecked(checkBoxCtrl)
+                end
+                textToNarrate = "[" .. checkboxStr .."]   " .. strfor(prefixStr, currentMenuItemText .. " ["..currentlyStr.."]: " ..tos(booleanToOnOff[currentCbState]))
+            end
         end
+        return textToNarrate, isCheckbox, isSubmenu
+    end
+
+
+    --Normal entries -> Settings menu
+    SecurePostHook("ZO_Menu_EnterItem", function(itemCtrl)
+        if checkIfMenuOwnerIsZOAddOns() == false or IsAccessibilityUIReaderEnabled() == false then return end
+        --d("[AddonSelector]ZO_Menu_EnterItem")
+        local textToNarrate = getNarratableZO_MenuItemText(itemCtrl, false)
+        OnUpdateDoNarrate("OnAddonSelectorSettingsZOMenuItemEnter", 25, function() AddNewChatNarrationText(textToNarrate, true)  end)
     end)
-    --Submenu entries
+    --Submenu entries -> Settings menu
     SecurePostHook(AddonSelector.LCM.submenu, "SetSelectedIndex", function(submenuTab, index)
         if submenuTab == nil or index == nil or checkIfMenuOwnerIsZOAddOns() == false or IsAccessibilityUIReaderEnabled() == false then return end
-
         --d("[AddonSelector]LCM.submenu.SetSelectedIndex - index: " .. tos(index))
-        local currentMenuItem = submenuTab.items[index]
-        local currentMenuItemText = (currentMenuItem ~= nil and currentMenuItem.nameLabel ~= nil) and currentMenuItem.nameLabel:GetText()
-        if currentMenuItemText ~= nil then
-            OnUpdateDoNarrate("OnAddonZOMenuItemEnter", 25, function() AddNewChatNarrationText(currentMenuItemText, true)  end)
+        local textToNarrate = getNarratableZO_MenuItemText(submenuTab.items[index], true)
+        OnUpdateDoNarrate("OnAddonSelectorSettingsZOMenuItemEnter", 25, function() AddNewChatNarrationText(textToNarrate, true)  end)
+    end)
+    --Narrate a checkbox againa fter it was clicked
+    SecurePostHook("ZO_Menu_ClickItem", function(itemCtrl, button)
+        if checkIfMenuOwnerIsZOAddOns() == false or IsAccessibilityUIReaderEnabled() == false then return end
+        --d("[AddonSelector]ZO_Menu_ClickItem")
+        if button ~= MOUSE_BUTTON_INDEX_LEFT then return end
+        local textToNarrate, isCheckbox = getNarratableZO_MenuItemText(itemCtrl, false)
+        if textToNarrate ~= nil and isCheckbox == true then
+            OnUpdateDoNarrate("OnAddonSelectorSettingsZOMenuItemEnter", 25, function() AddNewChatNarrationText(textToNarrate, true)  end)
         end
     end)
 
@@ -3566,3 +4039,5 @@ end
 --  Register Events --
 ---------------------------------------------------------------------
 EM:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
+
+

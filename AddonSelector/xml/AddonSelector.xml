@@ -14,7 +14,7 @@
             <Dimensions x="400" y="80"/>
 			<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsDivider" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="0" />
 			<Controls>
-				<EditBox name="$(parent)SearchBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+				<EditBox name="$(parent)SearchBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPRIGHT" relativeTo="ZO_AddOns" relativePoint="TOPRIGHT"  offsetX="-5" offsetY="75" />
 					<OnEnter>
@@ -25,21 +25,21 @@
 						<Backdrop name="$(parent)Bg" inherits="ZO_EditBackdrop" alpha="1"  >
 							<AnchorFill />
 						</Backdrop>
-						<Label name="$(parent)Label" font="ZoFontWinH4" color="FFFFFF" wrapMode="ELLIPSIS" text="Search:" verticalAlignment="CENTER" horizontalAlignment="RIGHT" alpha="1" >
+						<Label name="$(parent)Label" font="ZoFontWinH4" color="FFFFFF" wrapMode="ELLIPSIS" text="Search:" verticalAlignment="CENTER" horizontalAlignment="RIGHT" alpha="1" tier="LOW" layer="CONTROLS" level="5">
 							<Anchor point="RIGHT" relativeTo="$(parent)SearchBox" relativePoint="LEFT" offsetX="-10" offsetY="0"/>
 						</Label>
 					</Controls>
 				</EditBox>
 
-				<Label name="$(parent)NameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" >
+				<Label name="$(parent)NameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1"  tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="100" y="24" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="0" offsetY="0"/>
 				</Label>
-                <Backdrop name="$(parent)EditBoxBg" inherits="ZO_EditBackdrop" alpha="1"  >
+                <Backdrop name="$(parent)EditBoxBg" inherits="ZO_EditBackdrop" alpha="1"  tier="LOW" layer="BACKGROUND" level="0">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 				</Backdrop>
-				<EditBox name="$(parent)EditBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
+				<EditBox name="$(parent)EditBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 					<OnTextChanged>
@@ -50,32 +50,32 @@
 					</OnMouseUp>
 				</EditBox>
 
-				<Button name="$(parent)Save" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="">
+				<Button name="$(parent)Save" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="100" y="30" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)EditBox" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
 				</Button>
-				<Texture name="$(parent)SaveModeTexture">
+				<Texture name="$(parent)SaveModeTexture" tier="LOW" layer="CONTROLS" level="5">
 					<Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$(parent)Save" />
 					<Dimensions x="26" y="24" />
 				</Texture>
-				<Texture name="$(parent)AutoReloadUITexture">
+				<Texture name="$(parent)AutoReloadUITexture" tier="LOW" layer="CONTROLS" level="5">
 					<Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$(parent)SaveModeTexture" />
 					<Dimensions x="26" y="24" />
 				</Texture>
-				<Label name="$(parent)SelectLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" >
+				<Label name="$(parent)SelectLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="100" y="24" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="0"/>
 				</Label>
-				<Label name="$(parent)SelectedPackNameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" mouseEnabled="true">
+				<Label name="$(parent)SelectedPackNameLabel" font="ZoFontWinH5" color="FFFFFF" wrapMode="ELLIPSIS" text="" verticalAlignment="CENTER" horizontalAlignment="LEFT" alpha="1" mouseEnabled="true" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="500" y="24" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)SelectLabel" relativePoint="BOTTOMLEFT" offsetX="0" offsetY="5"/>
 				</Label>
-				<Control name="$(parent)ddl" inherits="ZO_ComboBox" mouseEnabled="true" >
+				<Control name="$(parent)ddl" inherits="ZO_ComboBox" mouseEnabled="true" tier="LOW" layer="CONTROLS" level="5">
 				<!-- <Control name="$(parent)ddl" inherits="ZO_ScrollableComboBox" mouseEnabled="true" > -->
 					<Dimensions x="200" y="30" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)SelectLabel" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
 				</Control>
-				<Button name="$(parent)Delete" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="">
+				<Button name="$(parent)Delete" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="100" y="30" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)ddl" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
 				</Button>
@@ -95,7 +95,7 @@
 					</Controls>
 				</Button>
 				-->
-				<Button name="$(parent)SettingsOpenDropdown" inherits="ZO_DropdownButton">
+				<Button name="$(parent)SettingsOpenDropdown" inherits="ZO_DropdownButton" tier="LOW" layer="CONTROLS" level="5">
                     <Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
 					<Dimensions x="45" y="45" />
 					<Textures normal="esoui/art/chatwindow/chat_options_up.dds"
