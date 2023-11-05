@@ -2,8 +2,8 @@
 ## Description: Allows you to save & reload packages of addons, whether they are turned ON/OFF.
 ## Author: Circonian, current: Baertram
 ## APIVersion: 101040 101041
-## AddOnVersion: 2030
-## Version: 2.23
+## AddOnVersion: 202400
+## Version: 2.24
 ## DependsOn: LibCustomMenu>=713 LibDialog>=127 LibScrollableMenu>=0103
 ## OptionalDependsOn: AddonCategory
 ## SavedVariables: AddonSelectorSavedVars

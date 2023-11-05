@@ -22,7 +22,7 @@ and recoded the whole narration features.
 
 
 local AddonSelector = AddonSelectorGlobal
-AddonSelector.version = "2.23"
+AddonSelector.version = "2.24"
 
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -98,6 +98,7 @@ local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-re
 ------------------------------------------------------------------------------------------------------------------------
 --Language and strings - local references to lang/strings.lua
 ------------------------------------------------------------------------------------------------------------------------
+local addonsStr = GetString(SI_GAME_MENU_ADDONS)
 local charNamePackColorTemplate = "|cc9b636%s|r"
 local charNamePackColorDef = ZO_ColorDef:New("C9B636")
 local packNameCharacter = strfor(charNamePackColorTemplate, GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL))
@@ -1982,27 +1983,97 @@ d(">scrollToIndex: " ..tos(scrollToIndex) .. ", approximatelyCurrentAddonSortInd
     end
 end
 
+local function TreeEntryOnSelected(control, data, selected, reselectingDuringRebuild)
+    control:SetSelected(selected)
+    if not reselectingDuringRebuild then
+        if selected then
+            if data.callback then
+                data.callback(control)
+            end
+        else
+            if data.unselectedCallback then
+                data.unselectedCallback(control)
+            end
+        end
+    end
+end
+
+local gameMenuHeadersHooked = false
+local function hideAddonMenu()
+    --Hide the addon's fragment again if it was added by AddonSelector!
+    if AddonSelector.AddedAddonsFragment == true then
+        SM:RemoveFragment(ADDONS_FRAGMENT)
+        AddonSelector.AddedAddonsFragment = false
+    end
+end
 local function showAddOnsList()
     addonListWasOpenedByAddonSelector = false
     if not SM then return end
     if not ADDONS_FRAGMENT then return end
-    if ADDONS_FRAGMENT and ADDONS_FRAGMENT.control and not ADDONS_FRAGMENT.control:IsHidden() then return end
+    if ADDONS_FRAGMENT and ADDONS_FRAGMENT.control and not ADDONS_FRAGMENT.control:IsHidden() then return true end
     --Show the game menu (as if you have pressed ESC key)
-    ZO_SceneManager_ToggleGameMenuBinding()
-    --Show the addons
-    SM:AddFragment(ADDONS_FRAGMENT)
-    addonListWasOpenedByAddonSelector = true
-    AddonSelector.AddedAddonsFragment = true
-    return true
+    if not SM:IsShowing("gameMenuInGame") then
+        ZO_SceneManager_ToggleGameMenuBinding()
+    end
+    --Show the addons fragment -> Adding the fragment will keep the fragment shown if we change the menus (in gamepad mode), so we need to remove the fragment on
+    --game menu change again!
+    --SM:AddFragment(ADDONS_FRAGMENT)
+    --Call the callback of the game menu entry of "AddOns"
+    --ZO_GameMenu_InGameNavigationContainerScrollChildZO_GameMenu_ChildlessHeader_WithSelectedState1.callback()
+    local headerControls = ZO_GameMenu_InGame.gameMenu.headerControls
+    if headerControls ~= nil then
+        local headersHookedCount = 0
+        for headerControlText, headerControlData in pairs(headerControls) do
+            if headerControlText == addonsStr then
+                if headerControlData.data and headerControlData.data.callback then
+                    --Is the addnons fragment already added to the current scene?
+                    if not SM:GetCurrentScene():HasFragment(ADDONS_FRAGMENT) then
+                        TreeEntryOnSelected(headerControlData.control, headerControlData.data, true, nil)
+                    end
+                    addonListWasOpenedByAddonSelector = true
+                    AddonSelector.AddedAddonsFragment = true
+                end
+            else
+                if not gameMenuHeadersHooked then
+                    local menuEntryToHook = (headerControlData.data and headerControlData.data.callback) or (headerControlData.control and headerControlData.control.SetSelected)
+                    if menuEntryToHook ~= nil then
+                        local origHeaderCallback = menuEntryToHook
+                        if headerControlData.data.callback ~= nil then
+                            headersHookedCount = headersHookedCount + 1
+                            headerControlData.data.callback = function(...)
+                                hideAddonMenu()
+                                return origHeaderCallback(...)
+                            end
+                        else
+                            headersHookedCount = headersHookedCount + 1
+                            headerControlData.control.SetSelected = function(...)
+                                hideAddonMenu()
+                                return origHeaderCallback(...)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        if addonListWasOpenedByAddonSelector == true then
+            if headersHookedCount > 0 then gameMenuHeadersHooked = true end
+            return true
+        end
+    end
+    return
 end
 
 local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScene, isAddonCategorySearched)
+--d("[AS]openGameMenuAndAddOnsAndThenSearch-addonName: " ..tos(addonName) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", isAddonCategorySearched: " ..tos(isAddonCategorySearched))
     if not addonName or addonName == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     isAddonCategorySearched = isAddonCategorySearched or false
     if not doNotShowAddOnsScene then
         --Show the game menu and open the AddOns
-        if not showAddOnsList() then return end
+        if not showAddOnsList() then
+--d("<aborted set search!")
+            return
+        end
     end
     --Set the focus to the addon search box
     local searchBox = AddonSelector.searchBox
