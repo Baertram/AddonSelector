@@ -2,11 +2,9 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2023-10-30
-AddonSelector v2.23
+2024-02-22
+AddonSelector v2.26
 
-Recoded the whole addon packs dropdown using LibScrollableMenu
-and recoded the whole narration features.
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs:
@@ -22,7 +20,7 @@ and recoded the whole narration features.
 
 
 local AddonSelector = AddonSelectorGlobal
-AddonSelector.version = "2.24"
+AddonSelector.version = "2.26"
 
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -107,6 +105,7 @@ local packGlobalStr = AddonSelector_GetLocalizedText("packGlobal")
 local packNameGlobal = strfor(globalPackColorTemplate, packGlobalStr)
 local packCharNameStr = AddonSelector_GetLocalizedText("packCharName")
 local selectPackStr = AddonSelector_GetLocalizedText("selectPack")
+local selectPackForAllCharsStr = AddonSelector_GetLocalizedText("selectPackForAllChars")
 local selectedPackNameStr = AddonSelector_GetLocalizedText("selectedPackName")
 local deletePackAlertStr = AddonSelector_GetLocalizedText("deletePackAlert")
 local deletePackErrorStr = AddonSelector_GetLocalizedText("deletePackError")
@@ -195,6 +194,33 @@ local function updateEnableAllAddonsCtrls()
     enableAllAddonTextCtrl = enableAllAddonTextCtrl or GetControl(enableAllAddonsParent, "Text")
 end
 updateEnableAllAddonsCtrls()
+
+
+--Function to get all characters of the currently logged in @account: server's unique characterID and non unique name.
+--Returns a table:nilable with 2 possible variants, either the character ID is key and the name is the value,
+--or vice versa.
+--Parameter boolean, keyIsCharName:
+-->True: the key of the returned table is the character name
+-->False: the key of the returned table is the unique character ID (standard)
+local function getCharactersOfAccount(keyIsCharName)
+    keyIsCharName = keyIsCharName or false
+    local charactersOfAccount
+    --Check all the characters of the account
+    for i = 1, GetNumCharacters() do
+        local name, _, _, _, _, _, characterId = GetCharacterInfo(i)
+        local charName = zo_strformat(SI_UNIT_NAME, name)
+        if characterId ~= nil and charName ~= "" then
+            if charactersOfAccount == nil then charactersOfAccount = {} end
+            if keyIsCharName then
+                charactersOfAccount[charName]   = characterId
+            else
+                charactersOfAccount[characterId]= charName
+            end
+        end
+    end
+    return charactersOfAccount
+end
+AddonSelector.charactersOfAccount = getCharactersOfAccount(false)
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility - Narration
@@ -721,6 +747,7 @@ end
 
 local function narrateDropdownOnMouseEnter()
     onMouseEnterDoNarrate(AddonSelector.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
+    AddonSelector.narrateSelectedPackEntryStr = nil
    --return "Test text", false
 end
 
@@ -1286,6 +1313,29 @@ local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, pa
     }
 end
 
+--Set the currently selected global pack for all characters as default pack ot load
+--> This will only affect the currently loged in character and next time you login another char it will also use this selected pack then
+local function SetAllCharactersSelectedPackname(currentlySelectedPackName, packData)
+d("SetAllCharactersSelectedPackname: " ..tos(currentlySelectedPackName) .. ", charName: " ..tos(packData.charName))
+    if not currentlySelectedPackName or currentlySelectedPackName == "" or packData == nil then return end
+    --Get the current character's uniqueId
+    if not currentCharId then return end
+    AddonSelector.charactersOfAccount = AddonSelector.charactersOfAccount or getCharactersOfAccount(false)
+
+    --Set the currently selected packname to the SavedVariables, for all characters of the account
+    for characterId, charName in pairs(AddonSelector.charactersOfAccount) do
+        local charId = tos(characterId)
+        if charId ~= currentCharId then
+            AddonSelector.acwsv.selectedPackNameForCharacters[charId] = {
+                packName = currentlySelectedPackName,
+                charName = (AddonSelector.acwsv.saveGroupedByCharacterName == true and packData.charName) or GLOBAL_PACK_NAME, --todo: Do we need to change the packData.charName here to charName of the charcterLoop? Or would that show new entries for "saved packs" of the charName where this pack never was saved for?
+                timestamp = GetTimeStamp()
+            }
+d("["..ADDON_NAME.."]Set selected pack \'..tos(currentlySelectedPackName)..\' for char \' " ..tos(charName) .. "\'")
+        end
+    end
+end
+
 
 --Disable/Enable the delete button's enabled state depending on the autoreloadui after pack change checkbox state
 local function ChangeDeleteButtonEnabledState(autoreloadUICheckboxState, skipStateCheck)
@@ -1396,7 +1446,8 @@ local function updateAddonsEnabledStateByPackData(packData)
     return somethingDone
 end
 
-local function loadAddonPack(packName, packData)
+local function loadAddonPack(packName, packData, forAllCharsTheSame)
+    forAllCharsTheSame = forAllCharsTheSame or false
     -- Clear the edit box:
     AddonSelector.editBox:Clear()
 
@@ -1406,9 +1457,15 @@ local function loadAddonPack(packName, packData)
     if not doNotReloadUI and AddonSelector.acwsv.autoReloadUI == true then -- and somethingDone == true then
         --Set the currently selected packname
         SetCurrentCharacterSelectedPackname(packName, packData)
+        if forAllCharsTheSame == true then
+            SetAllCharactersSelectedPackname(packName, packData)
+        end
         AddonSelector.acwsv.packChangedBeforeReloadUI = true
         ReloadUI("ingame")
     else
+        if forAllCharsTheSame == true then
+            SetAllCharactersSelectedPackname(packName, packData)
+        end
         AddonSelector.acwsv.packChangedBeforeReloadUI = true
         onAddonPackSelected(packName, packData, false)
     end
@@ -2450,7 +2507,7 @@ end
 -- addons & compare them against the selected addon pack.
 -- Enable all addons that are in the selected addon pack, disable the rest.
 -->Called by ItemSelectedClickHelper of the dropdown box entries/items
-local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem) --comboBox, itemName, item, selectionChanged, oldItem
+local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, forAllCharsTheSame) --comboBox, itemName, item, selectionChanged, oldItem
 --[[
 AddonSelector._onClickDDlData = {
     comboBox = comboBox,
@@ -2461,7 +2518,7 @@ AddonSelector._onClickDDlData = {
 }
 d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
 ]]
-    loadAddonPack(packName, packData)
+    loadAddonPack(packName, packData, forAllCharsTheSame)
 end
 
 local function OnAbort_Do(wasSave, wasDelete, itemData, charId, beforeSelectedPackData)
@@ -2676,6 +2733,11 @@ function AddonSelector.UpdateDDL(wasDeleted)
     --Auto reload theUI if a pack is changed? Show that directly at the pack's entry text
     local autoReloadUISuffix = ""
 
+    --Character IDs and names at the @account
+    AddonSelector.charactersOfAccount = AddonSelector.charactersOfAccount or getCharactersOfAccount(false)
+    local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
+
+
     --Show the addon packs saved per character?
     if showGroupedByCharacterName == true or saveGroupedByCharacterName == true then
         --Create a header "Character packs"
@@ -2760,7 +2822,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                         name    = packName,
                         label   = (selectPackStr) .. autoReloadUISuffixSubmenu .. ": " .. packName,
                         callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
---d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
+                            --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
                             --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
                             --Pass in the addonTable of the pack, else it won't load properly!
                             OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
@@ -2791,23 +2853,46 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     }
                 end
 
-                subMenuEntries[#subMenuEntries+1] =
+                --More than 1 character at the @account?
+                if characterCount > 1 then
+                    subMenuEntries[#subMenuEntries+1] =
                     {
                         name    = "-",
                         isDivider = true,
                         callback = function() end,
                         disabled = true,
                     }
-                subMenuEntries[#subMenuEntries+1] =
-                    {
-                        name    =  packName,
-                        label    = (deletePackTitleStr) .. " " .. packName,
+                    subMenuEntries[#subMenuEntries+1] = {
+                        name    = packName,
+                        label   = selectPackForAllCharsStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
                         callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                            OnClick_Delete(packData, false)
+                            --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
+                            --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, forAllCharsTheSame)
+                            --Pass in the addonTable of the pack, else it won't load properly!
+                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, true)
                         end,
                         charName = GLOBAL_PACK_NAME,
                         addonTable = addonTable,
                     }
+                end
+
+                subMenuEntries[#subMenuEntries+1] =
+                {
+                    name    = "-",
+                    isDivider = true,
+                    callback = function() end,
+                    disabled = true,
+                }
+                subMenuEntries[#subMenuEntries+1] =
+                {
+                    name    =  packName,
+                    label    = (deletePackTitleStr) .. " " .. packName,
+                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                        OnClick_Delete(packData, false)
+                    end,
+                    charName = GLOBAL_PACK_NAME,
+                    addonTable = addonTable,
+                }
 
                 addedSubMenuEntry = true
 
@@ -3975,6 +4060,8 @@ local function OnAddOnLoaded(event, addonName)
     ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
     AddonSelector.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
 
+    --Save the currently logged in @account's characterId = characterName table
+    AddonSelector.charactersOfAccount = getCharactersOfAccount(false)
 
     --AddonCategory is enabled?
     isAddonCategoryEnabled = (AddonCategory ~= nil and AddonCategory.getIndexOfCategory ~= nil and true) or false
