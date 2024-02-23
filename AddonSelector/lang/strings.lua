@@ -17,7 +17,6 @@ AddonSelectorGlobal.langArray = {
 	["de"] = { -- by Baertram
 		["packName"]			= "Pack Name:",
 		["selectPack"]			= "Wählen",
-		["selectPackForAllChars"] = "Für alle Charaktere wählen",
     	["ERRORpackMissing"] 	= "ADDON SELECTOR: Pack Name fehlt.",
         ["autoReloadUIHint"]	= "Autom. Reload UI nach Pack Auswahl!",
         ["autoReloadUIHintTooltip"] = "Auto-Reload UI: Wenn diese Option aktiviert wurde können keine AddOn Packs geändert oder gelöscht werden. Sie müssen diese Option deaktivieren, um AddOn Packs ändern oder löschen zu können.",
@@ -75,9 +74,9 @@ AddonSelectorGlobal.langArray = {
         ["closedStr"]           = "Geschlossen",
         ["chosenStr"]           = "Ausgewählt",
         ["addPackTooltip"]      = "Tooltip zu Pack in Auswahlbox hinzufügen",
-        ["accountWide"]         = "Account weiter AddOn Pack",
+        ["accountWide"]         = "Account-weiter AddOn Pack",
+        ["accountWides"]         = "Account-weite AddOn Packs",
         ["characterWide"]       = "Charakter spezifischer AddOn Pack",
-        ["accountWides"]         = "Account weite AddOn Packs",
         ["characterWides"]       = "Charakter spezifische AddOn Packs",
         ["settingPattern"]       = "[Einstellung] %s",
         ["searchHistoryPattern"] = "[Suche Historie] %s",
@@ -85,13 +84,14 @@ AddonSelectorGlobal.langArray = {
         ["entryMouseEnter"]      = "Eintrag unter der Maus",
         ["entrySelected"]        = "Eintrag wurde ausgewählt",
         ["entries"]              = "Einträge",
-        ["checkBox"]             = "Ankreuzfeld,"
+        ["checkBox"]             = "Ankreuzfeld",
+        ["enabledAddonsInPack"]  = "Aktivierte AddOns im Pack ",
+        ["showPacksAddonList"]   = "Zeige Pack's AddOn Liste als Untermenü",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
 		["packName"]			= "Pack name:",
 		["selectPack"]			= "Select",
-		["selectPackForAllChars"] = "Select for all characters",
     	["ERRORpackMissing"] 	= "ADDON SELECTOR: Pack name missing.",
         ["autoReloadUIHint"]	= "Auto-Reload UI on pack selection.",
         ["autoReloadUIHintTooltip"] = "Auto-Reload UI: When ON this will prevent editing and deleting addon packs. You will need to turn it off to edit or delete packs!",
@@ -149,8 +149,8 @@ AddonSelectorGlobal.langArray = {
         ["closedStr"]           = "Closed",
         ["chosenStr"]           = "Chosen",
         ["addPackTooltip"]      = "Add tooltip to pack in dropdown box",
-        ["accountWide"]         = "Account wide addOn pack",
-        ["accountWides"]         = "Account wide addOn packs",
+        ["accountWide"]         = "Account-wide addOn pack",
+        ["accountWides"]         = "Account-wide addOn packs",
         ["characterWide"]       = "Charakter specific addOn packs",
         ["characterWides"]      = "Charakter specific addOn pack",
         ["settingPattern"]       = "[Setting] %s",
@@ -159,7 +159,9 @@ AddonSelectorGlobal.langArray = {
         ["entryMouseEnter"]      = "Entry below mouse",
         ["entrySelected"]        = "Entry was selected",
         ["entries"]              = "entries",
-        ["checkBox"]             = "Checkbox,"
+        ["checkBox"]             = "Checkbox",
+        ["enabledAddonsInPack"]  = "Enabled AddOns in pack ",
+        ["showPacksAddonList"]   = "Show pack's AddOn list submenu",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
@@ -591,7 +593,7 @@ AddonSelectorGlobal.langArray = {
         ["entryMouseEnter"] = "Farenin altındaki giriş",
         ["entrySelected"] = "Giriş seçildi",
         ["entries"] = "girişler",
-        ["checkBox"] = "Onay kutusu"
+        ["checkBox"] = "Onay kutusu",
     },
 }
 local langArray = AddonSelectorGlobal.langArray

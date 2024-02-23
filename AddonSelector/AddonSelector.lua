@@ -2,8 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2024-02-22
-AddonSelector v2.26
+2024-02-23
+AddonSelector v2.27
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -105,7 +105,6 @@ local packGlobalStr = AddonSelector_GetLocalizedText("packGlobal")
 local packNameGlobal = strfor(globalPackColorTemplate, packGlobalStr)
 local packCharNameStr = AddonSelector_GetLocalizedText("packCharName")
 local selectPackStr = AddonSelector_GetLocalizedText("selectPack")
-local selectPackForAllCharsStr = AddonSelector_GetLocalizedText("selectPackForAllChars")
 local selectedPackNameStr = AddonSelector_GetLocalizedText("selectedPackName")
 local deletePackAlertStr = AddonSelector_GetLocalizedText("deletePackAlert")
 local deletePackErrorStr = AddonSelector_GetLocalizedText("deletePackError")
@@ -138,6 +137,7 @@ local openedStr = AddonSelector_GetLocalizedText("openedStr")
 local closedStr = AddonSelector_GetLocalizedText("closedStr")
 local chosenStr = AddonSelector_GetLocalizedText("chosenStr")
 local addPackTooltipStr = AddonSelector_GetLocalizedText("addPackTooltip")
+local showPacksAddonListStr = AddonSelector_GetLocalizedText("showPacksAddonList")
 local characterWideStr = AddonSelector_GetLocalizedText("characterWide")
 local accountWideStr = AddonSelector_GetLocalizedText("accountWide")
 local characterWidesStr = AddonSelector_GetLocalizedText("characterWides")
@@ -152,6 +152,7 @@ local entriesStr = AddonSelector_GetLocalizedText("entries")
 local entryMouseEnterStr = AddonSelector_GetLocalizedText("entryMouseEnter")
 local entrySelectedStr = AddonSelector_GetLocalizedText("entrySelected")
 local checkboxStr = AddonSelector_GetLocalizedText("checkBox")
+local enabledAddonsInPackStr = AddonSelector_GetLocalizedText("enabledAddonsInPack")
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -2724,7 +2725,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
     local showGroupedByCharacterName = settings.showGroupedByCharacterName
     local showGlobalPacks = settings.showGlobalPacks
     local showSubMenuAtGlobalPacks = settings.showSubMenuAtGlobalPacks
-
+    local addPackTooltip = settings.addPackTooltip
+    local showPacksAddonList = settings.showPacksAddonList
+--d("[LSM]UpdateDDL-showPacksAddonList: " ..tos(showPacksAddonList))
     --local addonPacksComboBox = AddonSelector.comboBox
 
     local subMenuEntries = {}
@@ -2732,10 +2735,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
     --Auto reload theUI if a pack is changed? Show that directly at the pack's entry text
     local autoReloadUISuffix = ""
+    local autoReloadUISuffixSubmenu = ""
+    if autoReloadUI == true then
+        autoReloadUISuffix = reloadUITextureStr
+        autoReloadUISuffixSubmenu = " & " .. reloadUIStr
+    end
 
     --Character IDs and names at the @account
     AddonSelector.charactersOfAccount = AddonSelector.charactersOfAccount or getCharactersOfAccount(false)
-    local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
+    --local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
 
 
     --Show the addon packs saved per character?
@@ -2769,9 +2777,12 @@ function AddonSelector.UpdateDDL(wasDeleted)
                             local addonsInCharPack = addonPacks[packNameOfChar]
                             tins(subMenuEntries, {
                                 name = packNameOfChar,
-                                label = (selectPackStr) .. ": " .. packNameOfChar,
+                                label = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packNameOfChar,
                                 charName = charName,
-                                callback = OnClickDDL,
+                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                    OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                    if settings.autoReloadUI == true then ReloadUI("ingame") end
+                                end,
                                 isCharacterPackHeader = false,
                                 isCharacterPack = true,
                                 isGlobalPackHeader = false,
@@ -2779,6 +2790,31 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 addonTable = addonsInCharPack,
                             })
                             addedSubMenuEntry = true
+
+                            if not autoReloadUI then
+                                subMenuEntries[#subMenuEntries+1] =
+                                {
+                                    name    = "-",
+                                    isDivider = true,
+                                    callback = function() end,
+                                    disabled = true,
+                                }
+                                subMenuEntries[#subMenuEntries+1] =
+                                {
+                                    name    = packNameOfChar,
+                                    label   = selectPackStr .. " & " .. reloadUIStr .. ": " .. packNameOfChar,
+                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                        OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                        ReloadUI("ingame")
+                                    end,
+                                    charName = charName,
+                                    isCharacterPackHeader = false,
+                                    isCharacterPack = true,
+                                    isGlobalPackHeader = false,
+                                    isGlobalPack = false,
+                                    addonTable = addonsInCharPack,
+                                }
+                            end
                         end
                     end
                     if not addedSubMenuEntry then subMenuEntries = nil end
@@ -2803,12 +2839,6 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 nil, false, true)
         tins(packTable, itemDataGlobalPackHeader)
 
-        local autoReloadUISuffixSubmenu = ""
-        if autoReloadUI == true then
-            autoReloadUISuffix = reloadUITextureStr
-            autoReloadUISuffixSubmenu = " & " .. reloadUIStr
-        end
-
         --Sort the global addon packs by their pack name
         local addonPacks = settings.addonPacks
         local addonPacksSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
@@ -2817,10 +2847,40 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
             subMenuEntries = nil
             if showSubMenuAtGlobalPacks == true then
+                local subSubMenuEntries
+                local addonTableSorted = {}
+                local tooltipStr
+                for _, addonName in pairs(addonTable) do
+                    addonTableSorted[#addonTableSorted + 1] = addonName
+                end
+                local numAddonsInPack = #addonTableSorted
+
+                if showPacksAddonList == true then
+                    table.sort(addonTableSorted)
+                    subSubMenuEntries = {}
+
+                    --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
+                    for _, addonName in ipairs(addonTableSorted) do
+                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                            name    = addonName,
+                            --[[
+                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                --Do nothing, just show info
+                                return true
+                            end,
+                            ]]
+                            enabled = false,
+                        }
+                    end
+                end
+                if addPackTooltip == true then
+                    tooltipStr = enabledAddonsInPackStr .. "\n'" .. packName .. "': " ..tos(numAddonsInPack)
+                end
+
                 subMenuEntries = {
                     {
                         name    = packName,
-                        label   = (selectPackStr) .. autoReloadUISuffixSubmenu .. ": " .. packName,
+                        label   = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
                         callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                             --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
                             --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
@@ -2829,6 +2889,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
                         end,
                         charName = GLOBAL_PACK_NAME,
                         addonTable = addonTable,
+                        tooltip = (tooltipStr ~= nil and tooltipStr ~= "" and tooltipStr) or nil,
+                        --Nested submenu showing all the addons in the pack
+                        entries = (showPacksAddonList == true and subSubMenuEntries) or nil,
                     },
                 }
 
@@ -2843,33 +2906,10 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     subMenuEntries[#subMenuEntries+1] =
                     {
                         name    = packName,
-                        label   = (selectPackStr) .. " & " .. (reloadUIStr) .. ": " .. packName,
+                        label   = selectPackStr .. " & " .. reloadUIStr.. ": " .. packName,
                         callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                             OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
                             ReloadUI("ingame")
-                        end,
-                        charName = GLOBAL_PACK_NAME,
-                        addonTable = addonTable,
-                    }
-                end
-
-                --More than 1 character at the @account?
-                if characterCount > 1 then
-                    subMenuEntries[#subMenuEntries+1] =
-                    {
-                        name    = "-",
-                        isDivider = true,
-                        callback = function() end,
-                        disabled = true,
-                    }
-                    subMenuEntries[#subMenuEntries+1] = {
-                        name    = packName,
-                        label   = selectPackForAllCharsStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
-                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                            --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
-                            --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, forAllCharsTheSame)
-                            --Pass in the addonTable of the pack, else it won't load properly!
-                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, true)
                         end,
                         charName = GLOBAL_PACK_NAME,
                         addonTable = addonTable,
@@ -2886,7 +2926,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 subMenuEntries[#subMenuEntries+1] =
                 {
                     name    =  packName,
-                    label    = (deletePackTitleStr) .. " " .. packName,
+                    label    = deletePackTitleStr .. " " .. packName,
                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                         OnClick_Delete(packData, false)
                     end,
@@ -2981,7 +3021,7 @@ end
 
 -- called from clicking the "Auto reload" label
 local function OnClick_CheckBoxLabel(self, currentStateVar)
---d("OnClick_CheckBoxLabel")
+--d("OnClick_CheckBoxLabel-currentStateVar: " ..tos(currentStateVar))
     if AddonSelector.acwsv[currentStateVar] == nil then return end
     local currentState = AddonSelector.acwsv[currentStateVar]
 --d(">currentState of \'".. currentStateVar .."\': " ..tos(currentState))
@@ -3239,7 +3279,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     AddCustomSubMenuItem(searchMenuStr, searchOptionsSubmenu)
 
     --Add the auto reload pack after selection checkbox
-    local cbAutoReloadUIindex = AddCustomMenuItem(autoReloadUIStr,
+    local cbAutoReloadUIindex = AddCustomMenuItem(reloadUITextureStr .. autoReloadUIStr,
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "autoReloadUI")
             end,
@@ -3253,6 +3293,15 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             end,
             MENU_ADD_OPTION_CHECKBOX)
     setMenuItemCheckboxState(cbAddPackTooltipIndex, AddonSelector.acwsv.addPackTooltip)
+
+    --Add the pack's addon list submenu after pack tooltip checkbox
+    local cbShowPacksAddonListIndex = AddCustomMenuItem(showPacksAddonListStr,
+            function(cboxCtrl)
+                OnClick_CheckBoxLabel(cboxCtrl, "showPacksAddonList")
+            end,
+            MENU_ADD_OPTION_CHECKBOX)
+    setMenuItemCheckboxState(cbShowPacksAddonListIndex, AddonSelector.acwsv.showPacksAddonList)
+
 
     --Last pack loaded info
     local lastLoadedPackData = AddonSelector.acwsv.lastLoadedPackNameForCharacters and AddonSelector.acwsv.lastLoadedPackNameForCharacters[currentCharId]
@@ -3727,6 +3776,7 @@ function AddonSelector.LoadSaveVariables()
         lastLoadedPackNameForCharacters = {}, --charName, packName, and timestamp as the pack was loaded with a ReloadUI
         packChangedBeforeReloadUI = false,
         addPackTooltip = false,
+        showPacksAddonList = false,
     }
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
