@@ -435,7 +435,7 @@ AddonSelectorGlobal.langArray = {
     },
     ---------------------------------------------------------------------------------------------------------------------
     --Polish
-    ["pl"] = { -- by Circonian & Baertram
+    ["pl"] = { -- by generaluploads
         ["packName"]            = "Nazwa paczki:",
         ["selectPack"]          = "Wybierz",
         ["selectPackForAllChars"] = "Wybierz dla wszystkich postaci",
