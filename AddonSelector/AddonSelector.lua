@@ -2,8 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2024-02-23
-AddonSelector v2.27
+2024-03-11
+AddonSelector v2.28
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ AddonSelector v2.27
 
 
 local AddonSelector = AddonSelectorGlobal
-AddonSelector.version = "2.26"
+AddonSelector.version = "2.28"
 
 local ADDON_NAME	= "AddonSelector"
 local ADDON_MANAGER
@@ -746,7 +746,7 @@ local function onMenuItemMouseEnterNarrate(menuItem)
 end
 ]]
 
-local function narrateDropdownOnMouseEnter()
+local function narrateComboBoxOnMouseEnter()
     onMouseEnterDoNarrate(AddonSelector.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AddonSelector.ddl) end)
     AddonSelector.narrateSelectedPackEntryStr = nil
    --return "Test text", false
@@ -3414,8 +3414,8 @@ function AddonSelector.CreateControlReferences()
 --												   Or you must return a string as 1st return param (and optionally a boolean "stopCurrentNarration" as 2nd return param. If this is nil it will be set to false!)
 --												    and let the library here narrate it for you via the UI narration
 --												Optional narration events can be:
---												"OnDropdownMouseEnter" 	function(scrollhelperObject, dropdownControl)  Build your narrateString and narrate it now, or return a string and let the library narrate it for you end
---												"OnDropdownMouseExit"	function(scrollhelperObject, dropdownControl) end
+--												"OnComboBoxMouseEnter" 	function(scrollhelperObject, dropdownControl)  Build your narrateString and narrate it now, or return a string and let the library narrate it for you end
+--												"OnComboBoxMouseExit"	function(scrollhelperObject, dropdownControl) end
 --												"OnMenuShow"			function(scrollhelperObject, dropdownControl) end
 --												"OnMenuHide"			function(scrollhelperObject, dropdownControl) end
 --												"OnSubMenuShow"			function(scrollhelperObject, parentControl) end
@@ -3431,8 +3431,8 @@ function AddonSelector.CreateControlReferences()
                 sortEntries = false,
 
                 narrate = {
-                    ["OnDropdownMouseEnter"] =  narrateDropdownOnMouseEnter,
-                    --["OnDropdownMouseExit"] =   narrateDropdownOnMouseExit,
+                    ["OnComboBoxMouseEnter"] =  narrateComboBoxOnMouseEnter,
+                    --["OnComboBoxMouseExit"] =   narrateDropdownOnMouseExit,
 					--["OnMenuShow"] =			narrateDropdownOnOpened,
 					--["OnMenuHide"] =			narrateDropdownOnClosed,
 					["OnSubMenuShow"] =			narrateDropdownOnSubmenuShown,
