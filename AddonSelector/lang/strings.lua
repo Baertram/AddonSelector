@@ -87,6 +87,8 @@ AddonSelectorGlobal.langArray = {
         ["checkBox"]             = "Ankreuzfeld",
         ["enabledAddonsInPack"]  = "Aktivierte AddOns im Pack ",
         ["showPacksAddonList"]   = "Zeige Pack's AddOn Liste als Untermenü",
+        ["addonsInPack"]         = "AddOns im Pack %q",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -162,6 +164,8 @@ AddonSelectorGlobal.langArray = {
         ["checkBox"]             = "Checkbox",
         ["enabledAddonsInPack"]  = "Enabled AddOns in pack ",
         ["showPacksAddonList"]   = "Show pack's AddOn list submenu",
+        ["addonsInPack"]         = "AddOns in pack %q",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
@@ -199,6 +203,7 @@ AddonSelectorGlobal.langArray = {
         ["searchSaveHistory"] = "Guardar historial de búsqueda",
         ["searchClearHistory"] = "Borrar historial",
         ["LastPackLoaded"] = "Último cargado:",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["fr"] = { --by Kwisatz
@@ -236,6 +241,7 @@ AddonSelectorGlobal.langArray = {
         ["searchSaveHistory"] = "Enregistrer historique des recherches",
         ["searchClearHistory"] = "Effacer l'historique",
         ["LastPackLoaded"] = "Dernier chargé:",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["jp"] = { -- by Calamath
@@ -273,6 +279,7 @@ AddonSelectorGlobal.langArray = {
         ["searchSaveHistory"] = "検索語の履歴を保存",
         ["searchClearHistory"] = "履歴を消去する",
         ["LastPackLoaded"] = "最終ロード:",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["ru"] = { --by Friday_The13_rus
@@ -310,6 +317,7 @@ AddonSelectorGlobal.langArray = {
         ["searchSaveHistory"] = "Сохранять историю поиска",
         ["searchClearHistory"] = "Очистить историю",
         ["LastPackLoaded"] = "Последняя загрузка:",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
 ---------------------------------------------------------------------------------------------------------------------
     --Chinese by Lykeion 20221206
@@ -354,6 +362,7 @@ AddonSelectorGlobal.langArray = {
         ["UndoLastMassMarking"] = "< 重做上次的标记",
         ["ClearLastMassMarking"] = "清除标记备份文件",
         ["LastPackLoaded"] = "上次加载:",
+        ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     },
     ---------------------------------------------------------------------------------------------------------------------
     -- Custom languages
