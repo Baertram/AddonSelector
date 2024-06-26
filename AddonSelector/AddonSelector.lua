@@ -57,6 +57,7 @@ local tins = gTab.insert
 --local trem = gTab.remove
 local tsor = gTab.sort
 
+local OnClick_Save
 
 --Constant for the global packs
 local GLOBAL_PACK_NAME = "$G"
@@ -78,6 +79,7 @@ local addonsWhichShouldNotBeDisabled = {
 local settingNeedsToUpdateDDL = {
     ["autoReloadUI"] = true,
     ["showPacksAddonList"] = true,
+    ["addPackTooltip"] = true,
     ["showSearchFilterAtPacksList"] = true,
 }
 
@@ -131,6 +133,7 @@ local reloadUIStrWithoutIcon = strlow(AddonSelector_GetLocalizedText("ReloadUI")
 local reloadUIStr = reloadUIStrWithoutIcon .. reloadUITextureStr
 local deletePackTitleStr = AddonSelector_GetLocalizedText("deletePackTitle")
 local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
+local overwriteSavePackStr = AddonSelector_GetLocalizedText("OverwriteSavePack")
 local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
 local packNameStr = AddonSelector_GetLocalizedText("packName")
 local addonCategoriesStr = AddonSelector_GetLocalizedText("addonCategories")
@@ -235,6 +238,12 @@ local function getCharactersOfAccount(keyIsCharName)
     return charactersOfAccount
 end
 AddonSelector.charactersOfAccount = getCharactersOfAccount(false)
+AddonSelector.characterIdsOfAccount = getCharactersOfAccount(true)
+local characterIdsOfAccount = AddonSelector.characterIdsOfAccount
+
+local function getCharacterIdByName(characterName)
+    return characterIdsOfAccount[characterName]
+end
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility - Narration
@@ -1014,14 +1023,23 @@ local function stripText(text)
 end
 ]]
 
+
 -- Create the pack table or nil it out if it exists.
 -- Distinguish between packs grouped for charactes or general packs
-local function createSVTableForPack(packName)
+local function createSVTableForPack(packName, characterName)
     if AddonSelector.acwsv.saveGroupedByCharacterName then
-        AddonSelector.acwsv.addonPacksOfChar[currentCharId] = AddonSelector.acwsv.addonPacksOfChar[currentCharId] or {}
-        AddonSelector.acwsv.addonPacksOfChar[currentCharId]._charName = currentCharName
-        AddonSelector.acwsv.addonPacksOfChar[currentCharId][packName] = {}
-        return AddonSelector.acwsv.addonPacksOfChar[currentCharId][packName]
+        local characterIdForSV = currentCharId
+        local charNameForSV = currentCharName
+        if characterName ~= nil then
+            characterIdForSV = getCharacterIdByName(characterName)
+            charNameForSV = characterName
+            if characterIdForSV == nil or AddonSelector.acwsv.addonPacksOfChar == nil or AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] == nil then return nil end
+        end
+
+        AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] = AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] or {}
+        AddonSelector.acwsv.addonPacksOfChar[characterIdForSV]._charName = charNameForSV
+        AddonSelector.acwsv.addonPacksOfChar[characterIdForSV][packName] = {}
+        return AddonSelector.acwsv.addonPacksOfChar[characterIdForSV][packName]
     else
         AddonSelector.acwsv.addonPacks[packName] = {}
         return AddonSelector.acwsv.addonPacks[packName]
@@ -1029,14 +1047,23 @@ local function createSVTableForPack(packName)
     return
 end
 
-local function getSVTableForPacks()
+local function getSVTableForPacks(characterName)
     if AddonSelector.acwsv.saveGroupedByCharacterName then
+        local characterIdForSV = currentCharId
+        local charNameForSV = currentCharName
+
+        if characterName ~= nil then
+            characterIdForSV = getCharacterIdByName(characterName)
+            if characterIdForSV == nil or AddonSelector.acwsv.addonPacksOfChar == nil or AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] == nil then return nil, nil end
+            charNameForSV = characterName
+        end
+
         --Table for current char does not exist yt, so create it. Else a new saved pack will be compared to the global
         --packs and if the name matches it will be saved as global!
         AddonSelector.acwsv.addonPacksOfChar = AddonSelector.acwsv.addonPacksOfChar or {}
-        AddonSelector.acwsv.addonPacksOfChar[currentCharId] = AddonSelector.acwsv.addonPacksOfChar[currentCharId] or {}
-        AddonSelector.acwsv.addonPacksOfChar[currentCharId]._charName = currentCharName
-        return AddonSelector.acwsv.addonPacksOfChar[currentCharId], currentCharName
+        AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] = AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] or {}
+        AddonSelector.acwsv.addonPacksOfChar[characterIdForSV]._charName = charNameForSV
+        return AddonSelector.acwsv.addonPacksOfChar[characterIdForSV], charNameForSV
     end
     return AddonSelector.acwsv.addonPacks, nil
 end
@@ -1093,11 +1120,11 @@ local function getCharNameOfPack(charId)
     return
 end
 ]]
-local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark)
+local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark, characterName)
     isPackBeforeMassMark = isPackBeforeMassMark or false
-    local l_svForPack = (not isPackBeforeMassMark and createSVTableForPack(packName)) or (isPackBeforeMassMark == true and {})
+    local l_svForPack = (not isPackBeforeMassMark and createSVTableForPack(packName, characterName)) or (isPackBeforeMassMark == true and {})
 
---d("[AS]saveAddonsAsPackToSV-packName: " ..tos(packName) .. "; isPackBeforeMassMark: " .. tos(isPackBeforeMassMark))
+d("[AS]saveAddonsAsPackToSV-packName: " ..tos(packName) .. "; isPackBeforeMassMark: " .. tos(isPackBeforeMassMark) .. "; characterName: " ..tos(characterName))
 
     --#15 If any main-addon was disabled by clicking that addon line, and sub-addons that depend on the main addon were automatically
     --disabled too, the SavedVariables pack here must take the sub-addons into account too: They need to be removed from the pack
@@ -2865,7 +2892,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 isGlobalPackHeader = false,
                                 isGlobalPack = false,
                                 addonTable = addonsInCharPack,
-                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. ": " ..tos(numAddonsInSubmenuPack))) or nil,
+                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. "\n'" .. packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack))) or nil,
                                 entries = ( showPacksAddonList == true and subSubMenuEntriesForCharPack) or nil,
                             })
 
@@ -2931,7 +2958,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 isGlobalPack = false,
                                 addonTable = addonsInCharPack,
                                 entries = nestedSubmenuEntriesOfCharPack,
-                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. "\n'" .. packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack))) or nil,
+                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. ": " ..tos(numAddonsInSubmenuPack))) or nil,
                             }
 
                             addedSubMenuEntry = true
@@ -3076,13 +3103,31 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     addonTable = addonTable,
                 }
 
+                subMenuEntries[#subMenuEntries+1] =
+                {
+                    name    = "-",
+                    isDivider = true,
+                    callback = function() end,
+                    disabled = true,
+                }
+                subMenuEntries[#subMenuEntries+1] =
+                {
+                    name    =  packName,
+                    label    = overwriteSavePackStr .. " " .. packName,
+                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                        OnClick_Save(packName, packData, false)
+                    end,
+                    charName = GLOBAL_PACK_NAME,
+                    addonTable = addonTable,
+                }
+
                 addedSubMenuEntry = true
 
             end
 
             local label = packName
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
-            local enabledAddonsInPackStrAddition = (numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
+            local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
             local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
@@ -3205,10 +3250,15 @@ local function OnClick_AutoReload(self, button, upInside, ctrl, alt, shift, comm
 end
 ]]
 
-local function OnClick_SaveDo()
-    local packName = AddonSelector.editBox:GetText()
+local function OnClick_SaveDo(packNameProvided, packName, characterName)
+    packNameProvided = packNameProvided or false
+    if packNameProvided == false then
+        packName = AddonSelector.editBox:GetText()
+    end
 
     if not packName or packName == "" then
+        if packNameProvided == true then return end
+
         local itemData = AddonSelector.comboBox:GetSelectedItemData()
         if not itemData then
             ZO_Alert(UI_ALERT_CATEGORY_ERROR, SOUNDS.NEGATIVE_CLICK, AddonSelector_GetLocalizedText("ERRORpackMissing"))
@@ -3216,34 +3266,52 @@ local function OnClick_SaveDo()
         end
         packName = itemData.name
     end
-    --Get SavedVariables table for the pack
-    local svForPack = saveAddonsAsPackToSV(packName, false)
-    -- Create a temporary copy of the itemEntry data so we can select it
-    -- after the ddl is updated
-    local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
-    --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
-    local itemData = createItemEntry(packName, nil, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME, nil, nil, nil, true)
 
-    clearAndUpdateDDL()
-    --Prevent reloadui for a currently new saved addon pack!
-    doNotReloadUI = true
-    AddonSelector.comboBox:SelectItem(itemData)
-    doNotReloadUI = false
+    --Overwrite an existing pack without selecting it (chose "Overwrite" from submenu)
+    if packNameProvided == true then
+        --Get SavedVariables table for the existing pack
+        local svForPack = saveAddonsAsPackToSV(packName, false, characterName)
 
-    --Disable the "save pack" button
-    ChangeSaveButtonEnabledState(true)
+        clearAndUpdateDDL()
+    else
+        --Get SavedVariables table for the pack
+        local svForPack = saveAddonsAsPackToSV(packName, false)
+        -- Create a temporary copy of the itemEntry data so we can select it
+        -- after the ddl is updated
+        local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
+        --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
+        local itemData = createItemEntry(packName, nil, svForPack, false, (savePackPerCharacter and currentCharName) or GLOBAL_PACK_NAME, nil, nil, nil, true)
+
+        clearAndUpdateDDL()
+        --Prevent reloadui for a currently new saved addon pack!
+        doNotReloadUI = true
+        AddonSelector.comboBox:SelectItem(itemData)
+        doNotReloadUI = false
+
+        --Disable the "save pack" button
+        ChangeSaveButtonEnabledState(true)
+    end
 end
 
 -- When the save button is clicked, creates a table containing all
 -- enabled addons:  { [AddOnFileName] = AddonStrippedName, ...}
-local function OnClick_Save()
-    local newPackName = AddonSelector.editBox:GetText()
-    if not newPackName or newPackName == "" then
-        local itemData = AddonSelector.comboBox.m_selectedItemData
-        if itemData then
-            newPackName = itemData.name
+function OnClick_Save(packName, packData, characterName)
+    local newPackName
+    local packNameProvided = (packName == nil and packData ~= nil and characterName == nil and true) or false
+
+    if packName ~= nil then
+        if packData == nil or characterName == nil then return end
+        newPackName = packName
+    else
+        newPackName = AddonSelector.editBox:GetText()
+        if not newPackName or newPackName == "" then
+            local itemData = AddonSelector.comboBox.m_selectedItemData
+            if itemData then
+                newPackName = itemData.name
+            end
         end
     end
+
     if not newPackName or newPackName == "" then
         return
     end
@@ -3251,13 +3319,24 @@ local function OnClick_Save()
     local doesPackAlreadyExist = false
     local saveGroupedByChar = false
     local svTable
+
+
     local savePerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
+    if packData ~= nil and characterName ~= nil then
+        savePerCharacter = true
+    end
+
     local packCharacter = packNameGlobal
     --Save grouped by charactername
---d("[AddonSelector]OnClick_Save - savePerChar: " ..tos(savePerCharacter) .. ", newPackName: " ..tos(newPackName))
+d("[AddonSelector]OnClick_Save - savePerChar: " ..tos(savePerCharacter) .. ", newPackName: " ..tos(newPackName))
     if savePerCharacter then
-        local svTableOfCurrentChar, charName = getSVTableForPacks()
---d(">charName: " ..tos(charName))
+        local svTableOfCurrentChar, charName
+        if packNameProvided == true then
+            svTableOfCurrentChar, charName = getSVTableForPacks(characterName)
+        else
+            svTableOfCurrentChar, charName = getSVTableForPacks()
+        end
+d(">charName: " ..tos(charName))
         if svTableOfCurrentChar ~= nil and charName ~= nil then
             saveGroupedByChar = true
             svTable = svTableOfCurrentChar
@@ -3275,15 +3354,18 @@ local function OnClick_Save()
         local savePackQuestion = strfor(AddonSelector_GetLocalizedText("savePackBody"), tos(addonPackName))
         ShowConfirmationDialog("SaveAddonPackDialog",
                 (AddonSelector_GetLocalizedText("savePackTitle")) .. "\n" ..
-                "[".. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
+                        "[".. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
                 savePackQuestion,
-                function() OnClick_SaveDo() end,
+                function() OnClick_SaveDo(packNameProvided, packName, characterName) end,
                 function() OnAbort_Do(true, false, nil, nil, nil) end,
                 nil,
                 nil,
                 true
         )
     else
+        --Pack does not exist but we passed in packName, packData and characterName -> Error
+        if packNameProvided == true then return end
+
         OnClick_SaveDo()
     end
 end
