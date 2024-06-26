@@ -89,6 +89,7 @@ AddonSelectorGlobal.langArray = {
         ["showPacksAddonList"]   = "Zeige Pack's AddOn Liste als Untermenü",
         ["addonsInPack"]         = "AddOns im Pack %q",
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
+        ["showSearchFilterAtPacksList"] = "Zeige Suche in der Pack-Liste",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -166,6 +167,7 @@ AddonSelectorGlobal.langArray = {
         ["showPacksAddonList"]   = "Show pack's AddOn list submenu",
         ["addonsInPack"]         = "AddOns in pack %q",
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
+        ["showSearchFilterAtPacksList"] = "Show search at the pack list",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
