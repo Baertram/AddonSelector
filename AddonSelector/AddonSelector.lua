@@ -67,6 +67,8 @@ local CHARACTER_PACK_CHARNAME_IDENTIFIER = "_charName"
 local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 local SEARCH_TYPE_NAME = "name"
 
+local myDisabledColor = ZO_DISABLED_TEXT
+
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
@@ -81,6 +83,12 @@ local settingNeedsToUpdateDDL = {
     ["showPacksAddonList"] = true,
     ["addPackTooltip"] = true,
     ["showSearchFilterAtPacksList"] = true,
+}
+--Do not disable mouse on these child conrols of AddonSelector, so one can still use them with all addons disabled
+--via ZOs checkbox button
+local isExcludedFromChangeEnabledState = {
+    ["AddonSelectorSettingsOpenDropdown"] = true,
+    ["AddonSelectorSearchBox"] = true,
 }
 
 --Get the current addonIndex of the "AddonSelector" addon
@@ -239,6 +247,7 @@ local function getCharactersOfAccount(keyIsCharName)
 end
 AddonSelector.charactersOfAccount = getCharactersOfAccount(false)
 AddonSelector.characterIdsOfAccount = getCharactersOfAccount(true)
+local charactersOfAccount = AddonSelector.charactersOfAccount
 local characterIdsOfAccount = AddonSelector.characterIdsOfAccount
 
 local function getCharacterIdByName(characterName)
@@ -1023,11 +1032,15 @@ local function stripText(text)
 end
 ]]
 
+local function areAddonsCurrentlyEnabled()
+    return ADDON_MANAGER:AreAddOnsEnabled()
+end
 
 -- Create the pack table or nil it out if it exists.
 -- Distinguish between packs grouped for charactes or general packs
-local function createSVTableForPack(packName, characterName)
-    if AddonSelector.acwsv.saveGroupedByCharacterName then
+local function createSVTableForPack(packName, characterName, wasPackNameProvided)
+    wasPackNameProvided = wasPackNameProvided or false
+    if (wasPackNameProvided == true or AddonSelector.acwsv.saveGroupedByCharacterName == true) and (characterName == nil or (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME)) then
         local characterIdForSV = currentCharId
         local charNameForSV = currentCharName
         if characterName ~= nil then
@@ -1039,8 +1052,10 @@ local function createSVTableForPack(packName, characterName)
         AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] = AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] or {}
         AddonSelector.acwsv.addonPacksOfChar[characterIdForSV]._charName = charNameForSV
         AddonSelector.acwsv.addonPacksOfChar[characterIdForSV][packName] = {}
+--d(">>returning the char SV table, charId: " ..tos(characterIdForSV) .. ", packName: " ..tos(packName))
         return AddonSelector.acwsv.addonPacksOfChar[characterIdForSV][packName]
     else
+--d(">>returning the global SV table, packName: " ..tos(packName))
         AddonSelector.acwsv.addonPacks[packName] = {}
         return AddonSelector.acwsv.addonPacks[packName]
     end
@@ -1048,12 +1063,14 @@ local function createSVTableForPack(packName, characterName)
 end
 
 local function getSVTableForPacks(characterName)
-    if AddonSelector.acwsv.saveGroupedByCharacterName then
+--d("[AS]getSVTableForPacks - characterName: " ..tos(characterName))
+    if AddonSelector.acwsv.saveGroupedByCharacterName or (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME) then
         local characterIdForSV = currentCharId
         local charNameForSV = currentCharName
 
         if characterName ~= nil then
             characterIdForSV = getCharacterIdByName(characterName)
+--d(">characterIdForSV: " .. tos(characterIdForSV))
             if characterIdForSV == nil or AddonSelector.acwsv.addonPacksOfChar == nil or AddonSelector.acwsv.addonPacksOfChar[characterIdForSV] == nil then return nil, nil end
             charNameForSV = characterName
         end
@@ -1120,12 +1137,12 @@ local function getCharNameOfPack(charId)
     return
 end
 ]]
-local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark, characterName)
+local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark, characterName, wasPackNameProvided)
     isPackBeforeMassMark = isPackBeforeMassMark or false
-    local l_svForPack = (not isPackBeforeMassMark and createSVTableForPack(packName, characterName)) or (isPackBeforeMassMark == true and {})
+    local l_svForPack = (not isPackBeforeMassMark and createSVTableForPack(packName, characterName, wasPackNameProvided)) or (isPackBeforeMassMark == true and {})
 
-d("[AS]saveAddonsAsPackToSV-packName: " ..tos(packName) .. "; isPackBeforeMassMark: " .. tos(isPackBeforeMassMark) .. "; characterName: " ..tos(characterName))
-
+--d("[AS]saveAddonsAsPackToSV-packName: " ..tos(packName) .. "; isPackBeforeMassMark: " .. tos(isPackBeforeMassMark) .. "; characterName: " ..tos(characterName) .. "; wasPackNameProvided: " ..tos(wasPackNameProvided))
+    if l_svForPack == nil then return end
     --#15 If any main-addon was disabled by clicking that addon line, and sub-addons that depend on the main addon were automatically
     --disabled too, the SavedVariables pack here must take the sub-addons into account too: They need to be removed from the pack
     --automatically! Checking only the enabled state will add those to the pack allthough they got dependency errors
@@ -1145,6 +1162,7 @@ d("[AS]saveAddonsAsPackToSV-packName: " ..tos(packName) .. "; isPackBeforeMassMa
             l_svForPack[fileName] = addonName
         end
     end
+AddonSelector._debugSVForPack = l_svForPack
     return l_svForPack
 end
 
@@ -1202,10 +1220,13 @@ local function setThisAddonsControlsEnabledState(enabledState)
     if numChildControls <= 0 then return end
     for childindex=1, numChildControls, 1 do
         local childControl = addonSelectorTLC:GetChild(childindex)
-        if childControl ~= nil and childControl.SetMouseEnabled and childControl.IsHidden then
-            childControl:SetMouseEnabled(enabledState)
+        if not isExcludedFromChangeEnabledState[childControl:GetName()] then
+            if childControl ~= nil and childControl.SetMouseEnabled and childControl.IsHidden then
+                childControl:SetMouseEnabled(enabledState)
+            end
         end
     end
+    AddonSelectorddlOpenDropdown:SetMouseEnabled(enabledState)
 end
 
 --Check if the checkbox to disable all addons is enabled or not
@@ -1220,7 +1241,7 @@ local function areAllAddonsEnabled(noControlUpdate)
         return true
     end
 
-    local areAllAddonsCurrentlyEnabled = ADDON_MANAGER:AreAddOnsEnabled()
+    local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
     if not noControlUpdate then
         setThisAddonsControlsEnabledState(areAllAddonsCurrentlyEnabled)
     end
@@ -1364,7 +1385,8 @@ d("SetAllCharactersSelectedPackname: " ..tos(currentlySelectedPackName) .. ", ch
     if not currentlySelectedPackName or currentlySelectedPackName == "" or packData == nil then return end
     --Get the current character's uniqueId
     if not currentCharId then return end
-    AddonSelector.charactersOfAccount = AddonSelector.charactersOfAccount or getCharactersOfAccount(false)
+    charactersOfAccount = charactersOfAccount or getCharactersOfAccount(false)
+    characterIdsOfAccount = characterIdsOfAccount or getCharactersOfAccount(true)
 
     --Set the currently selected packname to the SavedVariables, for all characters of the account
     for characterId, charName in pairs(AddonSelector.charactersOfAccount) do
@@ -2798,7 +2820,8 @@ function AddonSelector.UpdateDDL(wasDeleted)
     end
 
     --Character IDs and names at the @account
-    AddonSelector.charactersOfAccount = AddonSelector.charactersOfAccount or getCharactersOfAccount(false)
+    charactersOfAccount = charactersOfAccount or getCharactersOfAccount(false)
+    characterIdsOfAccount = characterIdsOfAccount or getCharactersOfAccount(true)
     --local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
 
 
@@ -2816,87 +2839,114 @@ function AddonSelector.UpdateDDL(wasDeleted)
         local addonPacksOfAllCharsSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacksOfChar)
 
         for _, charId in ipairs(addonPacksOfAllCharsSortedLookup) do
-            local addonPacks = addonPacksOfChar[charId]
+            --Only show the saved packs of the logged in account's characters
+            if charactersOfAccount[charId] ~= nil then
 
-            subMenuEntries = nil
+                local addonPacks = addonPacksOfChar[charId]
 
-            local charName = addonPacks._charName
-            local numAddonsInSubmenuPack
-            local numAddonsInPack = NonContiguousCount(addonPacks)
-            if charName ~= nil and numAddonsInPack > 1 then --count 1 will be the _charName entry!
-                if showGroupedByCharacterName == true then
-                    subMenuEntries = {}
+                subMenuEntries = nil
 
-                    local addonPacksOfCharSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
+                local charName = addonPacks._charName
+                local numAddonsInSubmenuPack
+                local numAddonsInPack = NonContiguousCount(addonPacks)
+                if charName ~= nil and numAddonsInPack > 1 then --count 1 will be the _charName entry!
+                    if showGroupedByCharacterName == true then
+                        subMenuEntries = {}
 
-                    --The entry in the DDL is the characterName -> We need to add the submenu entries for each packName
-                    for _, packNameOfChar in pairs(addonPacksOfCharSortedLookup) do
-                        if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then
-                            local nestedSubmenuEntriesOfCharPack = {}
-                            local addonsInCharPack = addonPacks[packNameOfChar]
+                        local addonPacksOfCharSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
 
-                            numAddonsInSubmenuPack = NonContiguousCount(addonsInCharPack)
-                            local subSubMenuEntriesForCharPack
-                            if showPacksAddonList == true then
-                                subSubMenuEntriesForCharPack = {}
+                        --The entry in the DDL is the characterName -> We need to add the submenu entries for each packName
+                        for _, packNameOfChar in pairs(addonPacksOfCharSortedLookup) do
+                            if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then
+                                local nestedSubmenuEntriesOfCharPack = {}
+                                local addonsInCharPack = addonPacks[packNameOfChar]
 
-                                local addonTableOfCharSorted = {}
-                                for _, addonNameOfCharPack in pairs(addonsInCharPack) do
-                                    addonTableOfCharSorted[#addonTableOfCharSorted + 1] = addonNameOfCharPack
+                                numAddonsInSubmenuPack = NonContiguousCount(addonsInCharPack)
+                                local subSubMenuEntriesForCharPack
+                                if showPacksAddonList == true then
+                                    subSubMenuEntriesForCharPack = {}
+
+                                    local addonTableOfCharSorted = {}
+                                    for _, addonNameOfCharPack in pairs(addonsInCharPack) do
+                                        addonTableOfCharSorted[#addonTableOfCharSorted + 1] = addonNameOfCharPack
+                                    end
+                                    table.sort(addonTableOfCharSorted)
+                                    numAddonsInSubmenuPack = #addonTableOfCharSorted
+
+                                    local addonsInPackText = string.format(addonsInPackStr, packNameOfChar) .. " [" .. singleCharNameColoredStr .. ": " .. charName .. "]"
+
+                                    --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
+                                    subSubMenuEntriesForCharPack[1] = {
+                                            name    = addonsInPackText,
+                                            --[[
+                                            --No callback function -> Just a non clickable scrollable list of entries
+                                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                                --Do nothing, just show info
+                                                return true
+                                            end,
+                                            ]]
+                                            enabled = false, -- non clickable
+                                            isHeader = true,
+                                    }
+
+                                    for _, addonNameOfCharPackSorted in ipairs(addonTableOfCharSorted) do
+                                        subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
+                                            name    = "|cE0E0E0" .. addonNameOfCharPackSorted .. "|r", --Colored white/light grey
+                                            --[[
+                                            --No callback function -> Just a non clickable scrollable list of entries
+                                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                                --Do nothing, just show info
+                                                return true
+                                            end,
+                                            ]]
+                                            enabled = false, -- non clickable
+                                        }
+                                    end
                                 end
-                                table.sort(addonTableOfCharSorted)
-                                numAddonsInSubmenuPack = #addonTableOfCharSorted
 
-                                local addonsInPackText = string.format(addonsInPackStr, packNameOfChar) .. " [" .. singleCharNameColoredStr .. ": " .. charName .. "]"
 
-                                --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                                subSubMenuEntriesForCharPack[1] = {
-                                        name    = addonsInPackText,
-                                        --[[
-                                        --No callback function -> Just a non clickable scrollable list of entries
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name = packNameOfChar,
+                                    label = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packNameOfChar,
+                                    charName = charName,
+                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                        OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                        if settings.autoReloadUI == true then ReloadUI("ingame") end
+                                    end,
+                                    isCharacterPackHeader = false,
+                                    isCharacterPack = true,
+                                    isGlobalPackHeader = false,
+                                    isGlobalPack = false,
+                                    addonTable = addonsInCharPack,
+                                    tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. "\n'" .. packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack))) or nil,
+                                    entries = ( showPacksAddonList == true and subSubMenuEntriesForCharPack) or nil,
+                                })
+
+                                if not autoReloadUI then
+                                    nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =
+                                    {
+                                        name    = "-",
+                                        isDivider = true,
+                                        callback = function() end,
+                                        disabled = true,
+                                    }
+                                    nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =
+                                    {
+                                        name    = packNameOfChar,
+                                        label   = selectPackStr .. " & " .. reloadUIStr .. ": " .. packNameOfChar,
                                         callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                            --Do nothing, just show info
-                                            return true
+                                            OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                            ReloadUI("ingame")
                                         end,
-                                        ]]
-                                        enabled = false, -- non clickable
-                                        isHeader = true,
-                                }
-
-                                for _, addonNameOfCharPackSorted in ipairs(addonTableOfCharSorted) do
-                                    subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                        name    = "|cE0E0E0" .. addonNameOfCharPackSorted .. "|r", --Colored white/light grey
-                                        --[[
-                                        --No callback function -> Just a non clickable scrollable list of entries
-                                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                            --Do nothing, just show info
-                                            return true
-                                        end,
-                                        ]]
-                                        enabled = false, -- non clickable
+                                        charName = charName,
+                                        isCharacterPackHeader = false,
+                                        isCharacterPack = true,
+                                        isGlobalPackHeader = false,
+                                        isGlobalPack = false,
+                                        addonTable = addonsInCharPack,
                                     }
                                 end
-                            end
 
-
-                            tins(nestedSubmenuEntriesOfCharPack, {
-                                name = packNameOfChar,
-                                label = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packNameOfChar,
-                                charName = charName,
-                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                    OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
-                                    if settings.autoReloadUI == true then ReloadUI("ingame") end
-                                end,
-                                isCharacterPackHeader = false,
-                                isCharacterPack = true,
-                                isGlobalPackHeader = false,
-                                isGlobalPack = false,
-                                addonTable = addonsInCharPack,
-                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. "\n'" .. packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack))) or nil,
-                                entries = ( showPacksAddonList == true and subSubMenuEntriesForCharPack) or nil,
-                            })
-
-                            if not autoReloadUI then
                                 nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =
                                 {
                                     name    = "-",
@@ -2904,78 +2954,73 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                     callback = function() end,
                                     disabled = true,
                                 }
-                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =
-                                {
-                                    name    = packNameOfChar,
-                                    label   = selectPackStr .. " & " .. reloadUIStr .. ": " .. packNameOfChar,
-                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                        OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
-                                        ReloadUI("ingame")
-                                    end,
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name = packNameOfChar,
+                                    label = deletePackTitleStr .. " " .. packNameOfChar,
                                     charName = charName,
+                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                        OnClick_Delete(packData, false)
+                                    end,
                                     isCharacterPackHeader = false,
                                     isCharacterPack = true,
                                     isGlobalPackHeader = false,
                                     isGlobalPack = false,
                                     addonTable = addonsInCharPack,
+                                })
+
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name    = "-",
+                                    isDivider = true,
+                                    callback = function() end,
+                                    disabled = true,
+                                })
+                                local packNameOfCharCopy = packNameOfChar
+                                local charNameCopy = charName
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name    =  packNameOfChar,
+                                    label    = packNameOfChar .. " " .. overwriteSavePackStr,
+                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                        OnClick_Save(packNameOfCharCopy, packData, charNameCopy)
+                                    end,
+                                    charName = charName,
+                                    addonTable = addonsInCharPack,
+                                })
+
+
+                                --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
+                                subMenuEntries[#subMenuEntries + 1] = {
+                                    name = packNameOfChar,
+                                    label = packNameOfChar,
+                                    charName = charName,
+                                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                        OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                        if settings.autoReloadUI == true then ReloadUI("ingame") end
+                                    end,
+                                    isCharacterPackHeader = false,
+                                    isCharacterPack = true,
+                                    isGlobalPackHeader = false,
+                                    isGlobalPack = false,
+                                    addonTable = addonsInCharPack,
+                                    entries = nestedSubmenuEntriesOfCharPack,
+                                    tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. ": " ..tos(numAddonsInSubmenuPack))) or nil,
                                 }
+
+                                addedSubMenuEntry = true
                             end
+                        end --for ... do
+                        if not addedSubMenuEntry then subMenuEntries = nil end
+                    end
 
-                            nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =
-                            {
-                                name    = "-",
-                                isDivider = true,
-                                callback = function() end,
-                                disabled = true,
-                            }
-                            tins(nestedSubmenuEntriesOfCharPack, {
-                                name = packNameOfChar,
-                                label = deletePackTitleStr .. " " .. packNameOfChar,
-                                charName = charName,
-                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                    OnClick_Delete(packData, false)
-                                end,
-                                isCharacterPackHeader = false,
-                                isCharacterPack = true,
-                                isGlobalPackHeader = false,
-                                isGlobalPack = false,
-                                addonTable = addonsInCharPack,
-                            })
-
-
-                            --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
-                            subMenuEntries[#subMenuEntries + 1] = {
-                                name = packNameOfChar,
-                                label = packNameOfChar,
-                                charName = charName,
-                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                    OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
-                                    if settings.autoReloadUI == true then ReloadUI("ingame") end
-                                end,
-                                isCharacterPackHeader = false,
-                                isCharacterPack = true,
-                                isGlobalPackHeader = false,
-                                isGlobalPack = false,
-                                addonTable = addonsInCharPack,
-                                entries = nestedSubmenuEntriesOfCharPack,
-                                tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. ": " ..tos(numAddonsInSubmenuPack))) or nil,
-                            }
-
-                            addedSubMenuEntry = true
-                        end
-                    end --for ... do
-                    if not addedSubMenuEntry then subMenuEntries = nil end
+                    --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
+                    --"[" .. charName .. "]"
+                    local label
+                    local itemCharData = createItemEntry(charName, label, addonPacks, true,
+                            charName, "[" .. tostring(megaServer) .. "]"..characterWideStr..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
+                            subMenuEntries, subMenuEntries ~= nil, false)
+                    tins(packTable, itemCharData)
+                    wasItemAdded = true
                 end
-
-                --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
-                --"[" .. charName .. "]"
-                local label
-                local itemCharData = createItemEntry(charName, label, addonPacks, true,
-                        charName, "[" .. tostring(megaServer) .. "]"..characterWideStr..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
-                        subMenuEntries, subMenuEntries ~= nil, false)
-                tins(packTable, itemCharData)
-                wasItemAdded = true
-            end
+            end --if characterIdsOfAccount[charId] then
         end
     end
 
@@ -3110,12 +3155,14 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     callback = function() end,
                     disabled = true,
                 }
+
+                local packNameCopy = packName
                 subMenuEntries[#subMenuEntries+1] =
                 {
                     name    =  packName,
-                    label    = overwriteSavePackStr .. " " .. packName,
+                    label    = packName .. " " .. overwriteSavePackStr,
                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                        OnClick_Save(packName, packData, false)
+                        OnClick_Save(packNameCopy, packData, GLOBAL_PACK_NAME)
                     end,
                     charName = GLOBAL_PACK_NAME,
                     addonTable = addonTable,
@@ -3250,14 +3297,14 @@ local function OnClick_AutoReload(self, button, upInside, ctrl, alt, shift, comm
 end
 ]]
 
-local function OnClick_SaveDo(packNameProvided, packName, characterName)
-    packNameProvided = packNameProvided or false
-    if packNameProvided == false then
+local function OnClick_SaveDo(wasPackNameProvided, packName, characterName)
+    wasPackNameProvided = wasPackNameProvided or false
+    if wasPackNameProvided == false then
         packName = AddonSelector.editBox:GetText()
     end
 
     if not packName or packName == "" then
-        if packNameProvided == true then return end
+        if wasPackNameProvided == true then return end
 
         local itemData = AddonSelector.comboBox:GetSelectedItemData()
         if not itemData then
@@ -3268,14 +3315,14 @@ local function OnClick_SaveDo(packNameProvided, packName, characterName)
     end
 
     --Overwrite an existing pack without selecting it (chose "Overwrite" from submenu)
-    if packNameProvided == true then
-        --Get SavedVariables table for the existing pack
-        local svForPack = saveAddonsAsPackToSV(packName, false, characterName)
+    if wasPackNameProvided == true then
+        --Get SavedVariables table for the existing pack and update the pack there
+        saveAddonsAsPackToSV(packName, false, characterName, wasPackNameProvided)
 
         clearAndUpdateDDL()
     else
-        --Get SavedVariables table for the pack
-        local svForPack = saveAddonsAsPackToSV(packName, false)
+        --Get SavedVariables table for the pack and update the pack there
+        local svForPack = saveAddonsAsPackToSV(packName, false, nil, false)
         -- Create a temporary copy of the itemEntry data so we can select it
         -- after the ddl is updated
         local savePackPerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
@@ -3297,7 +3344,8 @@ end
 -- enabled addons:  { [AddOnFileName] = AddonStrippedName, ...}
 function OnClick_Save(packName, packData, characterName)
     local newPackName
-    local packNameProvided = (packName == nil and packData ~= nil and characterName == nil and true) or false
+    local wasPackNameProvided = (packName ~= nil and packData ~= nil and characterName ~= nil and true) or false
+--d("[AddonSelector]OnClick_Save - packName: " ..tos(packName) .. ", characterName: " ..tos(characterName))
 
     if packName ~= nil then
         if packData == nil or characterName == nil then return end
@@ -3322,21 +3370,21 @@ function OnClick_Save(packName, packData, characterName)
 
 
     local savePerCharacter = AddonSelector.acwsv.saveGroupedByCharacterName
-    if packData ~= nil and characterName ~= nil then
+    if wasPackNameProvided == true and (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME) then
         savePerCharacter = true
     end
 
     local packCharacter = packNameGlobal
     --Save grouped by charactername
-d("[AddonSelector]OnClick_Save - savePerChar: " ..tos(savePerCharacter) .. ", newPackName: " ..tos(newPackName))
+--d(">savePerChar: " ..tos(savePerCharacter) .. ", newPackName: " ..tos(newPackName))
     if savePerCharacter then
         local svTableOfCurrentChar, charName
-        if packNameProvided == true then
+        if wasPackNameProvided == true then
             svTableOfCurrentChar, charName = getSVTableForPacks(characterName)
         else
             svTableOfCurrentChar, charName = getSVTableForPacks()
         end
-d(">charName: " ..tos(charName))
+--d(">charName: " ..tos(charName))
         if svTableOfCurrentChar ~= nil and charName ~= nil then
             saveGroupedByChar = true
             svTable = svTableOfCurrentChar
@@ -3356,7 +3404,7 @@ d(">charName: " ..tos(charName))
                 (AddonSelector_GetLocalizedText("savePackTitle")) .. "\n" ..
                         "[".. (saveGroupedByChar and strfor(charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
                 savePackQuestion,
-                function() OnClick_SaveDo(packNameProvided, packName, characterName) end,
+                function() OnClick_SaveDo(wasPackNameProvided, packName, characterName) end,
                 function() OnAbort_Do(true, false, nil, nil, nil) end,
                 nil,
                 nil,
@@ -3364,7 +3412,7 @@ d(">charName: " ..tos(charName))
         )
     else
         --Pack does not exist but we passed in packName, packData and characterName -> Error
-        if packNameProvided == true then return end
+        if wasPackNameProvided == true then return end
 
         OnClick_SaveDo()
     end
@@ -3395,6 +3443,9 @@ end
 
 --Show the settings context menu at the dropdown button
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
+    local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
+    local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or nil
+
     ClearMenu()
 
     --Add the currently logged in character name as header
@@ -3408,21 +3459,22 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             lastSavedPreMassMarkingTime = os.date("%c", AddonSelector.acwsv.lastMassMarkingSavedProfileTime)
         end
         if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL)
+            --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment, isHighlighted, onEnter, onExit, enabled)
+            AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
         end
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL)
+        AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
         AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
     end
 
     --Deselect/Select all
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, MENU_ADD_OPTION_LABEL)
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     local currentAddonSelectorSelectAllButtonText = addonSelectorSelectAddonsButtonNameLabel:GetText()
     if currentAddonSelectorSelectAllButtonText ~= selectAllText then
-        AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL)
+        AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     end
-    AddCustomMenuItem(selectAllText,                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL)
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL)
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL)
+    AddCustomMenuItem(selectAllText,                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
 
     --Scroll to addons/libraries
@@ -3579,7 +3631,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         lastLoadedPackTime = os.date("%c", lastLoadedPackData.timestamp)
         if lastLoadedPackCharName ~= "" and lastLoadedPackName ~= "" and lastLoadedPackTime ~= "" then
             --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment)
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6, nil)
+            AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6)
             AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
                 function()
                     --TODO Set the pack to the dropddown box again
@@ -3598,7 +3650,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                         AddonSelector.ddl.m_comboBox:SetSelectedItemByEval(evalFunc, false) --do not ignore the callback -> run it!
                         doNotReloadUI = false
                     end
-                end, MENU_ADD_OPTION_LABEL)
+                end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
         end
     end
 
@@ -3645,23 +3697,23 @@ function AddonSelector.CreateControlReferences()
     -->No more need to overwrite AddonSelector.ddl.m_comboBox:AddMenuItems below in this addon's code!
     -->Just use AddonSelector.ddl.m_comboBox:AddItems(tableWithMenuAndSubmenuEntries) instead, or in this addon use AddonSelector.UpdateDDL as it already exists to do the AddItems() call
     --AddonSelector.ddl = CreateControlFromVirtual  ZO_ComboBox
---		table	narrate:optional				Table or function returning a table with key = narration event and value = function called for that narration event.
---												The functions signature/parameters always is scrollHelperObject, control, data:nilable, isSubmenu:nilable
---												-> The function either builds your narrateString and narrates it in your addon.
---												   Or you must return a string as 1st return param (and optionally a boolean "stopCurrentNarration" as 2nd return param. If this is nil it will be set to false!)
---												    and let the library here narrate it for you via the UI narration
---												Optional narration events can be:
---												"OnComboBoxMouseEnter" 	function(scrollhelperObject, dropdownControl)  Build your narrateString and narrate it now, or return a string and let the library narrate it for you end
---												"OnComboBoxMouseExit"	function(scrollhelperObject, dropdownControl) end
---												"OnMenuShow"			function(scrollhelperObject, dropdownControl) end
---												"OnMenuHide"			function(scrollhelperObject, dropdownControl) end
---												"OnSubMenuShow"			function(scrollhelperObject, parentControl) end
---												"OnSubMenuHide"			function(scrollhelperObject, parentControl) end
---												"OnEntryMouseEnter"		function(scrollhelperObject, entryControl, data, isSubmenu) end
---												"OnEntryMouseExit"		function(scrollhelperObject, entryControl, data, isSubmenu) end
---												"OnEntrySelected"		function(scrollhelperObject, entryControl, data, isSubmenu) end
---												"OnCheckboxUpdated"		function(scrollhelperObject, checkboxControl, data) end
---			Example:	narrate = { ["OnDropdownMouseEnter"] = myAddonsNarrateDropdownOnMouseEnter, ... }
+    --		table	narrate:optional				Table or function returning a table with key = narration event and value = function called for that narration event.
+    --												The functions signature/parameters always is scrollHelperObject, control, data:nilable, isSubmenu:nilable
+    --												-> The function either builds your narrateString and narrates it in your addon.
+    --												   Or you must return a string as 1st return param (and optionally a boolean "stopCurrentNarration" as 2nd return param. If this is nil it will be set to false!)
+    --												    and let the library here narrate it for you via the UI narration
+    --												Optional narration events can be:
+    --												"OnComboBoxMouseEnter" 	function(scrollhelperObject, dropdownControl)  Build your narrateString and narrate it now, or return a string and let the library narrate it for you end
+    --												"OnComboBoxMouseExit"	function(scrollhelperObject, dropdownControl) end
+    --												"OnMenuShow"			function(scrollhelperObject, dropdownControl) end
+    --												"OnMenuHide"			function(scrollhelperObject, dropdownControl) end
+    --												"OnSubMenuShow"			function(scrollhelperObject, parentControl) end
+    --												"OnSubMenuHide"			function(scrollhelperObject, parentControl) end
+    --												"OnEntryMouseEnter"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+    --												"OnEntryMouseExit"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+    --												"OnEntrySelected"		function(scrollhelperObject, entryControl, data, isSubmenu) end
+    --												"OnCheckboxUpdated"		function(scrollhelperObject, checkboxControl, data) end
+    --			Example:	narrate = { ["OnDropdownMouseEnter"] = myAddonsNarrateDropdownOnMouseEnter, ... }
     AddonSelector.ddl.scrollHelper = AddCustomScrollableComboBoxDropdownMenu(addonSelector, AddonSelector.ddl,
             {
                 visibleRowsDropdown = 15,
@@ -3825,7 +3877,7 @@ function AddonSelector.CreateControlReferences()
     ]]
 
     -- SetHandlers:
-    AddonSelector.saveBtn:SetHandler("OnMouseUp", OnClick_Save)
+    AddonSelector.saveBtn:SetHandler("OnMouseUp", function(ctrl) OnClick_Save() end)
     AddonSelector.deleteBtn:SetHandler("OnMouseUp", function() OnClick_Delete(nil, true) end)
     --AddonSelector.autoReloadBtn:SetHandler("OnMouseUp", OnClick_AutoReload)
     --AddonSelector.autoReloadBtn:SetHandler("OnMouseEnter", OnMouseEnter)
@@ -4220,7 +4272,7 @@ function AddonSelector.Initialize()
                     if not isUpInside or mouseButton ~= MOUSE_BUTTON_INDEX_LEFT then return end
                     local currentState = enableAllAddonsCheckboxCtrl:GetState()
                     local isBoxChecked = true
-                    if currentState == 1 then
+                    if currentState == BSTATE_PRESSED then
                         isBoxChecked = false
                     end
                     disableAllAddonsToggleFunc(enableAllAddonsCheckboxCtrl, isBoxChecked)
@@ -4358,6 +4410,10 @@ local function OnAddOnLoaded(event, addonName)
 
     --Save the currently logged in @account's characterId = characterName table
     AddonSelector.charactersOfAccount = getCharactersOfAccount(false)
+    charactersOfAccount = AddonSelector.charactersOfAccount
+    AddonSelector.characterIdsOfAccount = getCharactersOfAccount(true)
+    characterIdsOfAccount = AddonSelector.characterIdsOfAccount
+
 
     --AddonCategory is enabled?
     isAddonCategoryEnabled = (AddonCategory ~= nil and AddonCategory.getIndexOfCategory ~= nil and true) or false

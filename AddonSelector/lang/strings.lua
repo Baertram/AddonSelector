@@ -90,7 +90,7 @@ AddonSelectorGlobal.langArray = {
         ["addonsInPack"]         = "AddOns im Pack %q",
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
         ["showSearchFilterAtPacksList"] = "Zeige Suche in der Pack-Liste",
-        ["OverwriteSavePack"]    = "Überschreiben mit aktuell aktivierten",
+        ["OverwriteSavePack"]    = "überschreiben (mit aktuell ausgewählten)",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -169,7 +169,7 @@ AddonSelectorGlobal.langArray = {
         ["addonsInPack"]         = "AddOns in pack %q",
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
         ["showSearchFilterAtPacksList"] = "Show search at the pack list",
-        ["OverwriteSavePack"]    = "Overwrite pack with currently enabled",
+        ["OverwriteSavePack"]    = "overwrite (with currently selected)",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
