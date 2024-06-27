@@ -69,6 +69,7 @@ local SEARCH_TYPE_NAME = "name"
 
 local myDisabledColor = ZO_DISABLED_TEXT
 
+
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
@@ -177,6 +178,7 @@ local entrySelectedStr = AddonSelector_GetLocalizedText("entrySelected")
 local checkboxStr = AddonSelector_GetLocalizedText("checkBox")
 local enabledAddonsInPackStr = AddonSelector_GetLocalizedText("enabledAddonsInPack")
 local addonsInPackStr = AddonSelector_GetLocalizedText("addonsInPack")
+local librariesInPackStr = AddonSelector_GetLocalizedText("librariesInPack")
 local showSearchFilterAtPacksListStr = AddonSelector_GetLocalizedText("showSearchFilterAtPacksList")
 
 
@@ -1148,7 +1150,6 @@ local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark, characterNam
     --#15 If any main-addon was disabled by clicking that addon line, and sub-addons that depend on the main addon were automatically
     --disabled too, the SavedVariables pack here must take the sub-addons into account too: They need to be removed from the pack
     --automatically! Checking only the enabled state will add those to the pack allthough they got dependency errors
-    --todo 20240510
 
     -- Add all of the enabled addOn to the pack table
     local aad = ZO_ScrollList_GetDataList(ZOAddOnsList)
@@ -2275,12 +2276,30 @@ end
 local function BuildAddOnReverseLookUpTable()
     if ZOAddOnsList ~= nil and ZOAddOnsList.data ~= nil then
         --Build the lookup table for the sortIndex to nrow index of addon rows
+        if ZO_IsTableEmpty(ZOAddOnsList.data) then return end
+    d(">>>[AS]BuildAddOnReverseLookUpTable - Running")
+
         AddonSelector.ReverseLookup = {}
+        AddonSelector.NameLookup = {}
+        AddonSelector.Libraries = {}
+        local reverseLookup = AddonSelector.ReverseLookup
+        local nameLookup = AddonSelector.NameLookup
+        local libraries = AddonSelector.Libraries
+
         for _,v in ipairs(ZOAddOnsList.data) do
-            if v.data.sortIndex ~= nil and v.data.index ~= nil then
-                AddonSelector.ReverseLookup[v.data.sortIndex] = v.data.index
+            local data = v.data
+            if data.sortIndex ~= nil and data.index ~= nil then
+                reverseLookup[data.sortIndex] = data.index
+                if data.strippedAddOnName ~= nil then
+                    nameLookup[data.strippedAddOnName] = data
+                end
+                if data.isLibrary then
+                    --AddonSelector.Libraries[data.strippedAddOnName] = true
+                    libraries[data.addOnFileName] = true
+                end
             end
         end
+        d("<<<[AS]BuildAddOnReverseLookUpTable - ENDED")
     end
 end
 
@@ -2644,7 +2663,7 @@ local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, button
     if isGlobalPack == true then
         AddonSelector.acwsv.addonPacks[selectedPackName] = nil
         wasDeleted = true
-d(">deleted global pack: " ..tos(selectedPackName))
+--d(">deleted global pack: " ..tos(selectedPackName))
     else
         if charId == nil then
             deleteError("CharId nil")
@@ -2653,14 +2672,14 @@ d(">deleted global pack: " ..tos(selectedPackName))
         if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
             AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
             wasDeleted = true
-d(">deleted char pack, charId: " ..tos(charId))
+--d(">deleted char pack, charId: " ..tos(charId))
         end
     end
 
     if wasDeleted == true then
         --Was the pack deleted which was currently selected, or any other?
         local currentlySelectedPackWasDeleted = (buttonWasPressed == true or (beforeSelectedPackData ~= nil and itemData == beforeSelectedPackData) and true) or false
-d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
+--d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
         clearAndUpdateDDL(currentlySelectedPackWasDeleted)
         --Select the before selected pack again -> No "selected" callback so it does not accidently reload the UI or changes any enabled/disabled addons
         if not currentlySelectedPackWasDeleted and beforeSelectedPackData ~= nil then
@@ -2715,7 +2734,7 @@ end
 -- When delete is clicked, remove the selected addon pack
 local function OnClick_Delete(itemData, buttonWasPressed)
     buttonWasPressed = buttonWasPressed or false
-    d("[AddonSelector]OnClick_Delete - itemData: " .. tos(itemData))
+    --d("[AddonSelector]OnClick_Delete - itemData: " .. tos(itemData))
     --todo: If itemData was passed in this was called from "Selecting an item in the dropdown -> e.g. submenu -> delete pack".
     --Selecting this menu entry will select the packName to delete to the dropdown's ItemSelectedText!
     --We need to overwrite this one with the before selected packname again (if any was selected!) so that aborting or deleting the
@@ -2729,7 +2748,7 @@ local function OnClick_Delete(itemData, buttonWasPressed)
     itemData = itemData or AddonSelector.comboBox:GetSelectedItemData()
     if not itemData then return end
     --Debuggin
-AddonSelector._SelectedItemDataOnDelete = itemData
+--AddonSelector._SelectedItemDataOnDelete = itemData
 
     --If the character name (could be _G for global packs too!) is missing at the pack (old saved packs e.g.): Add it here
     if itemData.charName == nil then
@@ -2750,7 +2769,7 @@ AddonSelector._SelectedItemDataOnDelete = itemData
     end
     if not svTable then return end
 
-d(">charName: " ..tos(charName) .. ", charId: " ..tos(charId))
+--d(">charName: " ..tos(charName) .. ", charId: " ..tos(charId))
 
     local packCharName
     if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
@@ -2871,10 +2890,17 @@ function AddonSelector.UpdateDDL(wasDeleted)
     characterIdsOfAccount = characterIdsOfAccount or getCharactersOfAccount(true)
     --local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
 
+    --Build the lookup tables for libraries
+    if ZO_IsTableEmpty(AddonSelector.Libraries) then
+        BuildAddOnReverseLookUpTable()
+    end
 
+------------------------------------------------------------------------------------------------------------------------
     --!LibScrollableMenu - Create the dropdown menu entries now - CharacterName entries!
     --Show the addon packs saved per character?
+------------------------------------------------------------------------------------------------------------------------
     if showGroupedByCharacterName == true or saveGroupedByCharacterName == true then
+------------------------------------------------------------------------------------------------------------------------
         --Create a header "Character packs"
         local itemDataCharacterPackHeader = createItemEntry(packNameCharacter, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. characterWidesStr,
                 nil, false, true)
@@ -2910,6 +2936,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
                                 numAddonsInSubmenuPack = NonContiguousCount(addonsInCharPack)
                                 local subSubMenuEntriesForCharPack
+
+------------------------------------------------------------------------------------------------------------------------
+                                ---Show the addons of the pack as submenu
                                 if showPacksAddonList == true then
                                     subSubMenuEntriesForCharPack = {}
 
@@ -2950,6 +2979,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         }
                                     end
                                 end
+------------------------------------------------------------------------------------------------------------------------
 
 
                                 tins(nestedSubmenuEntriesOfCharPack, {
@@ -3077,11 +3107,17 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 end
             end --if characterIdsOfAccount[charId] then
         end
-    end
+------------------------------------------------------------------------------------------------------------------------
+    end --Show grouped by character
+------------------------------------------------------------------------------------------------------------------------
 
+
+------------------------------------------------------------------------------------------------------------------------
     --!LibScrollableMenu - Create the dropdown menu entries now - Global entries!
     --Show the addon packs saved without character? -> Global, server wide
+------------------------------------------------------------------------------------------------------------------------
     if showGlobalPacks == true then
+------------------------------------------------------------------------------------------------------------------------
         --Create a header "Global packs"
         local itemDataGlobalPackHeader = createItemEntry(packNameGlobal, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. accountWidesStr,
                 nil, false, true)
@@ -3099,19 +3135,45 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 local subSubMenuEntries
                 local tooltipStr
 
-                numAddonsInGlobalPack = NonContiguousCount(addonTable)
+                --numAddonsInGlobalPack = NonContiguousCount(addonTable)
 
+------------------------------------------------------------------------------------------------------------------------
+                --Show list of addons in the saved pack as extra submenu
                 if showPacksAddonList == true then
                     subSubMenuEntries = {}
 
                     local addonTableSorted = {}
-                    for _, addonNameOfGlobalPack in pairs(addonTable) do
-                        addonTableSorted[#addonTableSorted + 1] = addonNameOfGlobalPack
+                    for addonFileName, addonNameOfGlobalPack in pairs(addonTable) do
+                        addonTableSorted[#addonTableSorted + 1] = { addonFileName = addonFileName, addonNameStripped = addonNameOfGlobalPack }
                     end
                     numAddonsInGlobalPack = #addonTableSorted
-                    table.sort(addonTableSorted)
+                    table.sort(addonTableSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
 
-                    local addonsInPackText = string.format(addonsInPackStr, packName) .. " [" .. packNameGlobal .. "]"
+                    --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
+                    local addonTableSortedAddons = {}
+                    local addonTableSortedLibraries = {}
+
+                    local libraries = AddonSelector.Libraries
+
+                    for _, addonDataOfGlobalPackSorted in ipairs(addonTableSorted) do
+                        local addonNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonNameStripped
+                        local addonFileNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonFileName
+                        if libraries ~= nil then
+--d(">addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted) .."; isLibrary: " ..tos(libraries[addonFileNameOfGlobalPackSorted]) or nil)
+                            if libraries[addonFileNameOfGlobalPackSorted] == true then
+                                addonTableSortedLibraries[#addonTableSortedLibraries + 1] = addonNameOfGlobalPackSorted
+                            else
+                                addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
+                            end
+                        else
+                            --Could happen as dropdown get's initialized on first run
+                            addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
+                        end
+                    end
+                    table.sort(addonTableSortedAddons)
+                    table.sort(addonTableSortedLibraries)
+
+                    local addonsInPackText = string.format(addonsInPackStr .. " - %s", packName, tos(#addonTableSortedAddons)) .. " [" .. packNameGlobal .. "]"
 
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     subSubMenuEntries[1] = {
@@ -3128,7 +3190,8 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     }
 
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                    for _, addonNameOfGlobalPackSorted in ipairs(addonTableSorted) do
+                    -->Normal addons first
+                    for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddons) do
                         subSubMenuEntries[#subSubMenuEntries + 1] = {
                             name    = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
                             --[[
@@ -3140,6 +3203,43 @@ function AddonSelector.UpdateDDL(wasDeleted)
                             ]]
                             enabled = false, -- non clickable
                         }
+                    end
+
+                    if #addonTableSortedLibraries > 0 then
+                        --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
+                        -->Libraries then
+
+                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                            name    = '-',
+                            enabled = false, 
+                            isDivider = true,
+                        }
+                        local librariesInPackText = string.format(librariesInPackStr .. " - %s", packName, tos(#addonTableSortedLibraries))
+                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                            name    = librariesInPackText, --Colored white/light grey
+                            --[[
+                            --No callback function -> Just a non clickable scrollable list of entries
+                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                --Do nothing, just show info
+                                return true
+                            end,
+                            ]]
+                            enabled = false, -- non clickable
+                            isHeader = true,
+                        }
+                        for _, libraryNameOfGlobalPackSorted in ipairs(addonTableSortedLibraries) do
+                            subSubMenuEntries[#subSubMenuEntries + 1] = {
+                                name    = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
+                                --[[
+                                --No callback function -> Just a non clickable scrollable list of entries
+                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                    --Do nothing, just show info
+                                    return true
+                                end,
+                                ]]
+                                enabled = false, -- non clickable
+                            }
+                        end
                     end
                 end
                 if addPackTooltip == true and numAddonsInGlobalPack ~= nil then
@@ -3231,6 +3331,8 @@ function AddonSelector.UpdateDDL(wasDeleted)
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
             local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
+------------------------------------------------------------------------------------------------------------------------
+            ---Context menu (right click) at the addon pack name
             local subMenuEntriesCopy = ZO_ShallowTableCopy(subMenuEntries)
             local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowTableCopy(subSubMenuEntries)) or nil
             local globalPackContextMenuCallbackFunc = function()
@@ -3259,6 +3361,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 --Clear the submenu entries again now (will only be used for the contextMenu then)
                 subMenuEntries = nil
             end
+------------------------------------------------------------------------------------------------------------------------
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
             local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
@@ -3266,7 +3369,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
             tins(packTable, itemGlobalData)
             wasItemAdded = true
         end --for _, packName in ipairs(addonPacksSortedLookup) do
+------------------------------------------------------------------------------------------------------------------------
     end --showGlobalPacks
+------------------------------------------------------------------------------------------------------------------------
 
     AddonSelector.comboBox:SetSortsItems(false)
     AddonSelector.comboBox:ClearItems()
@@ -4342,6 +4447,9 @@ function AddonSelector.Initialize()
             BuildAddOnReverseLookUpTable()
             --Hook the visible addon rows (controls) to set a hanlder for OnMouseDown
             --AddonSelector_HookForMultiSelectByShiftKey()
+
+            --Refresh the dropdown contents once so the libraries and addons are split up into proper tables
+            AddonSelector.UpdateDDL()
 
             --PostHook the new Enable All addons checkbox function so that the controls of Circonians Addon Selector get disabled/enabled
             updateEnableAllAddonsCtrls()
