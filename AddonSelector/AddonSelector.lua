@@ -57,7 +57,7 @@ local tins = gTab.insert
 --local trem = gTab.remove
 local tsor = gTab.sort
 
-local OnClick_Save
+local OnClick_Save, OnClick_DeleteWholeCharacter
 
 --Constant for the global packs
 local GLOBAL_PACK_NAME = "$G"
@@ -128,6 +128,8 @@ local selectPackStr = AddonSelector_GetLocalizedText("selectPack")
 local selectedPackNameStr = AddonSelector_GetLocalizedText("selectedPackName")
 local deletePackAlertStr = AddonSelector_GetLocalizedText("deletePackAlert")
 local deletePackErrorStr = AddonSelector_GetLocalizedText("deletePackError")
+local deleteWholeCharacterPacksTitleStr = AddonSelector_GetLocalizedText("deleteWholeCharacterPacksTitle")
+local deleteWholeCharacterPacksQuestionStr = AddonSelector_GetLocalizedText("deleteWholeCharacterPacksQuestion")
 local savedGroupedByCharNameStr = AddonSelector_GetLocalizedText("SaveGroupedByCharacterName")
 local autoReloadUIStr = AddonSelector_GetLocalizedText("autoReloadUIHint")
 local searchMenuStr = AddonSelector_GetLocalizedText("AddonSearch")
@@ -2331,6 +2333,7 @@ local function AddonSelector_MultiSelect(control, addonEnabledCBox, button)
 --d(">From sortIndex: " .. tos(firstRowData.sortIndex) .. " to sortindex: " .. tos(currentRowData.sortIndex) .. ", step: " .. tos(step) .. ", enabledNew: " .. tos(checkBoxNewState))
         --Disable the update of the addon count during the loop, to avoid lags
         AddonSelector.noAddonNumUpdate = true
+
         --local checkState = (firstRowData.addOnEnabled == true and TRISTATE_CHECK_BUTTON_CHECKED) or TRISTATE_CHECK_BUTTON_UNCHECKED
         AddonSelector.lastChangedAddOnVars = {}
         for addonSortIndex = firstRowData.sortIndex, currentRowData.sortIndex, step do
@@ -2553,6 +2556,7 @@ local function AddonSelector_HookSingleControlForMultiSelectByShiftKey(control)-
                 end
                 AddonSelector.noAddonCheckBoxUpdate = false
                 AddonSelector.noAddonNumUpdate = false
+                AddonSelectorUpdateCount(50)
             end)
         end
     end
@@ -2640,6 +2644,7 @@ local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, button
     if isGlobalPack == true then
         AddonSelector.acwsv.addonPacks[selectedPackName] = nil
         wasDeleted = true
+d(">deleted global pack: " ..tos(selectedPackName))
     else
         if charId == nil then
             deleteError("CharId nil")
@@ -2648,15 +2653,16 @@ local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, button
         if AddonSelector.acwsv.addonPacksOfChar[charId] and AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] then
             AddonSelector.acwsv.addonPacksOfChar[charId][selectedPackName] = nil
             wasDeleted = true
+d(">deleted char pack, charId: " ..tos(charId))
         end
     end
 
     if wasDeleted == true then
         --Was the pack deleted which was currently selected, or any other?
         local currentlySelectedPackWasDeleted = (buttonWasPressed == true or (beforeSelectedPackData ~= nil and itemData == beforeSelectedPackData) and true) or false
---d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
+d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
         clearAndUpdateDDL(currentlySelectedPackWasDeleted)
-        --Select the before selected pack again -> No "selected" callback so it does not accidently reloads the UI or changes any enabled/disabled addons
+        --Select the before selected pack again -> No "selected" callback so it does not accidently reload the UI or changes any enabled/disabled addons
         if not currentlySelectedPackWasDeleted and beforeSelectedPackData ~= nil then
             selectPreviouslySelectedPack(beforeSelectedPackData)
         else
@@ -2668,10 +2674,48 @@ local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, button
     end
 end
 
+local function OnClick_DeleteWholeCharacterDo(charName, charId)
+--d("[AddonSelector]OnClick_DeleteWholeCharacterDo -charName: " ..tos(charName))
+    if not charName then return end
+    if charId ~= nil and AddonSelector.acwsv.addonPacksOfChar[charId] ~= nil then
+        --Empty the SV table in total
+        AddonSelector.acwsv.addonPacksOfChar[charId] = { _charName = charName }
+
+        clearAndUpdateDDL(true)
+        --Disable the "delete pack" button
+        ChangeDeleteButtonEnabledState(nil, false)
+        --Disable the "save pack" button
+        ChangeSaveButtonEnabledState(false)
+    end
+end
+
+--Delete a whole characterId's saved packs?
+function OnClick_DeleteWholeCharacter(characterId)
+--d("[AddonSelector]OnClick_DeleteWholeCharacter -characterId: " ..tos(characterId))
+    charactersOfAccount = charactersOfAccount or AddonSelector.charactersOfAccount
+    characterIdsOfAccount = characterIdsOfAccount or AddonSelector.characterIdsOfAccount
+    local charName = charactersOfAccount[characterId]
+    if charName == nil then return end
+    local svTable, charId = getSVTableForPacksOfCharname(charName)
+    if svTable ~= nil and charId ~= nil then
+        if NonContiguousCount(svTable) == 1 then return end --only _charName entry is in there!
+        --Show security dialog
+        ShowConfirmationDialog("DeleteCharacterPacksDialog",
+                    deleteWholeCharacterPacksTitleStr .. "\n[" .. charName .. "]",
+                    deleteWholeCharacterPacksQuestionStr,
+                    function() OnClick_DeleteWholeCharacterDo(charName, charId) end,
+                    function() end,
+                    nil,
+                    nil,
+                    true
+            )
+    end
+end
+
 -- When delete is clicked, remove the selected addon pack
 local function OnClick_Delete(itemData, buttonWasPressed)
     buttonWasPressed = buttonWasPressed or false
-    --d("[AddonSelector]OnClick_Delete")
+    d("[AddonSelector]OnClick_Delete - itemData: " .. tos(itemData))
     --todo: If itemData was passed in this was called from "Selecting an item in the dropdown -> e.g. submenu -> delete pack".
     --Selecting this menu entry will select the packName to delete to the dropdown's ItemSelectedText!
     --We need to overwrite this one with the before selected packname again (if any was selected!) so that aborting or deleting the
@@ -2685,7 +2729,7 @@ local function OnClick_Delete(itemData, buttonWasPressed)
     itemData = itemData or AddonSelector.comboBox:GetSelectedItemData()
     if not itemData then return end
     --Debuggin
-    --AddonSelector._SelectedItemDataOnDelete = itemData
+AddonSelector._SelectedItemDataOnDelete = itemData
 
     --If the character name (could be _G for global packs too!) is missing at the pack (old saved packs e.g.): Add it here
     if itemData.charName == nil then
@@ -2700,13 +2744,13 @@ local function OnClick_Delete(itemData, buttonWasPressed)
     if charName == nil then return end
     if charName == currentCharName or charName == GLOBAL_PACK_NAME then
         svTable = getSVTableForPacks()
-        charId = (charName ~= GLOBAL_PACK_NAME and currentCharId)
+        charId = (charName ~= GLOBAL_PACK_NAME and currentCharId) or nil
     else
         svTable, charId = getSVTableForPacksOfCharname(charName)
     end
     if not svTable then return end
 
-    --d("[AddonSelector]charName: " ..tos(charName) .. ", charId: " ..tos(charId))
+d(">charName: " ..tos(charName) .. ", charId: " ..tos(charId))
 
     local packCharName
     if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
@@ -2739,7 +2783,7 @@ end
 ]]
 
 -- Create ItemEntry table for the ddl (dropdown box, ZO_ComboBox entries)
-function AddonSelector.CreateItemEntry(packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData)
+function AddonSelector.CreateItemEntry(packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData, contextMenuCallbackFunc)
     local isSubmenu = (entriesSubmenu ~= nil and true) or false
     local isCharacterPackHeader = (isCharacterPack and isSubmenuMainEntry and true) or false
     local settings = AddonSelector.acwsv
@@ -2767,7 +2811,10 @@ function AddonSelector.CreateItemEntry(packName, label, addonTable, isCharacterP
         isHeader = isHeader,
 
         --Icon
-        icon = iconData
+        icon = iconData,
+
+        --ContextMenu
+        contextMenuCallback = contextMenuCallbackFunc,
     }
 
     if not isSubmenu then
@@ -3014,9 +3061,17 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
                     --"[" .. charName .. "]"
                     local label
+                    local charContextMenuCallbackFunc = function()
+                        if not ZO_IsTableEmpty(subMenuEntries) then
+                            ClearCustomScrollableMenu()
+                            AddCustomScrollableMenuEntry(deleteWholeCharacterPacksTitleStr, function() OnClick_DeleteWholeCharacter(charId) end, LSM_ENTRY_TYPE_NORMAL)
+                            ShowCustomScrollableMenu()
+                        end
+                    end
+
                     local itemCharData = createItemEntry(charName, label, addonPacks, true,
                             charName, "[" .. tostring(megaServer) .. "]"..characterWideStr..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
-                            subMenuEntries, subMenuEntries ~= nil, false)
+                            subMenuEntries, subMenuEntries ~= nil, false, nil, charContextMenuCallbackFunc)
                     tins(packTable, itemCharData)
                     wasItemAdded = true
                 end
@@ -3040,7 +3095,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
             subMenuEntries = nil
             local numAddonsInGlobalPack
-            if showSubMenuAtGlobalPacks == true then
+            --if showSubMenuAtGlobalPacks == true then
                 local subSubMenuEntries
                 local tooltipStr
 
@@ -3170,18 +3225,47 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
                 addedSubMenuEntry = true
 
-            end
+            --end --if showSubMenuAtGlobalPacks == true then
 
             local label = packName
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
             local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
+            local subMenuEntriesCopy = ZO_ShallowTableCopy(subMenuEntries)
+            local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowTableCopy(subSubMenuEntries)) or nil
+            local globalPackContextMenuCallbackFunc = function()
+                ClearCustomScrollableMenu()
+                if not ZO_IsTableEmpty(subMenuEntriesCopy) then
+                    for idx, submenuEntryData in ipairs(subMenuEntriesCopy) do
+                        AddCustomScrollableMenuEntry(nil,
+                                submenuEntryData.callback ~= nil and function(...) submenuEntryData.callback(...) end,
+                                ((submenuEntryData.isDivider or submenuEntryData.name == "-") and LSM_ENTRY_TYPE_DIVIDER) or LSM_ENTRY_TYPE_NORMAL,
+                                (idx == 1 and subSubMenuEntriesCopy) or nil, --entries
+                                {
+                                    label = submenuEntryData.label,
+                                    name = submenuEntryData.name,
+                                    enabled = (submenuEntryData.disabled ~= nil and not submenuEntryData.disabled) or nil,
+                                    charName = submenuEntryData.charName,
+                                    addonTable = submenuEntryData.addonTable
+                                } --additionalData
+                        )
+                    end
+                    ShowCustomScrollableMenu()
+                end
+            end
+
+            --Do not show submenus at the global packs?
+            if not showSubMenuAtGlobalPacks then
+                --Clear the submenu entries again now (will only be used for the contextMenu then)
+                subMenuEntries = nil
+            end
+
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
             local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
-                    subMenuEntries, subMenuEntries ~= nil, false, iconData)
+                    subMenuEntries, subMenuEntries ~= nil, false, iconData, globalPackContextMenuCallbackFunc)
             tins(packTable, itemGlobalData)
             wasItemAdded = true
-        end
+        end --for _, packName in ipairs(addonPacksSortedLookup) do
     end --showGlobalPacks
 
     AddonSelector.comboBox:SetSortsItems(false)

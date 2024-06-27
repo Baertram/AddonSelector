@@ -91,6 +91,8 @@ AddonSelectorGlobal.langArray = {
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
         ["showSearchFilterAtPacksList"] = "Zeige Suche in der Pack-Liste",
         ["OverwriteSavePack"]    = "überschreiben (mit aktuell ausgewählten)",
+        ["deleteWholeCharacterPacksTitle"] = "Lösche alle Packs vom Charakter",
+        ["deleteWholeCharacterPacksQuestion"] = "Wirklich ALLE Packs löschen??",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -170,6 +172,8 @@ AddonSelectorGlobal.langArray = {
         ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
         ["showSearchFilterAtPacksList"] = "Show search at the pack list",
         ["OverwriteSavePack"]    = "overwrite (with currently selected)",
+        ["deleteWholeCharacterPacksTitle"] = "Delete all packs of character",
+        ["deleteWholeCharacterPacksQuestion"] = "Really delete ALL packs?",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
