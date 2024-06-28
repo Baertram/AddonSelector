@@ -1393,10 +1393,11 @@ local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, pa
     }
 end
 
+--[[
 --Set the currently selected global pack for all characters as default pack ot load
 --> This will only affect the currently loged in character and next time you login another char it will also use this selected pack then
 local function SetAllCharactersSelectedPackname(currentlySelectedPackName, packData)
-d("SetAllCharactersSelectedPackname: " ..tos(currentlySelectedPackName) .. ", charName: " ..tos(packData.charName))
+--d("SetAllCharactersSelectedPackname: " ..tos(currentlySelectedPackName) .. ", charName: " ..tos(packData.charName))
     if not currentlySelectedPackName or currentlySelectedPackName == "" or packData == nil then return end
     --Get the current character's uniqueId
     if not currentCharId then return end
@@ -1412,10 +1413,11 @@ d("SetAllCharactersSelectedPackname: " ..tos(currentlySelectedPackName) .. ", ch
                 charName = (AddonSelector.acwsv.saveGroupedByCharacterName == true and packData.charName) or GLOBAL_PACK_NAME, --todo: Do we need to change the packData.charName here to charName of the charcterLoop? Or would that show new entries for "saved packs" of the charName where this pack never was saved for?
                 timestamp = GetTimeStamp()
             }
-d("["..ADDON_NAME.."]Set selected pack \'..tos(currentlySelectedPackName)..\' for char \' " ..tos(charName) .. "\'")
+--d("["..ADDON_NAME.."]Set selected pack \'..tos(currentlySelectedPackName)..\' for char \' " ..tos(charName) .. "\'")
         end
     end
 end
+]]
 
 
 --Disable/Enable the delete button's enabled state depending on the autoreloadui after pack change checkbox state
@@ -1552,15 +1554,19 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame)
     if not doNotReloadUI and AddonSelector.acwsv.autoReloadUI == true then -- and somethingDone == true then
         --Set the currently selected packname
         SetCurrentCharacterSelectedPackname(packName, packData)
+        --[[
         if forAllCharsTheSame == true then
             SetAllCharactersSelectedPackname(packName, packData)
         end
+        ]]
         AddonSelector.acwsv.packChangedBeforeReloadUI = true
         ReloadUI("ingame")
     else
+        --[[
         if forAllCharsTheSame == true then
             SetAllCharactersSelectedPackname(packName, packData)
         end
+        ]]
         AddonSelector.acwsv.packChangedBeforeReloadUI = true
         onAddonPackSelected(packName, packData, false)
     end
