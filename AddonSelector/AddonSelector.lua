@@ -198,6 +198,14 @@ local prefixStrings = {
     ["AddonSelectorSearchBox"] =            searchHistoryStr,
 }
 
+--LibScrollableMenu - Default contextMenu options
+local LSM_defaultContextMenuOptions = {
+    visibleRowsDropdown = 15,
+    visibleRowsSubmenu  = 15,
+    sortEntries         = false,
+    enableFilter        = function() return AddonSelector.acwsv.showSearchFilterAtPacksList end,
+}
+
 ------------------------------------------------------------------------------------------------------------------------
 -- Helper functions
 ------------------------------------------------------------------------------------------------------------------------
@@ -2902,8 +2910,6 @@ function AddonSelector.UpdateDDL(wasDeleted)
 --d("[LSM]UpdateDDL-showPacksAddonList: " ..tos(showPacksAddonList))
     --local addonPacksComboBox = AddonSelector.comboBox
 
-    local subMenuEntries = {}
-    local addedSubMenuEntry = false
 
     --Auto reload theUI if a pack is changed? Show that directly at the pack's entry text
     local autoReloadUISuffix = ""
@@ -2929,6 +2935,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
 ------------------------------------------------------------------------------------------------------------------------
     if showGroupedByCharacterName == true or saveGroupedByCharacterName == true then
 ------------------------------------------------------------------------------------------------------------------------
+        local subMenuEntriesChar = {}
+        local addedSubMenuEntry  = false
+
         --Create a header "Character packs"
         local itemDataCharacterPackHeader = createItemEntry(packNameCharacter, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. characterWidesStr,
                 nil, false, true)
@@ -2947,14 +2956,14 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
                 local addonPacks = addonPacksOfChar[charId]
 
-                subMenuEntries = nil
+                subMenuEntriesChar = nil
 
                 local charName = addonPacks._charName
                 local numAddonsInSubmenuPack
                 local numAddonsInPack = NonContiguousCount(addonPacks)
                 if charName ~= nil and numAddonsInPack > 1 then --count 1 will be the _charName entry!
                     if showGroupedByCharacterName == true then
-                        subMenuEntries = {}
+                        subMenuEntriesChar = {}
 
                         local addonPacksOfCharSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup(addonPacks)
 
@@ -3352,7 +3361,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
 
                                 --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
-                                subMenuEntries[#subMenuEntries + 1] = {
+                                subMenuEntriesChar[#subMenuEntriesChar + 1] = {
                                     name = packNameOfChar,
                                     label = packNameOfChar,
                                     charName = charName,
@@ -3372,23 +3381,25 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 addedSubMenuEntry = true
                             end
                         end --for ... do
-                        if not addedSubMenuEntry then subMenuEntries = nil end
+                        if not addedSubMenuEntry then subMenuEntriesChar = nil end
                     end ---if showGroupedByCharacterName
 
                     --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
                     --"[" .. charName .. "]"
                     local label
-                    local charContextMenuCallbackFunc = function()
-                        if not ZO_IsTableEmpty(subMenuEntries) then
+                    local charContextMenuCallbackFunc
+                    if not ZO_IsTableEmpty(subMenuEntriesChar) then
+                        charContextMenuCallbackFunc = function()
                             ClearCustomScrollableMenu()
                             AddCustomScrollableMenuEntry(deleteWholeCharacterPacksTitleStr, function() OnClick_DeleteWholeCharacter(charId) end, LSM_ENTRY_TYPE_NORMAL)
-                            ShowCustomScrollableMenu()
+                            ShowCustomScrollableMenu(nil, LSM_defaultContextMenuOptions)
                         end
                     end
 
+                    --packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData, contextMenuCallbackFunc
                     local itemCharData = createItemEntry(charName .. ((not isCharOfCurrentAcc and " " .. otherAccStr) or ""), label, addonPacks, true,
                             charName, "[" .. tostring(megaServer) .. "]"..characterWideStr..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
-                            subMenuEntries, subMenuEntries ~= nil, false, nil, charContextMenuCallbackFunc)
+                            subMenuEntriesChar, subMenuEntriesChar ~= nil, false, nil, charContextMenuCallbackFunc)
                     tins(packTable, itemCharData)
                     wasItemAdded = true
                 end
@@ -3405,6 +3416,9 @@ function AddonSelector.UpdateDDL(wasDeleted)
 ------------------------------------------------------------------------------------------------------------------------
     if showGlobalPacks == true then
 ------------------------------------------------------------------------------------------------------------------------
+        local subMenuEntriesGlobal
+        local addedSubMenuEntryGlobal
+
         --Create a header "Global packs"
         local itemDataGlobalPackHeader = createItemEntry(packNameGlobal, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. accountWidesStr,
                 nil, false, true)
@@ -3416,24 +3430,23 @@ function AddonSelector.UpdateDDL(wasDeleted)
         for _, packName in ipairs(addonPacksSortedLookup) do
             local addonTable = addonPacks[packName]
 
-            subMenuEntries = nil
+            subMenuEntriesGlobal = nil
             local numAddonsInGlobalPack
             --if showSubMenuAtGlobalPacks == true then
-                local subSubMenuEntries
-                local tooltipStr
+            local subSubMenuEntriesGlobal
+            local tooltipStr
 
-                --numAddonsInGlobalPack = NonContiguousCount(addonTable)
+            local addonTableSorted = {}
+            for addonFileName, addonNameOfGlobalPack in pairs(addonTable) do
+                addonTableSorted[#addonTableSorted + 1] = { addonFileName = addonFileName, addonNameStripped = addonNameOfGlobalPack }
+            end
+            numAddonsInGlobalPack = #addonTableSorted
 
-------------------------------------------------------------------------------------------------------------------------
+            ------------------------------------------------------------------------------------------------------------------------
             --Show list of addons in the saved pack as extra submenu
             if showPacksAddonList == true then
-                subSubMenuEntries = {}
+                subSubMenuEntriesGlobal = {}
 
-                local addonTableSorted = {}
-                for addonFileName, addonNameOfGlobalPack in pairs(addonTable) do
-                    addonTableSorted[#addonTableSorted + 1] = { addonFileName = addonFileName, addonNameStripped = addonNameOfGlobalPack }
-                end
-                numAddonsInGlobalPack = #addonTableSorted
                 table.sort(addonTableSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
 
                 --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
@@ -3507,7 +3520,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 if #addonTableSortedAddons > 0 then
                     local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packName, tos(#addonTableSortedAddons), tos(numAddonsInGlobalPack)) .. " [" .. packNameGlobal .. "]"
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = addonsInPackText, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3523,7 +3536,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddons) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3538,14 +3551,14 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 end
 
                 if #addonTableSortedAddonsNotEnabled > 0 then
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
                     local addonsInPackTextNotEnabled = string.format("["..disabledStr.."]" .. addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(#addonTableSortedAddonsNotEnabled), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                    subSubMenuEntries[#subSubMenuEntries + 1]  = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = addonsInPackTextNotEnabled, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3561,7 +3574,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsNotEnabled) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3576,14 +3589,14 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 end
 
                 if #addonTableSortedAddonsMissing > 0 then
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
                     local addonsInPackTextMissing = string.format("["..missingStr.."]"..addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(#addonTableSortedAddonsMissing), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                    subSubMenuEntries[#subSubMenuEntries + 1]  = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = addonsInPackTextMissing, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3599,7 +3612,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsMissing) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3616,13 +3629,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 if #addonTableSortedLibraries > 0 then
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Libraries then
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
                     local librariesInPackText = string.format(librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packName, tos(#addonTableSortedLibraries), tos(numAddonsInGlobalPack))
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = librariesInPackText, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3635,7 +3648,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                         isHeader = true,
                     }
                     for _, libraryNameOfGlobalPackSorted in ipairs(addonTableSortedLibraries) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3650,14 +3663,14 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 end
 
                 if #addonTableSortedLibrariesNotEnabled > 0 then
-                    subSubMenuEntries[#subSubMenuEntries + 1] = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
                     local librariesInPackTextNotEnabled = string.format("["..disabledStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packName, tos(#addonTableSortedLibrariesNotEnabled), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
-                    subSubMenuEntries[#subSubMenuEntries + 1]  = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = librariesInPackTextNotEnabled, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3673,7 +3686,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesNotEnabled) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3688,13 +3701,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                 end
 
                 if #addonTableSortedLibrariesMissing > 0 then
-                    subSubMenuEntries[#subSubMenuEntries + 1]  = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = "-",
                         enabled = false, -- non clickable
                         isDivider = true,
                     }
                     local librariesInPackTextMissing = string.format("["..missingStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate.."/%s", packName, tos(#addonTableSortedLibrariesMissing), tos(numAddonsInGlobalPack))
-                    subSubMenuEntries[#subSubMenuEntries + 1]  = {
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = librariesInPackTextMissing, --Colored white/light grey
                         --[[
                         --No callback function -> Just a non clickable scrollable list of entries
@@ -3710,7 +3723,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesMissing) do
-                        subSubMenuEntries[#subSubMenuEntries + 1] = {
+                        subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                             name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
                             --[[
                             --No callback function -> Just a non clickable scrollable list of entries
@@ -3726,90 +3739,90 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
 
             end --if showPacksAddonList == true then
-------------------------------------------------------------------------------------------------------------------------
+            ------------------------------------------------------------------------------------------------------------------------
 
-                if addPackTooltip == true and numAddonsInGlobalPack ~= nil then
-                    tooltipStr = enabledAddonsInPackStr .. "\n'" .. packName .. "': " ..tos(numAddonsInGlobalPack)
-                end
+            if addPackTooltip == true and numAddonsInGlobalPack ~= nil then
+                tooltipStr = enabledAddonsInPackStr .. "\n'" .. packName .. "': " ..tos(numAddonsInGlobalPack)
+            end
 
-                subMenuEntries = {
-                    {
-                        name    = packName,
-                        label   = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
-                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                            --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
-                            --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
-                            --Pass in the addonTable of the pack, else it won't load properly!
-                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
-                        end,
-                        charName = GLOBAL_PACK_NAME,
-                        addonTable = addonTable,
-                        tooltip = (tooltipStr ~= nil and tooltipStr ~= "" and tooltipStr) or nil,
-                        --Nested submenu showing all the addons in the pack
-                        entries = (showPacksAddonList == true and subSubMenuEntries) or nil,
-                    },
-                }
+            subMenuEntriesGlobal = {
+                {
+                    name    = packName,
+                    label   = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
+                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                        --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
+                        --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                        --Pass in the addonTable of the pack, else it won't load properly!
+                        OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                    end,
+                    charName = GLOBAL_PACK_NAME,
+                    addonTable = addonTable,
+                    tooltip = (tooltipStr ~= nil and tooltipStr ~= "" and tooltipStr) or nil,
+                    --Nested submenu showing all the addons in the pack
+                    entries = (showPacksAddonList == true and subSubMenuEntriesGlobal) or nil,
+                },
+            }
 
-                if not autoReloadUI then
-                    subMenuEntries[#subMenuEntries+1] =
-                    {
-                        name    = "-",
-                        isDivider = true,
-                        callback = function() end,
-                        disabled = true,
-                    }
-                    subMenuEntries[#subMenuEntries+1] =
-                    {
-                        name    = packName,
-                        label   = selectPackStr .. " & " .. reloadUIStr.. ": " .. packName,
-                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                            OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
-                            ReloadUI("ingame")
-                        end,
-                        charName = GLOBAL_PACK_NAME,
-                        addonTable = addonTable,
-                    }
-                end
-
-                subMenuEntries[#subMenuEntries+1] =
+            if not autoReloadUI then
+                subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
                 {
                     name    = "-",
                     isDivider = true,
                     callback = function() end,
                     disabled = true,
                 }
-                subMenuEntries[#subMenuEntries+1] =
+                subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
                 {
-                    name    =  packName,
-                    label    = deletePackTitleStr .. " " .. packName,
+                    name    = packName,
+                    label   = selectPackStr .. " & " .. reloadUIStr.. ": " .. packName,
                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                        OnClick_Delete(packData, false)
+                        OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
+                        ReloadUI("ingame")
                     end,
                     charName = GLOBAL_PACK_NAME,
                     addonTable = addonTable,
                 }
+            end
 
-                subMenuEntries[#subMenuEntries+1] =
-                {
-                    name    = "-",
-                    isDivider = true,
-                    callback = function() end,
-                    disabled = true,
-                }
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
+            {
+                name    = "-",
+                isDivider = true,
+                callback = function() end,
+                disabled = true,
+            }
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
+            {
+                name    =  packName,
+                label    = deletePackTitleStr .. " " .. packName,
+                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                    OnClick_Delete(packData, false)
+                end,
+                charName = GLOBAL_PACK_NAME,
+                addonTable = addonTable,
+            }
 
-                local packNameCopy = packName
-                subMenuEntries[#subMenuEntries+1] =
-                {
-                    name    =  packName,
-                    label    = packName .. " " .. overwriteSavePackStr,
-                    callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                        OnClick_Save(packNameCopy, packData, GLOBAL_PACK_NAME)
-                    end,
-                    charName = GLOBAL_PACK_NAME,
-                    addonTable = addonTable,
-                }
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
+            {
+                name    = "-",
+                isDivider = true,
+                callback = function() end,
+                disabled = true,
+            }
 
-                addedSubMenuEntry = true
+            local packNameCopy = packName
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
+            {
+                name    =  packName,
+                label    = packName .. " " .. overwriteSavePackStr,
+                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                    OnClick_Save(packNameCopy, packData, GLOBAL_PACK_NAME)
+                end,
+                charName = GLOBAL_PACK_NAME,
+                addonTable = addonTable,
+            }
+
+            addedSubMenuEntryGlobal = true
 
             --end --if showSubMenuAtGlobalPacks == true then
 
@@ -3817,41 +3830,44 @@ function AddonSelector.UpdateDDL(wasDeleted)
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
             local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
-------------------------------------------------------------------------------------------------------------------------
+            ------------------------------------------------------------------------------------------------------------------------
             ---Context menu (right click) at the addon pack name
-            local subMenuEntriesCopy = ZO_ShallowTableCopy(subMenuEntries)
-            local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowTableCopy(subSubMenuEntries)) or nil
-            local globalPackContextMenuCallbackFunc = function()
-                ClearCustomScrollableMenu()
-                if not ZO_IsTableEmpty(subMenuEntriesCopy) then
-                    for idx, submenuEntryData in ipairs(subMenuEntriesCopy) do
-                        AddCustomScrollableMenuEntry(nil,
-                                submenuEntryData.callback ~= nil and function(...) submenuEntryData.callback(...) end,
-                                ((submenuEntryData.isDivider or submenuEntryData.name == "-") and LSM_ENTRY_TYPE_DIVIDER) or LSM_ENTRY_TYPE_NORMAL,
-                                (idx == 1 and subSubMenuEntriesCopy) or nil, --entries
-                                {
-                                    label = submenuEntryData.label,
-                                    name = submenuEntryData.name,
-                                    enabled = (submenuEntryData.disabled ~= nil and not submenuEntryData.disabled) or nil,
-                                    charName = submenuEntryData.charName,
-                                    addonTable = submenuEntryData.addonTable
-                                } --additionalData
-                        )
+            local globalPackContextMenuCallbackFunc
+            if addedSubMenuEntryGlobal then
+                local subMenuEntriesCopy    = ZO_ShallowTableCopy(subMenuEntriesGlobal)
+                local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowTableCopy(subSubMenuEntriesGlobal)) or nil
+                globalPackContextMenuCallbackFunc = function()
+                    ClearCustomScrollableMenu()
+                    if not ZO_IsTableEmpty(subMenuEntriesCopy) then
+                        for idx, submenuEntryData in ipairs(subMenuEntriesCopy) do
+                            AddCustomScrollableMenuEntry(nil,
+                                    submenuEntryData.callback ~= nil and function(...) submenuEntryData.callback(...) end,
+                                    ((submenuEntryData.isDivider or submenuEntryData.name == "-") and LSM_ENTRY_TYPE_DIVIDER) or LSM_ENTRY_TYPE_NORMAL,
+                                    (idx == 1 and subSubMenuEntriesCopy) or nil, --entries
+                                    {
+                                        label = submenuEntryData.label,
+                                        name = submenuEntryData.name,
+                                        enabled = (submenuEntryData.disabled ~= nil and not submenuEntryData.disabled) or nil,
+                                        charName = submenuEntryData.charName,
+                                        addonTable = submenuEntryData.addonTable
+                                    } --additionalData
+                            )
+                        end
+                        ShowCustomScrollableMenu(nil, LSM_defaultContextMenuOptions)
                     end
-                    ShowCustomScrollableMenu()
                 end
             end
 
             --Do not show submenus at the global packs?
             if not showSubMenuAtGlobalPacks then
                 --Clear the submenu entries again now (will only be used for the contextMenu then)
-                subMenuEntries = nil
+                subMenuEntriesGlobal = nil
             end
-------------------------------------------------------------------------------------------------------------------------
+            ------------------------------------------------------------------------------------------------------------------------
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
             local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
-                    subMenuEntries, subMenuEntries ~= nil, false, iconData, globalPackContextMenuCallbackFunc)
+                    subMenuEntriesGlobal, subMenuEntriesGlobal ~= nil, false, iconData, globalPackContextMenuCallbackFunc)
             tins(packTable, itemGlobalData)
             wasItemAdded = true
         end --for _, packName in ipairs(addonPacksSortedLookup) do
