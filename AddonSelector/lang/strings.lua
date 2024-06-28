@@ -94,6 +94,10 @@ AddonSelectorGlobal.langArray = {
         ["OverwriteSavePack"]    = "überschreiben (mit aktuell ausgewählten)",
         ["deleteWholeCharacterPacksTitle"] = "Lösche alle Packs vom Charakter",
         ["deleteWholeCharacterPacksQuestion"] = "Wirklich ALLE Packs löschen??",
+        ["disabledRed"] = "|c990000" .. GetString(SI_SCREEN_NARRATION_TOGGLE_DISABLED) .."|r",
+        ["missing"] = "|cFF0000"..GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION).."|r",
+        ["otherAccount"] = "|cf9a602(anderer @)|r",
+        ["ShowPacksOfOtherAccountsChars"] = "Zeige Packs von anderen @Accounts",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -176,6 +180,10 @@ AddonSelectorGlobal.langArray = {
         ["OverwriteSavePack"]    = "overwrite (with currently selected)",
         ["deleteWholeCharacterPacksTitle"] = "Delete all packs of character",
         ["deleteWholeCharacterPacksQuestion"] = "Really delete ALL packs?",
+        ["disabledRed"] = "|c990000" .. GetString(SI_SCREEN_NARRATION_TOGGLE_DISABLED) .."|r",
+        ["missing"] = "|cFF0000"..GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION).."|r",
+        ["otherAccount"] = "|cf9a602(Other @)|r",
+        ["ShowPacksOfOtherAccountsChars"] = "Show packs of other @accounts",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
