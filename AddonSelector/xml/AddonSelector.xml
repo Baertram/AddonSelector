@@ -72,12 +72,12 @@
 				</Label>
 				<Control name="$(parent)ddl" inherits="ZO_ComboBox" mouseEnabled="true" tier="LOW" layer="CONTROLS" level="5">
 				<!-- <Control name="$(parent)ddl" inherits="ZO_ScrollableComboBox" mouseEnabled="true" > -->
-					<Dimensions x="200" y="30" />
+					<Dimensions x="202" y="30" />
 					<Anchor point="TOPLEFT" relativeTo="$(parent)SelectLabel" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
 				</Control>
 				<Button name="$(parent)Delete" inherits="ZO_DefaultButton" font="ZoFontWinH4" text="" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="100" y="30" />
-					<Anchor point="TOPLEFT" relativeTo="$(parent)ddl" relativePoint="TOPRIGHT" offsetX="20" offsetY="0"/>
+					<Anchor point="TOPLEFT" relativeTo="$(parent)ddl" relativePoint="TOPRIGHT" offsetX="18" offsetY="0"/>
 				</Button>
 
                 <Control name="$(parent)BottomDivider" inherits="ZO_WideHorizontalDivider">

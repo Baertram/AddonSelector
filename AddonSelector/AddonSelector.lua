@@ -117,6 +117,7 @@ local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-re
 --Language and strings - local references to lang/strings.lua
 ------------------------------------------------------------------------------------------------------------------------
 local addonsStr = GetString(SI_GAME_MENU_ADDONS)
+local librariesStr = GetString(SI_ADDON_MANAGER_SECTION_LIBRARIES)
 local charNamePackColorTemplate = "|cc9b636%s|r"
 local charNamePackColorDef = ZO_ColorDef:New("C9B636")
 local packNameCharacter = strfor(charNamePackColorTemplate, GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL))
@@ -1177,7 +1178,11 @@ local function saveAddonsAsPackToSV(packName, isPackBeforeMassMark, characterNam
             l_svForPack[fileName] = addonName
         end
     end
-AddonSelector._debugSVForPack = l_svForPack
+--AddonSelector._debugSVForPack = l_svForPack
+    --Try to save the addon packs to your SV "NOW" without reloadui
+    --Will only work once every 15mins, and only if your SV file is < 50kb and will not happen instantly, but maybe soon within 3 mins (w/o a ReloadUI)
+    ADDON_MANAGER:RequestAddOnSavedVariablesPrioritySave(ADDON_NAME)
+
     return l_svForPack
 end
 
@@ -2984,86 +2989,94 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
 ------------------------------------------------------------------------------------------------------------------------
                                 ---Show the addons of the pack as submenu
-                                if showPacksAddonList == true then
-                                    subSubMenuEntriesForCharPack = {}
+                                subSubMenuEntriesForCharPack = {}
 
-                                    local addonTableOfCharSorted = {}
-                                    for addonFileName, addonNameOfCharPack in pairs(addonsInCharPack) do
-                                        addonTableOfCharSorted[#addonTableOfCharSorted + 1] = { addonFileName = addonFileName, addonNameStripped = addonNameOfCharPack }
-                                    end
-                                    table.sort(addonTableOfCharSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
-                                    numAddonsInSubmenuPack = #addonTableOfCharSorted
+                                local addonTableOfCharSorted = {}
+                                for addonFileName, addonNameOfCharPack in pairs(addonsInCharPack) do
+                                    addonTableOfCharSorted[#addonTableOfCharSorted + 1] = { addonFileName = addonFileName, addonNameStripped = addonNameOfCharPack }
+                                end
+                                table.sort(addonTableOfCharSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
+                                numAddonsInSubmenuPack = #addonTableOfCharSorted
 
-                                    --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
-                                    --First currently enabled ones, then the disabled and then missing (not installed) ones
-                                    local addonTableSortedAddons = {}
-                                    local addonTableSortedLibraries = {}
-                                    local addonTableSortedAddonsNotEnabled = {}
-                                    local addonTableSortedLibrariesNotEnabled = {}
-                                    local addonTableSortedAddonsMissing = {}
-                                    local addonTableSortedLibrariesMissing = {}
+                                --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
+                                --First currently enabled ones, then the disabled and then missing (not installed) ones
+                                local addonTableSortedAddons = {}
+                                local addonTableSortedLibraries = {}
+                                local addonTableSortedAddonsNotEnabled = {}
+                                local addonTableSortedLibrariesNotEnabled = {}
+                                local addonTableSortedAddonsMissing = {}
+                                local addonTableSortedLibrariesMissing = {}
 
-                                    for _, addonDataOfGlobalPackSorted in ipairs(addonTableOfCharSorted) do
-                                        local wasAddonAdded = false
-                                        local addonNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonNameStripped
-                                        local addonFileNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonFileName
-                                        if addonsLookup ~= nil or librariesLookup ~= nil then
-                                            --if string.find(addonNameOfGlobalPackSorted, "LibAddonMenu", 1, true) == 1 then
-                                            --    d(">addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted) .."; isLibrary: " ..tos(libraries[addonFileNameOfGlobalPackSorted]) or nil)
-                                            --end
-                                            if addonsLookup then
-                                                local addonsData = addonsLookup[addonFileNameOfGlobalPackSorted] or addonsLookup[addonNameOfGlobalPackSorted]
-                                                if addonsData ~= nil then
-                                                    local enabled = addonsData.addOnEnabled or false
-                                                    if not enabled then
-                                                        addonTableSortedAddonsNotEnabled[#addonTableSortedAddonsNotEnabled + 1] = addonNameOfGlobalPackSorted
-                                                    else
-                                                        addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
-                                                    end
-                                                    wasAddonAdded = true
-                                                end
-                                            end
-                                            if librariesLookup then
-                                                local libraryData = librariesLookup[addonFileNameOfGlobalPackSorted] or librariesLookup[addonNameOfGlobalPackSorted]
-                                                if libraryData ~= nil then
-                                                    local enabled = libraryData.addOnEnabled or false
-                                                    if not enabled then
-                                                        addonTableSortedLibrariesNotEnabled[#addonTableSortedLibraries + 1] = addonNameOfGlobalPackSorted
-                                                    else
-                                                        addonTableSortedLibraries[#addonTableSortedLibraries + 1] = addonNameOfGlobalPackSorted
-                                                    end
-                                                    wasAddonAdded = true
-                                                end
-                                            end
-
-                                            if not wasAddonAdded then
-                                                --d(">not lib nor addon - addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted))
-                                                --Addon in pack is not installed anymore? Or at least teh saved fileName and strippedAddonName do not match anymore
-                                                --Check if it begins with Lib and assume it's a library then
-                                                if string.find(string.lower(addonNameOfGlobalPackSorted), "lib", 1, true) ~= nil then
-                                                    addonTableSortedLibrariesMissing[#addonTableSortedLibrariesMissing + 1] = addonNameOfGlobalPackSorted
-                                                    wasAddonAdded = true
+                                for _, addonDataOfCharPackSorted in ipairs(addonTableOfCharSorted) do
+                                    local wasAddonAdded                   = false
+                                    local addonNameOfCharPackSorted     = addonDataOfCharPackSorted.addonNameStripped
+                                    local addonFileNameOfCharPackSorted = addonDataOfCharPackSorted.addonFileName
+                                    if addonsLookup ~= nil or librariesLookup ~= nil then
+--if string.find(addonNameOfCharPackSorted, "LibChar", 1, true) == 1 then
+--d(">addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted) .."; isLibrary: " ..tos(librariesLookup[addonFileNameOfCharPackSorted] or librariesLookup[addonNameOfCharPackSorted]) or nil)
+--end
+                                        if addonsLookup then
+                                            local addonsData = addonsLookup[addonFileNameOfCharPackSorted] or addonsLookup[addonNameOfCharPackSorted]
+                                            if addonsData ~= nil then
+                                                local enabled = addonsData.addOnEnabled or false
+                                                if not enabled then
+                                                    addonTableSortedAddonsNotEnabled[#addonTableSortedAddonsNotEnabled + 1] = addonNameOfCharPackSorted
                                                 else
-                                                    addonTableSortedAddonsMissing[#addonTableSortedAddonsMissing + 1] = addonNameOfGlobalPackSorted
-                                                    wasAddonAdded = true
+                                                    addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfCharPackSorted
                                                 end
+                                                wasAddonAdded = true
                                             end
                                         end
-                                        if not wasAddonAdded then
-                                            --Could happen as dropdown get's initialized on first run -> Just all all entries as normal addons for then
-                                            addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
+                                        if librariesLookup then
+                                            local libraryData = librariesLookup[addonFileNameOfCharPackSorted] or librariesLookup[addonNameOfCharPackSorted]
+                                            if libraryData ~= nil then
+                                                local enabled = libraryData.addOnEnabled or false
+                                                if not enabled then
+                                                    addonTableSortedLibrariesNotEnabled[#addonTableSortedLibrariesNotEnabled + 1] = addonNameOfCharPackSorted
+                                                else
+                                                    addonTableSortedLibraries[#addonTableSortedLibraries + 1] = addonNameOfCharPackSorted
+                                                end
+                                                wasAddonAdded = true
+                                            end
                                         end
 
-                                    end --for ... do
-                                    table.sort(addonTableSortedAddons)
-                                    table.sort(addonTableSortedLibraries)
-                                    table.sort(addonTableSortedAddonsNotEnabled)
-                                    table.sort(addonTableSortedLibrariesNotEnabled)
-                                    table.sort(addonTableSortedAddonsMissing)
-                                    table.sort(addonTableSortedLibrariesMissing)
+                                        if not wasAddonAdded then
+--d(">not lib nor addon - addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted))
+                                            --Addon in pack is not installed anymore? Or at least teh saved fileName and strippedAddonName do not match anymore
+                                            --Check if it begins with Lib and assume it's a library then
+                                            if string.find(string.lower(addonNameOfCharPackSorted), "lib", 1, true) ~= nil then
+                                                addonTableSortedLibrariesMissing[#addonTableSortedLibrariesMissing + 1] = addonNameOfCharPackSorted
+                                                wasAddonAdded = true
+                                            else
+                                                addonTableSortedAddonsMissing[#addonTableSortedAddonsMissing + 1] = addonNameOfCharPackSorted
+                                                wasAddonAdded = true
+                                            end
+                                        end
+                                    end
+                                    if not wasAddonAdded then
+                                        --Could happen as dropdown get's initialized on first run -> Just all all entries as normal addons for then
+                                        addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfCharPackSorted
+                                    end
 
-                                    if #addonTableSortedAddons > 0 then
-                                        local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packNameOfChar, tos(#addonTableSortedAddons), tos(numAddonsInSubmenuPack)) .. " [" .. singleCharNameColoredStr .. ": " .. charName .. "]"
+                                end --for ... do
+                                table.sort(addonTableSortedAddons)
+                                table.sort(addonTableSortedLibraries)
+                                table.sort(addonTableSortedAddonsNotEnabled)
+                                table.sort(addonTableSortedLibrariesNotEnabled)
+                                table.sort(addonTableSortedAddonsMissing)
+                                table.sort(addonTableSortedLibrariesMissing)
+
+                                local numOnlyAddOnsInSubmenuPack = #addonTableSortedAddons
+                                local numLibrariesInSubmenuPack = #addonTableSortedLibraries
+                                local numDisabledAddonsInSubmenuPack = #addonTableSortedAddonsNotEnabled
+                                local numDisabledLibrariesInSubmenuPack = #addonTableSortedLibrariesNotEnabled
+                                local numMissingAddonsInSubmenuPack = #addonTableSortedAddonsMissing
+                                local numMissingLibrariesInSubmenuPack = #addonTableSortedLibrariesMissing
+
+                                if showPacksAddonList == true then
+
+                                    if numOnlyAddOnsInSubmenuPack > 0 then
+                                        local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packNameOfChar, tos(numOnlyAddOnsInSubmenuPack), tos(numAddonsInSubmenuPack)) .. " [" .. singleCharNameColoredStr .. ": " .. charName .. "]"
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = addonsInPackText, --Colored white/light grey
@@ -3095,13 +3108,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         end
                                     end
 
-                                    if #addonTableSortedAddonsNotEnabled > 0 then
+                                    if numDisabledAddonsInSubmenuPack > 0 then
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = '-',
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local addonsInPackTextNotEnabled = string.format("["..disabledStr.."]" .. addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packNameOfChar, tos(#addonTableSortedAddonsNotEnabled), tos(numAddonsInSubmenuPack))
+                                        local addonsInPackTextNotEnabled = string.format("["..disabledStr.."]" .. addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numDisabledAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = addonsInPackTextNotEnabled, --Colored white/light grey
@@ -3133,13 +3146,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         end
                                     end
 
-                                    if #addonTableSortedAddonsMissing > 0 then
+                                    if numMissingAddonsInSubmenuPack > 0 then
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = '-',
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local addonsInPackTextMissing = string.format("["..missingStr.."]"..addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packNameOfChar, tos(#addonTableSortedAddonsMissing), tos(numAddonsInSubmenuPack))
+                                        local addonsInPackTextMissing = string.format("["..missingStr.."]"..addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numMissingAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = addonsInPackTextMissing, --Colored white/light grey
@@ -3171,7 +3184,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         end
                                     end
 
-                                    if #addonTableSortedLibraries > 0 then
+                                    if numLibrariesInSubmenuPack > 0 then
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         -->Libraries then
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
@@ -3179,7 +3192,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local librariesInPackText = string.format(librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(#addonTableSortedLibraries), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackText = string.format(librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = librariesInPackText, --Colored white/light grey
                                             --[[
@@ -3207,13 +3220,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         end
                                     end
 
-                                    if #addonTableSortedLibrariesNotEnabled > 0 then
+                                    if numDisabledLibrariesInSubmenuPack > 0 then
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = '-',
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local librariesInPackTextNotEnabled = string.format("["..disabledStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(#addonTableSortedLibrariesNotEnabled), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackTextNotEnabled = string.format("["..disabledStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numDisabledLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = librariesInPackTextNotEnabled, --Colored white/light grey
@@ -3245,13 +3258,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         end
                                     end
 
-                                    if #addonTableSortedLibrariesMissing > 0 then
+                                    if numMissingLibrariesInSubmenuPack > 0 then
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = "-",
                                             enabled = false, -- non clickable
                                             isDivider = true,
                                         }
-                                        local librariesInPackTextMissing = string.format("["..missingStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate.."/%s", packNameOfChar, tos(#addonTableSortedLibrariesMissing), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackTextMissing = string.format("["..missingStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate.."/%s", packNameOfChar, tos(numMissingLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = librariesInPackTextMissing, --Colored white/light grey
                                             --[[
@@ -3284,6 +3297,21 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 end
 ------------------------------------------------------------------------------------------------------------------------
 
+                                local tooltipCharPack = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil
+                                    and (enabledAddonsInPackStr .. "\n'" ..
+                                        packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack) .. "\n" ..
+                                        addonsStr .. ": " .. tos(numOnlyAddOnsInSubmenuPack) ..
+                                        ((numDisabledAddonsInSubmenuPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledAddonsInSubmenuPack)) or "") ..
+                                        ((numMissingAddonsInSubmenuPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingAddonsInSubmenuPack)) or "")
+                                    )
+                                ) or nil
+                                if numLibrariesInSubmenuPack > 0 and tooltipCharPack ~= nil then
+                                    tooltipCharPack = tooltipCharPack ..
+                                    "\n" .. librariesStr .. ": " .. tos(numLibrariesInSubmenuPack) ..
+                                    ((numDisabledLibrariesInSubmenuPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledLibrariesInSubmenuPack)) or "") ..
+                                    ((numMissingLibrariesInSubmenuPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingLibrariesInSubmenuPack)) or "")
+                                end
+
                                 tins(nestedSubmenuEntriesOfCharPack, {
                                     name = packNameOfChar,
                                     label = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packNameOfChar,
@@ -3297,7 +3325,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                     isGlobalPackHeader = false,
                                     isGlobalPack = false,
                                     addonTable = addonsInCharPack,
-                                    tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. "\n'" .. packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack))) or nil,
+                                    tooltip = tooltipCharPack,
                                     entries = ( showPacksAddonList == true and subSubMenuEntriesForCharPack) or nil,
                                 })
 
@@ -3357,7 +3385,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                 local charNameCopy = charName
                                 tins(nestedSubmenuEntriesOfCharPack, {
                                     name    =  packNameOfChar,
-                                    label    = packNameOfChar .. " " .. overwriteSavePackStr,
+                                    label    = string.format(overwriteSavePackStr, packNameOfChar),
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                                         OnClick_Save(packNameOfCharCopy, packData, charNameCopy)
                                     end,
@@ -3381,7 +3409,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                     isGlobalPack = false,
                                     addonTable = addonsInCharPack,
                                     entries = nestedSubmenuEntriesOfCharPack,
-                                    tooltip = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil and (enabledAddonsInPackStr .. ": " ..tos(numAddonsInSubmenuPack))) or nil,
+                                    tooltip = tooltipCharPack,
                                 }
 
                                 addedSubMenuEntry = true
@@ -3449,81 +3477,89 @@ function AddonSelector.UpdateDDL(wasDeleted)
             numAddonsInGlobalPack = #addonTableSorted
 
             ------------------------------------------------------------------------------------------------------------------------
+            subSubMenuEntriesGlobal = {}
+
+            table.sort(addonTableSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
+
+            --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
+            --First currently enabled ones, then the disabled and then missing (not installed) ones
+            local addonTableSortedAddons = {}
+            local addonTableSortedLibraries = {}
+            local addonTableSortedAddonsNotEnabled = {}
+            local addonTableSortedLibrariesNotEnabled = {}
+            local addonTableSortedAddonsMissing = {}
+            local addonTableSortedLibrariesMissing = {}
+
+            for _, addonDataOfGlobalPackSorted in ipairs(addonTableSorted) do
+                local wasAddonAdded = false
+                local addonNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonNameStripped
+                local addonFileNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonFileName
+                if addonsLookup ~= nil or librariesLookup ~= nil then
+                    --if string.find(addonNameOfGlobalPackSorted, "LibAddonMenu", 1, true) == 1 then
+                    --    d(">addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted) .."; isLibrary: " ..tos(libraries[addonFileNameOfGlobalPackSorted]) or nil)
+                    --end
+                    if addonsLookup then
+                        local addonsData = addonsLookup[addonFileNameOfGlobalPackSorted] or addonsLookup[addonNameOfGlobalPackSorted]
+                        if addonsData ~= nil then
+                            local enabled = addonsData.addOnEnabled or false
+                            if not enabled then
+                                addonTableSortedAddonsNotEnabled[#addonTableSortedAddonsNotEnabled + 1] = addonNameOfGlobalPackSorted
+                            else
+                                addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
+                            end
+                            wasAddonAdded = true
+                        end
+                    end
+                    if librariesLookup then
+                        local libraryData = librariesLookup[addonFileNameOfGlobalPackSorted] or librariesLookup[addonNameOfGlobalPackSorted]
+                        if libraryData ~= nil then
+                            local enabled = libraryData.addOnEnabled or false
+                            if not enabled then
+                                addonTableSortedLibrariesNotEnabled[#addonTableSortedLibrariesNotEnabled + 1] = addonNameOfGlobalPackSorted
+                            else
+                                addonTableSortedLibraries[#addonTableSortedLibraries + 1] = addonNameOfGlobalPackSorted
+                            end
+                            wasAddonAdded = true
+                        end
+                    end
+
+                    if not wasAddonAdded then
+                        --d(">not lib nor addon - addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted))
+                        --Addon in pack is not installed anymore? Or at least teh saved fileName and strippedAddonName do not match anymore
+                        --Check if it begins with Lib and assume it's a library then
+                        if string.find(string.lower(addonNameOfGlobalPackSorted), "lib", 1, true) ~= nil then
+                            addonTableSortedLibrariesMissing[#addonTableSortedLibrariesMissing + 1] = addonNameOfGlobalPackSorted
+                            wasAddonAdded = true
+                        else
+                            addonTableSortedAddonsMissing[#addonTableSortedAddonsMissing + 1] = addonNameOfGlobalPackSorted
+                            wasAddonAdded = true
+                        end
+                    end
+                end
+                if not wasAddonAdded then
+                    --Could happen as dropdown get's initialized on first run -> Just all all entries as normal addons for then
+                    addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
+                end
+
+            end --for ... do
+            table.sort(addonTableSortedAddons)
+            table.sort(addonTableSortedLibraries)
+            table.sort(addonTableSortedAddonsNotEnabled)
+            table.sort(addonTableSortedLibrariesNotEnabled)
+            table.sort(addonTableSortedAddonsMissing)
+            table.sort(addonTableSortedLibrariesMissing)
+
+            local numOnlyAddOnsInGlobalPack      = #addonTableSortedAddons
+            local numLibrariesInGlobalPack          = #addonTableSortedLibraries
+            local numDisabledAddonsInGlobalPack    = #addonTableSortedAddonsNotEnabled
+            local numDisabledLibrariesInGlobalPack = #addonTableSortedLibrariesNotEnabled
+            local numMissingAddonsInGlobalPack    = #addonTableSortedAddonsMissing
+            local numMissingLibrariesInGlobalPack = #addonTableSortedLibrariesMissing
+
             --Show list of addons in the saved pack as extra submenu
             if showPacksAddonList == true then
-                subSubMenuEntriesGlobal = {}
 
-                table.sort(addonTableSorted, function(a, b) return a.addonNameStripped < b.addonNameStripped end)
-
-                --Show the addon list submenu sorted by addons first, then libarries (With a headline each)
-                --First currently enabled ones, then the disabled and then missing (not installed) ones
-                local addonTableSortedAddons = {}
-                local addonTableSortedLibraries = {}
-                local addonTableSortedAddonsNotEnabled = {}
-                local addonTableSortedLibrariesNotEnabled = {}
-                local addonTableSortedAddonsMissing = {}
-                local addonTableSortedLibrariesMissing = {}
-
-                for _, addonDataOfGlobalPackSorted in ipairs(addonTableSorted) do
-                    local wasAddonAdded = false
-                    local addonNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonNameStripped
-                    local addonFileNameOfGlobalPackSorted = addonDataOfGlobalPackSorted.addonFileName
-                    if addonsLookup ~= nil or librariesLookup ~= nil then
-                        --if string.find(addonNameOfGlobalPackSorted, "LibAddonMenu", 1, true) == 1 then
-                        --    d(">addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted) .."; isLibrary: " ..tos(libraries[addonFileNameOfGlobalPackSorted]) or nil)
-                        --end
-                        if addonsLookup then
-                            local addonsData = addonsLookup[addonFileNameOfGlobalPackSorted] or addonsLookup[addonNameOfGlobalPackSorted]
-                            if addonsData ~= nil then
-                                local enabled = addonsData.addOnEnabled or false
-                                if not enabled then
-                                    addonTableSortedAddonsNotEnabled[#addonTableSortedAddonsNotEnabled + 1] = addonNameOfGlobalPackSorted
-                                else
-                                    addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
-                                end
-                                wasAddonAdded = true
-                            end
-                        end
-                        if librariesLookup then
-                            local libraryData = librariesLookup[addonFileNameOfGlobalPackSorted] or librariesLookup[addonNameOfGlobalPackSorted]
-                            if libraryData ~= nil then
-                                local enabled = libraryData.addOnEnabled or false
-                                if not enabled then
-                                    addonTableSortedLibrariesNotEnabled[#addonTableSortedLibrariesNotEnabled + 1] = addonNameOfGlobalPackSorted
-                                else
-                                    addonTableSortedLibraries[#addonTableSortedLibraries + 1] = addonNameOfGlobalPackSorted
-                                end
-                                wasAddonAdded = true
-                            end
-                        end
-
-                        if not wasAddonAdded then
-                            --d(">not lib nor addon - addoName: " ..tos(addonNameOfGlobalPackSorted) .. "; fileName: " ..tos(addonFileNameOfGlobalPackSorted))
-                            --Addon in pack is not installed anymore? Or at least teh saved fileName and strippedAddonName do not match anymore
-                            --Check if it begins with Lib and assume it's a library then
-                            if string.find(string.lower(addonNameOfGlobalPackSorted), "lib", 1, true) ~= nil then
-                                addonTableSortedLibrariesMissing[#addonTableSortedLibrariesMissing + 1] = addonNameOfGlobalPackSorted
-                                wasAddonAdded = true
-                            else
-                                addonTableSortedAddonsMissing[#addonTableSortedAddonsMissing + 1] = addonNameOfGlobalPackSorted
-                                wasAddonAdded = true
-                            end
-                        end
-                    end
-                    if not wasAddonAdded then
-                        --Could happen as dropdown get's initialized on first run -> Just all all entries as normal addons for then
-                        addonTableSortedAddons[#addonTableSortedAddons + 1] = addonNameOfGlobalPackSorted
-                    end
-
-                end --for ... do
-                table.sort(addonTableSortedAddons)
-                table.sort(addonTableSortedLibraries)
-                table.sort(addonTableSortedAddonsNotEnabled)
-                table.sort(addonTableSortedLibrariesNotEnabled)
-                table.sort(addonTableSortedAddonsMissing)
-                table.sort(addonTableSortedLibrariesMissing)
-
-                if #addonTableSortedAddons > 0 then
+                if numOnlyAddOnsInGlobalPack > 0 then
                     local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packName, tos(#addonTableSortedAddons), tos(numAddonsInGlobalPack)) .. " [" .. packNameGlobal .. "]"
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
@@ -3556,13 +3592,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end
                 end
 
-                if #addonTableSortedAddonsNotEnabled > 0 then
+                if numDisabledAddonsInGlobalPack > 0 then
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
-                    local addonsInPackTextNotEnabled = string.format("["..disabledStr.."]" .. addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(#addonTableSortedAddonsNotEnabled), tos(numAddonsInGlobalPack))
+                    local addonsInPackTextNotEnabled = string.format("["..disabledStr.."]" .. addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(numDisabledAddonsInGlobalPack), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = addonsInPackTextNotEnabled, --Colored white/light grey
@@ -3594,13 +3630,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end
                 end
 
-                if #addonTableSortedAddonsMissing > 0 then
+                if numMissingAddonsInGlobalPack > 0 then
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
-                    local addonsInPackTextMissing = string.format("["..missingStr.."]"..addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(#addonTableSortedAddonsMissing), tos(numAddonsInGlobalPack))
+                    local addonsInPackTextMissing = string.format("["..missingStr.."]"..addonsInPackStr .. " - #" .. numAddonsColorTemplate .. "/%s", packName, tos(numMissingAddonsInGlobalPack), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = addonsInPackTextMissing, --Colored white/light grey
@@ -3632,7 +3668,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end
                 end
 
-                if #addonTableSortedLibraries > 0 then
+                if numLibrariesInGlobalPack > 0 then
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     -->Libraries then
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
@@ -3668,13 +3704,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end
                 end
 
-                if #addonTableSortedLibrariesNotEnabled > 0 then
+                if numDisabledLibrariesInGlobalPack > 0 then
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = '-',
                         enabled = false,
                         isDivider = true,
                     }
-                    local librariesInPackTextNotEnabled = string.format("["..disabledStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packName, tos(#addonTableSortedLibrariesNotEnabled), tos(numAddonsInGlobalPack))
+                    local librariesInPackTextNotEnabled = string.format("["..disabledStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate .. "/%s", packName, tos(numDisabledLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
                     --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = librariesInPackTextNotEnabled, --Colored white/light grey
@@ -3706,13 +3742,13 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end
                 end
 
-                if #addonTableSortedLibrariesMissing > 0 then
+                if numMissingLibrariesInGlobalPack > 0 then
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = "-",
                         enabled = false, -- non clickable
                         isDivider = true,
                     }
-                    local librariesInPackTextMissing = string.format("["..missingStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate.."/%s", packName, tos(#addonTableSortedLibrariesMissing), tos(numAddonsInGlobalPack))
+                    local librariesInPackTextMissing = string.format("["..missingStr.."]" .. librariesInPackStr .. " - #" .. numLibrariesColorTemplate.."/%s", packName, tos(numMissingLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
                     subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                         name    = librariesInPackTextMissing, --Colored white/light grey
                         --[[
@@ -3748,7 +3784,22 @@ function AddonSelector.UpdateDDL(wasDeleted)
             ------------------------------------------------------------------------------------------------------------------------
 
             if addPackTooltip == true and numAddonsInGlobalPack ~= nil then
-                tooltipStr = enabledAddonsInPackStr .. "\n'" .. packName .. "': " ..tos(numAddonsInGlobalPack)
+                tooltipStr = (numAddonsInGlobalPack ~= nil
+                    and (enabledAddonsInPackStr .. "\n'" ..
+                        packName .. "': " ..tos(numAddonsInGlobalPack) .. "\n" ..
+                        addonsStr .. ": " .. tos(numOnlyAddOnsInGlobalPack) ..
+                        ((numDisabledAddonsInGlobalPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledAddonsInGlobalPack)) or "") ..
+                        ((numMissingAddonsInGlobalPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingAddonsInGlobalPack)) or "")
+                    )
+                ) or nil
+                if numLibrariesInGlobalPack > 0 and tooltipStr ~= nil then
+                    tooltipStr = tooltipStr ..
+                    "\n" .. librariesStr .. ": " .. tos(numLibrariesInGlobalPack) ..
+                    ((numDisabledLibrariesInGlobalPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledLibrariesInGlobalPack)) or "") ..
+                    ((numMissingLibrariesInGlobalPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingLibrariesInGlobalPack)) or "")
+                end
+
+
             end
 
             subMenuEntriesGlobal = {
@@ -3763,7 +3814,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     end,
                     charName = GLOBAL_PACK_NAME,
                     addonTable = addonTable,
-                    tooltip = (tooltipStr ~= nil and tooltipStr ~= "" and tooltipStr) or nil,
+                    tooltip = tooltipStr or nil,
                     --Nested submenu showing all the addons in the pack
                     entries = (showPacksAddonList == true and subSubMenuEntriesGlobal) or nil,
                 },
@@ -3820,7 +3871,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
             subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
             {
                 name    =  packName,
-                label    = packName .. " " .. overwriteSavePackStr,
+                label    = string.format(overwriteSavePackStr, packName),
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     OnClick_Save(packNameCopy, packData, GLOBAL_PACK_NAME)
                 end,
