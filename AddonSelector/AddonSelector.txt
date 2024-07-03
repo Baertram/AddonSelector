@@ -4,7 +4,7 @@
 ## APIVersion: 101041 101042
 ## AddOnVersion: 203030
 ## Version: 2.33
-## DependsOn: LibCustomMenu>=722 LibDialog>=127 LibScrollableMenu>=0201
+## DependsOn: LibCustomMenu>=722 LibDialog>=127 LibScrollableMenu>=0203
 ## OptionalDependsOn: AddonCategory
 ## SavedVariables: AddonSelectorSavedVars
 

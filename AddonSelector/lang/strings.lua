@@ -98,6 +98,8 @@ AddonSelectorGlobal.langArray = {
         ["missing"] = "|cFF0000"..GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION).."|r",
         ["otherAccount"] = "|cf9a602(anderer @)|r",
         ["ShowPacksOfOtherAccountsChars"] = "Zeige Packs von anderen @Accounts",
+        ["changedAddonPack"] = "Addon Pack %q geändert, %s - Anzahl: %s",
+        ["saveChangesNow"] = "--- Sichere Änderungen ---",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -184,6 +186,8 @@ AddonSelectorGlobal.langArray = {
         ["missing"] = "|cFF0000"..GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION).."|r",
         ["otherAccount"] = "|cf9a602(Other @)|r",
         ["ShowPacksOfOtherAccountsChars"] = "Show packs of other @accounts",
+        ["changedAddonPack"] = "Changed addon pack %q, %s - Count: %s",
+        ["saveChangesNow"] = "--- Save changes now ---",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz

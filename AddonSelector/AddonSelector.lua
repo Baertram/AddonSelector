@@ -58,6 +58,7 @@ local tins = gTab.insert
 local tsor = gTab.sort
 
 local OnClick_Save, OnClick_DeleteWholeCharacter
+local preventOnClickDDL = false
 
 --Constant for the global packs
 local GLOBAL_PACK_NAME = "$G"
@@ -68,7 +69,6 @@ local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 local SEARCH_TYPE_NAME = "name"
 
 local myDisabledColor = ZO_DISABLED_TEXT
-
 
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
@@ -99,6 +99,7 @@ local thisAddonIndex = 0
 local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 
 local addonListWasOpenedByAddonSelector = false
+local skipUpdateDDL = false
 
 --Textures
 local reloadUITexture = "/esoui/art/miscellaneous/eso_icon_warning.dds"
@@ -187,6 +188,8 @@ local showSearchFilterAtPacksListStr = AddonSelector_GetLocalizedText("showSearc
 local disabledStr = AddonSelector_GetLocalizedText("disabledRed")
 local missingStr = AddonSelector_GetLocalizedText("missing")
 local otherAccStr = AddonSelector_GetLocalizedText("otherAccount")
+local changedAddonPackStr = AddonSelector_GetLocalizedText("changedAddonPack")
+local saveChangesNowStr = AddonSelector_GetLocalizedText("saveChangesNow")
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -238,7 +241,6 @@ local function updateEnableAllAddonsCtrls()
 end
 updateEnableAllAddonsCtrls()
 
-
 --Function to get all characters of the currently logged in @account: server's unique characterID and non unique name.
 --Returns a table:nilable with 2 possible variants, either the character ID is key and the name is the value,
 --or vice versa.
@@ -272,6 +274,23 @@ local function getCharacterIdByName(characterName)
     return characterIdsOfAccount[characterName]
 end
 
+local function unselectAnyPack(selectedPackLabelToo)
+--d("[AS]unselectAnyPack - selectedPackLabelToo: " .. tos(selectedPackLabelToo))
+    local AddonSelectorDDL = AddonSelector.comboBox
+    if AddonSelectorDDL == nil then return end
+    AddonSelectorDDL:ClearAllSelections()
+    AddonSelectorDDL:SetSelectedItemText("")
+
+    if AddonSelector.editBox then
+        AddonSelector.editBox:Clear()
+    end
+
+    if not selectedPackLabelToo then return end
+    local selectedPackLabel = AddonSelector.selectedPackNameLabel
+    if selectedPackLabel ~= nil then
+        selectedPackLabel:SetText("")
+    end
+end
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility - Narration
 ------------------------------------------------------------------------------------------------------------------------
@@ -1195,6 +1214,7 @@ end
 
 --Deselect the combobox entry
 local function deselectComboBoxEntry()
+--d("[AS]deselectComboBoxEntry")
     local comboBox = AddonSelector.comboBox
     if comboBox then
         comboBox:SetSelectedItem("")
@@ -1463,6 +1483,7 @@ local function ChangeSaveButtonEnabledState(newEnabledState)
 end
 
 local function updateDDL(wasDeleted)
+--d("[AS]updateDDL")
     AddonSelector.UpdateDDL(wasDeleted)
 end
 
@@ -1549,11 +1570,15 @@ local function updateAddonsEnabledStateByPackData(packData)
 end
 
 local function loadAddonPack(packName, packData, forAllCharsTheSame)
+--d("[AS]loadAddonPack")
     forAllCharsTheSame = forAllCharsTheSame or false
     -- Clear the edit box:
     AddonSelector.editBox:Clear()
 
+    --Prevent that hook to ADDON_MANAGER:SetAddOnEnabled will call updateDDL() and unselect the current selected pack
+    skipUpdateDDL = true
     local somethingDone = updateAddonsEnabledStateByPackData(packData)
+    skipUpdateDDL = false
 --d(">somethingDone: " ..tos(somethingDone))
 
     if not doNotReloadUI and AddonSelector.acwsv.autoReloadUI == true then -- and somethingDone == true then
@@ -2318,9 +2343,11 @@ local function BuildAddOnReverseLookUpTable()
 
         AddonSelector.ReverseLookup = {}
         AddonSelector.NameLookup = {}
+        AddonSelector.FileNameLookup = {}
         AddonSelector.Libraries = {}
         local reverseLookup = AddonSelector.ReverseLookup
         local nameLookup = AddonSelector.NameLookup
+        local fileNameLookup = AddonSelector.FileNameLookup
         local libraries = AddonSelector.Libraries
 
         for _,v in ipairs(ZOAddOnsList.data) do
@@ -2328,6 +2355,7 @@ local function BuildAddOnReverseLookUpTable()
             if data.sortIndex ~= nil and data.index ~= nil then
                 reverseLookup[data.sortIndex] = data.index
                 if data.addOnFileName ~= nil or data.strippedAddOnName ~= nil then
+                    fileNameLookup[data.strippedAddOnName] = data.addOnFileName
                     if data.isLibrary then
                         libraries[data.addOnFileName] = data
                         libraries[data.strippedAddOnName] = data
@@ -2650,24 +2678,25 @@ end
 -->Called by ItemSelectedClickHelper of the dropdown box entries/items
 local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem, forAllCharsTheSame) --comboBox, itemName, item, selectionChanged, oldItem
 --[[
-AddonSelector._onClickDDlData = {
-    comboBox = comboBox,
-    packName = packName,
-    packData = packData,
-    selectionChanged = selectionChanged,
-    oldItem = oldItem,
-}
-d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
+    AddonSelector._onClickDDlData = {
+        comboBox = comboBox,
+        packName = packName,
+        packData = packData,
+        selectionChanged = selectionChanged,
+        oldItem = oldItem,
+    }
 ]]
+--d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
+    if preventOnClickDDL == true then preventOnClickDDL = false return end
     loadAddonPack(packName, packData, forAllCharsTheSame)
 end
 
 local function OnAbort_Do(wasSave, wasDelete, itemData, charId, beforeSelectedPackData)
     wasSave = wasSave or false
     wasDelete = wasDelete or false
-    AddonSelector._debugItemData = itemData
-    AddonSelector._debugCharId = charId
-    AddonSelector._debugBeforeSelectedPackData = beforeSelectedPackData
+    --AddonSelector._debugItemData = itemData
+    --AddonSelector._debugCharId = charId
+    --AddonSelector._debugBeforeSelectedPackData = beforeSelectedPackData
     if wasDelete == true and itemData ~= nil and beforeSelectedPackData ~= nil and itemData ~= beforeSelectedPackData then
 --d(">OnAbort_Do - Delete")
         --Change the combobox SelectedItemText to beforeSelectedPackData.label or .name
@@ -2897,6 +2926,112 @@ function AddonSelector.CreateItemEntry(packName, label, addonTable, isCharacterP
 end
 local createItemEntry = AddonSelector.CreateItemEntry
 
+local submenuPacksSaveButtons = {}
+local function updatePackSubmenuSaveButtonEnabledState(p_comboBox, newEnabledState)
+    --d("[AS]updatePackSubmenuSaveButtonEnabledState - p_comboBox: " ..tos(p_comboBox) .. ", newEnabledState: " ..tos(newEnabledState))
+    if p_comboBox == nil then return end
+    --local dropdownBaseObject = p_comboBox.openingControl and p_comboBox.openingControl or p_comboBox --> that#s the parent submenu!
+    local dropdownBaseObject = p_comboBox --that's the current nested submenu of the parent submenu (Addon list, of addons which are in the pack)
+
+    --The save buttons
+    if ZO_IsTableEmpty(submenuPacksSaveButtons[p_comboBox]) then return end
+    for _, submenuPacksSaveButtonData in pairs(submenuPacksSaveButtons[p_comboBox]) do
+        submenuPacksSaveButtonData.enabled = newEnabledState
+
+        dropdownBaseObject.m_dropdownObject:Refresh(submenuPacksSaveButtonData)
+    end
+end
+
+    --Get the save button
+local function getPackSubmenuSaveButtons(p_comboBox, p_item, entriesFound)
+    --d("[AS]getPackSubmenuSaveButton->RunCustomScrollableMenuItemsCallback: WAS EXECUTED!")
+    submenuPacksSaveButtons[p_comboBox] = {}
+    --Loop the normal entries and get the save buttons
+--AddonSelector._entriesFound = entriesFound
+    for k, v in ipairs(entriesFound) do
+        local name = v.label or v.name
+    --d(">name of entry: " .. tostring(name).. ", isSaveButton: " .. tostring(v.isSaveButton))
+        if v.isSaveButton then
+            submenuPacksSaveButtons[p_comboBox][v] = v
+        end
+    end
+    --AddonSelector._submenuPacksSaveButtons = submenuPacksSaveButtons
+end
+
+local function onCheckboxInAddonPackListClicked(p_comboBox, rowControl, itemName, checked, packName, charName)
+--d("[AS]checkbox ".. tos(itemName) .." clicked, newState: " ..tos(checked))
+--AddonSelector._debugRowControl = rowControl
+    --LSM 2.21 compatibility
+    if p_comboBox == nil then
+        p_comboBox = rowControl.m_owner
+    end
+    updatePackSubmenuSaveButtonEnabledState(p_comboBox, true)
+end
+
+local function saveUpdatedAddonPackCallbackFuncSubmenu(p_comboBox, p_item, entriesFound, p_character, p_packName) --... will be filled with customParams
+    --local selectedContextMenuItemData = (GetCustomScrollableMenuRowData ~= nil and GetCustomScrollableMenuRowData(p_item)) or p_item.m_data.dataSource
+    --if selectedContextMenuItemData == nil then return end
+
+--AddonSelector._debugEntriesFoundSaveUpdatedAddonPack = ZO_ShallowTableCopy(entriesFound)
+
+--d("[AS]saveUpdatedAddonPackCallbackFuncSubmenu->RunCustomScrollableMenuItemsCallback: WAS EXECUTED! packNameGlobal: " ..tos(packNameGlobal) .. ", packName: " ..tos(packName))
+
+    --The currently saved pack from SavedVariables - For comparison
+    local currentSvPackDataTable = getSVTableForPackBySavedType(p_character)
+    if currentSvPackDataTable == nil then return end
+--d(">sv table found")
+    local currentSvPackData = currentSvPackDataTable[p_packName]
+    if currentSvPackData == nil then return end
+
+    local fileNameLookup = AddonSelector.FileNameLookup
+
+--AddonSelector._debugCurrentSvPackData = currentSvPackData
+--d(">current addons in pack found")
+    --Loop the checkboxes and get their current state
+    local addonsChanged = 0
+    for _, v in ipairs(entriesFound) do
+        local name = v.name
+        local isCheckedNow = v.checked
+
+        local addOnFileName = fileNameLookup[name]
+--d(">name of entry: " .. tostring(name).. ", addOnFileName: " .. tos(addOnFileName) ..", checked: " .. tostring(isCheckedNow))
+        if addOnFileName ~= nil then
+            if currentSvPackData[addOnFileName] ~= nil then
+                if not isCheckedNow then
+                    currentSvPackData[addOnFileName] = nil
+--d(">>removed addon from pack!")
+                    addonsChanged = addonsChanged + 1
+                end
+            end
+        else
+--d(">>addon is missing in AddOns list!")
+            if not isCheckedNow then
+                --find the addon's filename in the SV via the name
+                local addOnFileNameOfNotInstalledAddon
+                for key, value in pairs(currentSvPackData) do
+                    if value == name then
+                        addOnFileNameOfNotInstalledAddon = key
+                        break
+                    end
+                end
+                if addOnFileNameOfNotInstalledAddon ~= nil then
+                    currentSvPackData[addOnFileNameOfNotInstalledAddon] = nil
+--d(">>2removed addon from pack!")
+                    addonsChanged = addonsChanged + 1
+                end
+            end
+        end
+    end
+    if addonsChanged > 0 then
+        d(string.format("[" .. ADDON_NAME .."]" .. changedAddonPackStr, tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (packCharNameStr .. ": " .. p_character)), tos(addonsChanged)))
+        updateDDL()
+        --Disable the saved button's enabled state
+        ChangeSaveButtonEnabledState(false)
+        --Disable the "delete pack" button
+        ChangeDeleteButtonEnabledState(nil, false)
+    end
+end
+
 -- Called on load or when a new addon pack is saved & added to the comboBox
 -- Clear & re-add all items + submenus, including new ones. Easier/quicker than
 -- trying to see if an item already exists & editing it. Just adding
@@ -3075,6 +3210,25 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
                                 if showPacksAddonList == true then
 
+                                    if numAddonsInPack > 0 then
+                                        subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
+                                            name    = saveChangesNowStr,
+                                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                                                --d("[AS]Save changes to charName: " .. tos(packNameGlobal) .. ", packName: " ..tos(packName))
+                                                --As the clicked nested submenu entry will select this entry -> Clear the selection now
+                                                unselectAnyPack()
+
+                                                --Save the changes to the pack now, using API function
+                    --AddonSelector._debugRowPackData = packData
+                                                local currentComboBox = packData.m_owner --added with LSM 2.3 !
+                                                --Use LSM API func to get the current control's list and m_sorted items properly so addons do not have to take care of that again and again on their own
+                                                RunCustomScrollableMenuItemsCallback(currentComboBox, packData, saveUpdatedAddonPackCallbackFuncSubmenu, { LSM_ENTRY_TYPE_CHECKBOX }, false, charName, packNameOfChar)
+                                            end,
+                                            enabled = false,--will get enabled by ther checkbox's callback
+                                            isSaveButton = true,
+                                        }
+                                    end
+
                                     if numOnlyAddOnsInSubmenuPack > 0 then
                                         local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packNameOfChar, tos(numOnlyAddOnsInSubmenuPack), tos(numAddonsInSubmenuPack)) .. " [" .. singleCharNameColoredStr .. ": " .. charName .. "]"
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
@@ -3095,15 +3249,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         -->Normal addons first
                                         for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddons) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label   = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
+                                                name    = addonNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3133,15 +3287,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         -->Normal addons first
                                         for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsNotEnabled) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
+                                                name    = addonNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3171,15 +3325,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         -->Normal addons first
                                         for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsMissing) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label   = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
+                                                name    = addonNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3207,15 +3361,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         }
                                         for _, libraryNameOfGlobalPackSorted in ipairs(addonTableSortedLibraries) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label   = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
+                                                name    = libraryNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3245,15 +3399,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         -->Normal addons first
                                         for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesNotEnabled) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label   = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
+                                                name    = addonNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3282,15 +3436,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                                         -->Normal addons first
                                         for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesMissing) do
                                             subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
-                                                name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
-                                                --[[
-                                                --No callback function -> Just a non clickable scrollable list of entries
-                                                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                                    --Do nothing, just show info
-                                                    return true
+                                                label   = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
+                                                name    = addonNameOfGlobalPackSorted,
+                                                callback = function(comboBox, itemName, rowControl, checked)
+                                                    RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                                    onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, charName, packNameOfChar)
                                                 end,
-                                                ]]
-                                                enabled = false, -- non clickable
+                                                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                                enabled = true,
+                                                checked = true,
                                             }
                                         end
                                     end
@@ -3558,6 +3712,24 @@ function AddonSelector.UpdateDDL(wasDeleted)
 
             --Show list of addons in the saved pack as extra submenu
             if showPacksAddonList == true then
+                if numAddonsInGlobalPack > 0 then
+                    subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
+                        name    = saveChangesNowStr,
+                        callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                            --d("[AS]Save changes to charName: " .. tos(packNameGlobal) .. ", packName: " ..tos(packName))
+                            --As the clicked nested submenu entry will select this entry -> Clear the selection now
+                            unselectAnyPack()
+
+                            --Save the changes to the pack now, using API function
+--AddonSelector._debugRowPackData = packData
+                            local currentComboBox = packData.m_owner --added with LSM 2.3 !
+                            --Use LSM API func to get the current control's list and m_sorted items properly so addons do not have to take care of that again and again on their own
+                            RunCustomScrollableMenuItemsCallback(currentComboBox, packData, saveUpdatedAddonPackCallbackFuncSubmenu, { LSM_ENTRY_TYPE_CHECKBOX }, false, GLOBAL_PACK_NAME, packName)
+                        end,
+                        enabled = false,--will get enabled by ther checkbox's callback
+                        isSaveButton = true,
+                    }
+                end
 
                 if numOnlyAddOnsInGlobalPack > 0 then
                     local addonsInPackText = string.format(addonsInPackStr .. " - #" .. numAddonsColorTemplate.."/%s", packName, tos(#addonTableSortedAddons), tos(numAddonsInGlobalPack)) .. " [" .. packNameGlobal .. "]"
@@ -3579,15 +3751,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddons) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label = "|cF0F0F0" .. addonNameOfGlobalPackSorted .. "|r", --Colored white/light grey
+                            name    = addonNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3617,15 +3789,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsNotEnabled) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
+                            name    = addonNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3655,15 +3827,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedAddonsMissing) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
+                            name    = addonNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3689,17 +3861,18 @@ function AddonSelector.UpdateDDL(wasDeleted)
                         enabled = false, -- non clickable
                         isHeader = true,
                     }
+
                     for _, libraryNameOfGlobalPackSorted in ipairs(addonTableSortedLibraries) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label    = "|cF0F0F0" .. libraryNameOfGlobalPackSorted .. "|r", --Colored white/light grey
+                            name    = libraryNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3729,15 +3902,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesNotEnabled) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label   = addonNameOfGlobalPackSorted .. " (" .. disabledStr .. ")",
+                            name    = addonNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3766,15 +3939,15 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     -->Normal addons first
                     for _, addonNameOfGlobalPackSorted in ipairs(addonTableSortedLibrariesMissing) do
                         subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
-                            name    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
-                            --[[
-                            --No callback function -> Just a non clickable scrollable list of entries
-                            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                --Do nothing, just show info
-                                return true
+                            label    = "|cFF0000" .. addonNameOfGlobalPackSorted .. "|r",
+                            name    = addonNameOfGlobalPackSorted,
+                            callback = function(comboBox, itemName, rowControl, checked)
+                                RunCustomScrollableMenuItemsCallback(comboBox, rowControl, getPackSubmenuSaveButtons, { LSM_ENTRY_TYPE_NORMAL }, false)
+                                onCheckboxInAddonPackListClicked(comboBox, rowControl, itemName, checked, packNameGlobal, packName)
                             end,
-                            ]]
-                            enabled = false, -- non clickable
+                            entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                            checked = true,
+                            enabled = true,
                         }
                     end
                 end
@@ -3807,7 +3980,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
                     name    = packName,
                     label   = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                        --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
+    --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
                         --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
                         --Pass in the addonTable of the pack, else it won't load properly!
                         OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
@@ -3933,6 +4106,7 @@ function AddonSelector.UpdateDDL(wasDeleted)
 ------------------------------------------------------------------------------------------------------------------------
 
     AddonSelector.comboBox:SetSortsItems(false)
+--d("AddonSelector.comboBox:ClearItems()")
     AddonSelector.comboBox:ClearItems()
 
     if wasItemAdded == true then
@@ -4938,7 +5112,10 @@ function AddonSelector.Initialize()
             if not AddonSelector.noAddonNumUpdate then
                 AddonSelectorUpdateCount(50)
                 --Rebuild the Dropdown's entry data so the enabled addon state is reflected correctly
-                updateDDLThrottled(250)
+                -->After loading a pack this will lead to deselected packname from dropdoen box! So we need to skip this here if a pack was "loaded"
+                if not skipUpdateDDL then
+                    updateDDLThrottled(250)
+                end
             end
             --if AddonSelector.noAddonCheckBoxUpdate then return true end
         end)
@@ -5106,7 +5283,6 @@ function AddonSelector.Initialize()
         }
         ADDON_MANAGER_OBJECT:RefreshKeybinds()
     end
-
 
     --Get the currently loaded packname of the char, if it was changed before reloadUI
     if AddonSelector.acwsv.packChangedBeforeReloadUI == true then
@@ -5308,6 +5484,34 @@ local function OnAddOnLoaded(event, addonName)
     end)
     ]]
 
+--[[
+    ZO_PreHook(AddonSelector.comboBox, "ItemSelectedClickHelper", function()
+d("[AS]comboBox:ItemSelectedClickHelper")
+    end)
+    function ZO_ComboBoxDropdown_Keyboard:Refresh(item)
+d("[AS]ZO_ComboBoxDropdown_Keyboard:Refresh - item: " ..tos(item))
+    local entryData = nil
+    if item then
+--AddonSelector._debugItems = AddonSelector._debugItems or {}
+        local timeStamp = GetGameTimeMilliseconds()
+--AddonSelector._debugItems[timeStamp] = item
+--AddonSelector._debugDataSource = {}
+        local dataList = ZO_ScrollList_GetDataList(self.scrollControl)
+--AddonSelector._scrollDataList = ZO_ShallowTableCopy(dataList)
+        for i, data in ipairs(dataList) do
+--AddonSelector._debugDataSource[i] = data:GetDataSource()
+            if data:GetDataSource() == item then
+                entryData = data
+d(">["..tos(timeStamp).."]item was found - index: " ..tos(i))
+                break
+            end
+        end
+    end
+
+AddonSelector._debugScrollControl = self.scrollControl
+    ZO_ScrollList_RefreshVisible(self.scrollControl, entryData)
+end
+]]
 
 	EM:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 end
@@ -5316,5 +5520,4 @@ end
 --  Register Events --
 ---------------------------------------------------------------------
 EM:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, OnAddOnLoaded)
-
 
