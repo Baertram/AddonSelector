@@ -5477,11 +5477,11 @@ local function OnAddOnLoaded(event, addonName)
     end
     SLASH_COMMANDS["/addonload"]        = function(args) loadAddOnPackSlashCommandHandler(args, nil, true) end
     SLASH_COMMANDS["/loadpack"]         = function(args) loadAddOnPackSlashCommandHandler(args, nil, true) end
-    if SLASH_COMMANDS["/aslnrl"] == nil then
-        SLASH_COMMANDS["/aslnrl"]          = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
+    if SLASH_COMMANDS["/aslrl"] == nil then
+        SLASH_COMMANDS["/aslrl"]          = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
     end
-    SLASH_COMMANDS["/addonloadnoreload"]        = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
-    SLASH_COMMANDS["/loadpacknoreload"]         = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
+    SLASH_COMMANDS["/addonloadrl"]        = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
+    SLASH_COMMANDS["/loadpackrl"]         = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
 
 
     SLASH_COMMANDS["/asap"]             = AddonSelector_ShowActivePackInChat
