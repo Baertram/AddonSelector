@@ -192,6 +192,8 @@ local missingStr = AddonSelector_GetLocalizedText("missing")
 local otherAccStr = AddonSelector_GetLocalizedText("otherAccount")
 local changedAddonPackStr = AddonSelector_GetLocalizedText("changedAddonPack")
 local saveChangesNowStr = AddonSelector_GetLocalizedText("saveChangesNow")
+local packNameLoadNotFoundStr = AddonSelector_GetLocalizedText("packNameLoadNotFound")
+local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -2290,12 +2292,10 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
     if not args or args == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     if noReloadUI == nil then noReloadUI = true end
-    if not doNotShowAddOnsScene then
-        --Show the game menu and open the AddOns
-        if not showAddOnsList() then
-            return
-        end
-    end
+
+    local packNameLower
+    local isCharacterPack = false
+    local svForPacks, charId, characterName
 
     --Parse the arguments string
     local options = {}
@@ -2305,18 +2305,33 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
             options[#options+1] = strlow(param)
         end
     end
-    if #options >= 2 then
-        local isCharacterPack = tos(options[1]) == "2" and true or false
-        local packNameLower = table.concat(options, " ", 2)
+
+    local numOptions = #options
+    if numOptions >= 1 then
+        if numOptions == 1 then
+            --Save charcater packs is enabled at the settings? Assume we load a character pack then
+            isCharacterPack = AS.acwsv.saveGroupedByCharacterName
+            packNameLower = options[1]
+        else
+            isCharacterPack = tos(options[1]) == "2" and true or false
+            packNameLower = table.concat(options, " ", 2)
+        end
+
         if packNameLower ~= nil then
             --Search the packname now as character or global pack
-            local svForPacks, charId, characterName = getSVTableForPackBySavedType(not isCharacterPack and GLOBAL_PACK_NAME or nil, isCharacterPack and currentCharId or nil)
+            svForPacks, charId, characterName = getSVTableForPackBySavedType(not isCharacterPack and GLOBAL_PACK_NAME or nil, isCharacterPack and currentCharId or nil)
             if svForPacks ~= nil then
-                d("[AS]Packname: " .. tos(packNameLower) .. ", globalOrCharacterName: " .. tos(not isCharacterPack and GLOBAL_PACK_NAME or characterName))
+                if not doNotShowAddOnsScene then
+                    --Show the game menu and open the AddOns
+                    if not showAddOnsList() then
+                        return
+                    end
+                end
+
                 --Now check if the packname is in the list
                 for packName, addonsInPack in pairs(svForPacks) do
                     if strlow(packName) == packNameLower then
-                        d(">pack found -> loading it now!")
+                        --d(">pack found -> loading it now!")
                         local packData = ZO_ShallowTableCopy(addonsInPack)
                         packData.charName = packData.charName or (isCharacterPack and charId or GLOBAL_PACK_NAME)
 
@@ -2333,12 +2348,14 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
                         if not doNotReloadUI and AS.acwsv.autoReloadUI == false then
                             ReloadUI("ingame")
                         end
+                        d(string.format(packNameLoadFoundStr, tos(packNameLower), tos(not isCharacterPack and packNameGlobal or characterName)))
                         return true
                     end
                 end
             end
         end
     end
+    d(string.format(packNameLoadNotFoundStr, tos(packNameLower), tos(not isCharacterPack and packNameGlobal or characterName)))
     return false
 end
 
@@ -5066,12 +5083,13 @@ function AS.LoadSaveVariables()
     local svName            = "AddonSelectorSavedVars"
     local SAVED_VAR_VERSION = 1
     local defaultSavedVars  = {
+        svMigrationToServerDone = false,
+        -----------------------------------------------------
         addonPacks = {},
         addonPacksOfChar = {},
         autoReloadUI = false,
         selectAllSave = {},
         selectedPackNameForCharacters = {},
-        svMigrationToServerDone = false,
         showGlobalPacks = true,
         showSubMenuAtGlobalPacks = true,
         saveGroupedByCharacterName = false,

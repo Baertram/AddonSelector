@@ -100,6 +100,8 @@ AddonSelectorGlobal.langArray = {
         ["ShowPacksOfOtherAccountsChars"] = "Zeige Packs von anderen @Accounts",
         ["changedAddonPack"] = "Addon Pack %q geändert, %s - Anzahl: %s",
         ["saveChangesNow"] = "--- Sichere Änderungen ---",
+        ["packNameLoadFound"] = "Packname wurde geladen: %q, GlobalOderCharakterName: %s",
+        ["packNameLoadNotFound"] = "Packname wurde nicht gefunden: %q, GlobalOderCharakterName: %s",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -188,6 +190,8 @@ AddonSelectorGlobal.langArray = {
         ["ShowPacksOfOtherAccountsChars"] = "Show packs of other @accounts",
         ["changedAddonPack"] = "Changed addon pack %q, %s - Count: %s",
         ["saveChangesNow"] = "--- Save changes now ---",
+        ["packNameLoadFound"] = "Packname was loaded: %q, globalOrCharacterName: %s",
+        ["packNameLoadNotFound"] = "Packname was not found: %q, globalOrCharacterName: %s",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
