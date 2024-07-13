@@ -2336,7 +2336,6 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
                         packData.charName = packData.charName or (isCharacterPack and charId or GLOBAL_PACK_NAME)
 
                         --Clear the dropdown selected entry
-                        --clearAndUpdateDDL()
                         doNotReloadUI = noReloadUI
                         --skipOnAddonPackSelected = true
                         --Select this pack now at the dropdown
@@ -2348,6 +2347,9 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
                         if not doNotReloadUI and AS.acwsv.autoReloadUI == false then
                             ReloadUI("ingame")
                         end
+
+                        clearAndUpdateDDL()
+
                         d(string.format(packNameLoadFoundStr, tos(packNameLower), tos(not isCharacterPack and packNameGlobal or characterName)))
                         return true
                     end
@@ -5491,15 +5493,15 @@ local function OnAddOnLoaded(event, addonName)
     SLASH_COMMANDS["/addonsearch"]      = searchAddOnSlashCommandHandlder
     SLASH_COMMANDS["/addonselector"]    = searchAddOnSlashCommandHandlder
     if SLASH_COMMANDS["/asl"] == nil then
-        SLASH_COMMANDS["/asl"]          = function(args) loadAddOnPackSlashCommandHandler(args, nil, true) end
+        SLASH_COMMANDS["/asl"]          = function(args) loadAddOnPackSlashCommandHandler(args, true) end
     end
-    SLASH_COMMANDS["/addonload"]        = function(args) loadAddOnPackSlashCommandHandler(args, nil, true) end
-    SLASH_COMMANDS["/loadpack"]         = function(args) loadAddOnPackSlashCommandHandler(args, nil, true) end
+    SLASH_COMMANDS["/addonload"]        = function(args) loadAddOnPackSlashCommandHandler(args, true) end
+    SLASH_COMMANDS["/loadpack"]         = function(args) loadAddOnPackSlashCommandHandler(args, true) end
     if SLASH_COMMANDS["/aslrl"] == nil then
-        SLASH_COMMANDS["/aslrl"]          = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
+        SLASH_COMMANDS["/aslrl"]          = function(args) loadAddOnPackSlashCommandHandler(args, false) end
     end
-    SLASH_COMMANDS["/addonloadrl"]        = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
-    SLASH_COMMANDS["/loadpackrl"]         = function(args) loadAddOnPackSlashCommandHandler(args, nil, false) end
+    SLASH_COMMANDS["/addonloadrl"]        = function(args) loadAddOnPackSlashCommandHandler(args, false) end
+    SLASH_COMMANDS["/loadpackrl"]         = function(args) loadAddOnPackSlashCommandHandler(args, false) end
 
 
     SLASH_COMMANDS["/asap"]             = AddonSelector_ShowActivePackInChat
