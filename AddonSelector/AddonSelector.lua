@@ -197,6 +197,8 @@ local changedAddonPackStr = AddonSelector_GetLocalizedText("changedAddonPack")
 local saveChangesNowStr = AddonSelector_GetLocalizedText("saveChangesNow")
 local packNameLoadNotFoundStr = AddonSelector_GetLocalizedText("packNameLoadNotFound")
 local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
+local addPackToKeybindStr = AddonSelector_GetLocalizedText("addPackToKeybind")
+local removePackFromKeybindStr = AddonSelector_GetLocalizedText("removePackFromKeybind")
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -4457,19 +4459,19 @@ function getKeybindingLSMEntriesForPacks(packName, charName)
         local isPackAlreadySavedAsKeybind = isPackKeybindUsed(keybindNr, packName, charName)
         if isPackAlreadySavedAsKeybind == false then
             keybindEntries[#keybindEntries + 1] = {
-                name = "Set as pack keybind " .. tos(keybindNr),
-                label = "Set as pack keybind " .. tos(keybindNr),
+                name = string.format(addPackToKeybindStr, tos(keybindNr)),
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     savePackToKeybind(keybindNr, packName, charName)
+                    clearAndUpdateDDL()
                 end,
                 entryType = LSM_ENTRY_TYPE_NORMAL,
             }
         else
             keybindEntries[#keybindEntries + 1] = {
-                name = "Remove pack from keybind " .. tos(keybindNr),
-                label = "Remove pack from keybind " .. tos(keybindNr),
+                name = string.format(removePackFromKeybindStr, tos(keybindNr)),
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     removePackFromKeybind(keybindNr, packName, charName)
+                    clearAndUpdateDDL()
                 end,
                 entryType = LSM_ENTRY_TYPE_NORMAL,
             }

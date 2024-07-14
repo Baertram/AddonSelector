@@ -107,6 +107,8 @@ AddonSelectorGlobal.langArray = {
         ["LoadPackByKeybind3"] = "Lade Pack 3",
         ["LoadPackByKeybind4"] = "Lade Pack 4",
         ["LoadPackByKeybind5"] = "Lade Pack 5",
+        ["addPackToKeybind"] =   "Pack zu Tastenkombination %s hinzufügen",
+        ["removePackFromKeybind"] = "Pack von Tastenkombination %s entfernen",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -202,6 +204,8 @@ AddonSelectorGlobal.langArray = {
         ["LoadPackByKeybind3"] = "Load pack 3",
         ["LoadPackByKeybind4"] = "Load pack 4",
         ["LoadPackByKeybind5"] = "Load pack 5",
+        ["addPackToKeybind"] =   "Add pack to keybind %s",
+        ["removePackFromKeybind"] = "Remove pack from keybind %s",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
