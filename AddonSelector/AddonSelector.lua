@@ -199,6 +199,7 @@ local packNameLoadNotFoundStr = AddonSelector_GetLocalizedText("packNameLoadNotF
 local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
 local addPackToKeybindStr = AddonSelector_GetLocalizedText("addPackToKeybind")
 local removePackFromKeybindStr = AddonSelector_GetLocalizedText("removePackFromKeybind")
+local loadOnLogoutOrQuitStr = AddonSelector_GetLocalizedText("loadOnLogoutOrQuit")
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -1567,38 +1568,59 @@ local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
 end
 
 
-local function updateAddonsEnabledStateByPackData(packData)
+local function updateAddonsEnabledStateByPackData(packData, noUIShown)
     if not packData then return false end
+    noUIShown = noUIShown or false
     local addonTable = packData.addonTable or packData
     if not addonTable or NonContiguousCount(addonTable) == 0 then return false end
-    local scrollListData = ZO_ScrollList_GetDataList(ZOAddOnsList)
 
     local somethingDone = false
     local changed = true
-    local numScrollListData = #scrollListData
+
     -- loop until all dependencies are solved.
     while changed do
         changed = false
-        for k = 1, numScrollListData do
-            local addonData = scrollListData[k]
-            local addondataData = addonData.data
-            local fileName = addondataData.addOnFileName
-            local addonIndex = addondataData.index
 
-            local addonShouldBeEnabled = addonTable[fileName] ~= nil
-            if addonShouldBeEnabled ~= addondataData.addOnEnabled and addonIndex and fileName then
-                somethingDone = true
-                ADDON_MANAGER:SetAddOnEnabled(addonIndex, addonShouldBeEnabled)
-                local enabled = select(5, ADDON_MANAGER:GetAddOnInfo(addonIndex))
-                addonData.data.addOnEnabled = enabled
-                if enabled then changed = true end
+        if noUIShown == true then
+            --If called from Logout() or Quit() function e.g.
+            for addonIndex = 1, ADDON_MANAGER:GetNumAddOns() do
+                --fileName, title, author, description, enabled, state, isOutOfDate, isLibrary
+                local fileName, _, _, _, enabled, _, _, _ = ADDON_MANAGER:GetAddOnInfo(addonIndex)
+                if fileName then
+                    local addonShouldBeEnabled = addonTable[fileName] ~= nil
+                    if addonShouldBeEnabled ~= enabled then
+                        somethingDone = true
+                        ADDON_MANAGER:SetAddOnEnabled(addonIndex, addonShouldBeEnabled)
+                        changed = true
+                    end
+                end
+            end
+        else
+            local scrollListData = ZO_ScrollList_GetDataList(ZOAddOnsList)
+            local numScrollListData = #scrollListData
+            for k = 1, numScrollListData do
+                local addonData = scrollListData[k]
+                local addondataData = addonData and addonData.data or nil
+                local fileName = addondataData and addondataData.addOnFileName or nil
+                local addonIndex = addondataData and addondataData.index or nil
+
+                if addonIndex and fileName then
+                    local addonShouldBeEnabled = addonTable[fileName] ~= nil
+                    if addonShouldBeEnabled ~= addondataData.addOnEnabled then
+                        somethingDone = true
+                        ADDON_MANAGER:SetAddOnEnabled(addonIndex, addonShouldBeEnabled)
+                        local enabled = select(5, ADDON_MANAGER:GetAddOnInfo(addonIndex))
+                        addonData.data.addOnEnabled = enabled
+                        if enabled then changed = true end
+                    end
+                end
             end
         end
     end
     return somethingDone
 end
 
-local function loadAddonPack(packName, packData, forAllCharsTheSame)
+local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown)
 --d("[AS]loadAddonPack")
     forAllCharsTheSame = forAllCharsTheSame or false
     -- Clear the edit box:
@@ -1606,7 +1628,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame)
 
     --Prevent that hook to ADDON_MANAGER:SetAddOnEnabled will call updateDDL() and unselect the current selected pack
     skipUpdateDDL = true
-    local somethingDone = updateAddonsEnabledStateByPackData(packData)
+    local somethingDone = updateAddonsEnabledStateByPackData(packData, noUIShown)
     skipUpdateDDL = false
 --d(">somethingDone: " ..tos(somethingDone))
 
@@ -2350,7 +2372,7 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
                         doNotReloadUI = noReloadUI
                         --skipOnAddonPackSelected = true
                         --Select this pack now at the dropdown
-                        loadAddonPack(packName, packData, false)
+                        loadAddonPack(packName, packData, false, doNotShowAddOnsScene)
                         --skipOnAddonPackSelected = false
                         doNotReloadUI = noReloadUI
 
@@ -2400,6 +2422,11 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     --Search for the addonName or category
     AddonSelector_SearchAddon(SEARCH_TYPE_NAME, addonName, false, isAddonCategorySearched)
     addonListWasOpenedByAddonSelector = false
+end
+
+local function loadAddonPackNow(packName, charName, doNotShowAddonsList, noReloadUI)
+    if packName == nil or packName == "" or charName == nil or charName == "" then return end
+    openGameMenuAndAddOnsAndThenLoadPack(packName, doNotShowAddonsList, noReloadUI, charName)
 end
 
 --Add the active addon count to the header text
@@ -2799,7 +2826,7 @@ local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldIte
 ]]
 --d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
     if preventOnClickDDL == true then preventOnClickDDL = false return end
-    loadAddonPack(packName, packData, forAllCharsTheSame)
+    loadAddonPack(packName, packData, forAllCharsTheSame, false)
 end
 
 local function OnAbort_Do(wasSave, wasDelete, itemData, charId, beforeSelectedPackData)
@@ -3233,7 +3260,7 @@ function AS.UpdateDDL(wasDeleted)
                                 numAddonsInSubmenuPack = NonContiguousCount(addonsInCharPack)
                                 local subSubMenuEntriesForCharPack
 
-------------------------------------------------------------------------------------------------------------------------
+                                ------------------------------------------------------------------------------------------------------------------------
                                 ---Show the addons of the pack as submenu
                                 subSubMenuEntriesForCharPack = {}
 
@@ -3258,9 +3285,9 @@ function AS.UpdateDDL(wasDeleted)
                                     local addonNameOfCharPackSorted     = addonDataOfCharPackSorted.addonNameStripped
                                     local addonFileNameOfCharPackSorted = addonDataOfCharPackSorted.addonFileName
                                     if addonsLookup ~= nil or librariesLookup ~= nil then
---if string.find(addonNameOfCharPackSorted, "LibChar", 1, true) == 1 then
---d(">addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted) .."; isLibrary: " ..tos(librariesLookup[addonFileNameOfCharPackSorted] or librariesLookup[addonNameOfCharPackSorted]) or nil)
---end
+                                        --if string.find(addonNameOfCharPackSorted, "LibChar", 1, true) == 1 then
+                                        --d(">addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted) .."; isLibrary: " ..tos(librariesLookup[addonFileNameOfCharPackSorted] or librariesLookup[addonNameOfCharPackSorted]) or nil)
+                                        --end
                                         if addonsLookup then
                                             local addonsData = addonsLookup[addonFileNameOfCharPackSorted] or addonsLookup[addonNameOfCharPackSorted]
                                             if addonsData ~= nil then
@@ -3287,7 +3314,7 @@ function AS.UpdateDDL(wasDeleted)
                                         end
 
                                         if not wasAddonAdded then
---d(">not lib nor addon - addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted))
+                                            --d(">not lib nor addon - addoName: " ..tos(addonNameOfCharPackSorted) .. "; fileName: " ..tos(addonFileNameOfCharPackSorted))
                                             --Addon in pack is not installed anymore? Or at least teh saved fileName and strippedAddonName do not match anymore
                                             --Check if it begins with Lib and assume it's a library then
                                             if string.find(string.lower(addonNameOfCharPackSorted), "lib", 1, true) ~= nil then
@@ -3330,7 +3357,7 @@ function AS.UpdateDDL(wasDeleted)
                                                 --unselectAnyPack()
 
                                                 --Save the changes to the pack now, using API function
-                    --AddonSelector._debugRowPackData = packData
+                                                --AddonSelector._debugRowPackData = packData
                                                 local currentComboBox = packData.m_owner --added with LSM 2.3 !
                                                 --Use LSM API func to get the current control's list and m_sorted items properly so addons do not have to take care of that again and again on their own
                                                 RunCustomScrollableMenuItemsCallback(currentComboBox, packData, saveUpdatedAddonPackCallbackFuncSubmenu, { LSM_ENTRY_TYPE_CHECKBOX }, false, charName, packNameOfChar)
@@ -3562,21 +3589,21 @@ function AS.UpdateDDL(wasDeleted)
                                         end
                                     end
                                 end
-------------------------------------------------------------------------------------------------------------------------
+                                ------------------------------------------------------------------------------------------------------------------------
 
                                 local tooltipCharPack = (addPackTooltip == true and numAddonsInSubmenuPack ~= nil
-                                    and (enabledAddonsInPackStr .. "\n'" ..
+                                        and (enabledAddonsInPackStr .. "\n'" ..
                                         packNameOfChar .. "': " ..tos(numAddonsInSubmenuPack) .. "\n" ..
                                         addonsStr .. ": " .. tos(numOnlyAddOnsInSubmenuPack) ..
                                         ((numDisabledAddonsInSubmenuPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledAddonsInSubmenuPack)) or "") ..
                                         ((numMissingAddonsInSubmenuPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingAddonsInSubmenuPack)) or "")
-                                    )
+                                )
                                 ) or nil
                                 if numLibrariesInSubmenuPack > 0 and tooltipCharPack ~= nil then
                                     tooltipCharPack = tooltipCharPack ..
-                                    "\n" .. librariesStr .. ": " .. tos(numLibrariesInSubmenuPack) ..
-                                    ((numDisabledLibrariesInSubmenuPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledLibrariesInSubmenuPack)) or "") ..
-                                    ((numMissingLibrariesInSubmenuPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingLibrariesInSubmenuPack)) or "")
+                                            "\n" .. librariesStr .. ": " .. tos(numLibrariesInSubmenuPack) ..
+                                            ((numDisabledLibrariesInSubmenuPack > 0 and "\n" .. disabledStr.. "': " ..tos(numDisabledLibrariesInSubmenuPack)) or "") ..
+                                            ((numMissingLibrariesInSubmenuPack > 0 and "\n" .. missingStr .. "': " ..tos(numMissingLibrariesInSubmenuPack)) or "")
                                 end
 
                                 tins(nestedSubmenuEntriesOfCharPack, {
@@ -3628,7 +3655,7 @@ function AS.UpdateDDL(wasDeleted)
                                     callback = function() end,
                                     disabled = true,
                                 }
-                                tins(nestedSubmenuEntriesOfCharPack, {
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] = {
                                     name = packNameOfChar,
                                     label = deletePackTitleStr .. " " .. packNameOfChar,
                                     charName = charName,
@@ -3640,17 +3667,17 @@ function AS.UpdateDDL(wasDeleted)
                                     isGlobalPackHeader = false,
                                     isGlobalPack = false,
                                     addonTable = addonsInCharPack,
-                                })
+                                }
 
-                                tins(nestedSubmenuEntriesOfCharPack, {
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] = {
                                     name    = "-",
                                     isDivider = true,
                                     callback = function() end,
                                     disabled = true,
-                                })
+                                }
                                 local packNameOfCharCopy = packNameOfChar
                                 local charNameCopy = charName
-                                tins(nestedSubmenuEntriesOfCharPack, {
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] = {
                                     name    =  packNameOfChar,
                                     label    = string.format(overwriteSavePackStr, packNameOfChar),
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
@@ -3658,21 +3685,45 @@ function AS.UpdateDDL(wasDeleted)
                                     end,
                                     charName = charName,
                                     addonTable = addonsInCharPack,
-                                })
-                                tins(nestedSubmenuEntriesOfCharPack, {
+                                }
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] = {
                                     name    = "-",
                                     isDivider = true,
                                     callback = function() end,
                                     disabled = true,
-                                })
+                                }
                                 local keybindingEntries = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
-                                tins(nestedSubmenuEntriesOfCharPack, {
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
                                     name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
                                     callback = nil,
                                     entries = keybindingEntries,
                                     charName = charName,
-                                })
+                                }
 
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
+                                    name    = "-",
+                                    isDivider = true,
+                                    callback = function() end,
+                                    disabled = true,
+                                }
+                                nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
+                                    name    = loadOnLogoutOrQuitStr,
+                                    isCheckbox = true,
+                                    callback = function(comboBox, itemName, rowControl, checked)
+                                        AS.acwsv.loadAddonPackOnLogout = nil
+                                        if checked == true then
+                                            AS.acwsv.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
+                                        end
+                                        clearAndUpdateDDL()
+                                    end,
+                                    entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                                    checked = function()
+                                        local loadAddonPackOnLogout = AS.acwsv.loadAddonPackOnLogout
+                                        if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
+                                        if loadAddonPackOnLogout.packName == packNameOfCharCopy and loadAddonPackOnLogout.charName == charNameCopy then return true end
+                                        return false
+                                    end,
+                                }
 
                                 --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
                                 subMenuEntriesChar[#subMenuEntriesChar + 1] = {
@@ -3680,8 +3731,8 @@ function AS.UpdateDDL(wasDeleted)
                                     label = packNameOfChar,
                                     charName = charName,
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
-                                        OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
-                                        if settings.autoReloadUI == true then ReloadUI("ingame") end
+                                    OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
+                                    if settings.autoReloadUI == true then ReloadUI("ingame") end
                                     end,
                                     isCharacterPackHeader = false,
                                     isCharacterPack = true,
@@ -3693,7 +3744,7 @@ function AS.UpdateDDL(wasDeleted)
                                 }
 
                                 addedSubMenuEntry = true
-                            end
+                            end --if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then
                         end --for ... do
                         if not addedSubMenuEntry then subMenuEntriesChar = nil end
                     end ---if showGroupedByCharacterName
@@ -4194,6 +4245,30 @@ function AS.UpdateDDL(wasDeleted)
                 charName = GLOBAL_PACK_NAME,
             }
 
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
+                name    = "-",
+                isDivider = true,
+                callback = function() end,
+                disabled = true,
+            }
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
+                name    = loadOnLogoutOrQuitStr,
+                isCheckbox = true,
+                callback = function(comboBox, itemName, rowControl, checked)
+                    AS.acwsv.loadAddonPackOnLogout = nil
+                    if checked == true then
+                        AS.acwsv.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
+                    end
+                    clearAndUpdateDDL()
+                end,
+                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                checked = function()
+                    local loadAddonPackOnLogout = AS.acwsv.loadAddonPackOnLogout
+                    if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
+                    if loadAddonPackOnLogout.packName == packNameCopy and loadAddonPackOnLogout.charName == GLOBAL_PACK_NAME then return true end
+                    return false
+                end,
+            }
 
             addedSubMenuEntryGlobal = true
 
@@ -5229,6 +5304,7 @@ function AS.LoadSaveVariables()
             [4] = {},
             [5] = {},
         },
+        loadAddonPackOnLogout = nil, --table with packName and charName
     }
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
@@ -5288,6 +5364,17 @@ end
 
 
 --====================================--
+--====  Logout / Quit ====--
+--====================================--
+local function myLogoutCallback()
+    local settings = AS.acwsv
+    if settings == nil then return end
+    local addonPackToLoad = settings.loadAddonPackOnLogout
+    if addonPackToLoad == nil then return end
+    loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
+end
+
+--====================================--
 --====  Keybindings ====--
 --====================================--
 function AS.LoadKeybinds()
@@ -5310,6 +5397,7 @@ end
 --====================================--
 --====  Initialize ====--
 --====================================--
+local wasLogoutPrehooked = false
 function AS.Initialize()
     --Libraries
     AS.LDIALOG = LibDialog
@@ -5544,6 +5632,14 @@ function AS.Initialize()
         end
     end
     AS.acwsv.packChangedBeforeReloadUI = false
+
+
+    --Prehook the logout and quit functions to check if any addon pack should be loaded now
+    if not wasLogoutPrehooked then
+        ZO_PreHook("Logout", myLogoutCallback)
+        ZO_PreHook("Quit", myLogoutCallback)
+        wasLogoutPrehooked = true
+    end
 end
 
 --Reload the user interface
@@ -5585,9 +5681,8 @@ function AddonSelector_LoadPackByKeybind(keybindNr)
     if keybindNr == nil or keybindNr < 1 or keybindNr > MAX_ADDON_LOAD_PACK_KEYBINDS then return end
     local packKeybinds = AS.acwsv.packKeybinds
     local packDataToLoad = packKeybinds[keybindNr]
-    if packDataToLoad == nil or packDataToLoad.packName == nil or packDataToLoad.packName == "" or packDataToLoad.charName == nil or packDataToLoad.charName == "" then return end
-
-    openGameMenuAndAddOnsAndThenLoadPack(packDataToLoad.packName, nil, false, packDataToLoad.charName)
+    if packDataToLoad == nil then return end
+    loadAddonPackNow(packDataToLoad.packName, packDataToLoad.charName, nil, nil)
 end
 
 --Show the current user's active pack in the chat
