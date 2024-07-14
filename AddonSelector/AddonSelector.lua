@@ -4178,19 +4178,19 @@ function AS.UpdateDDL(wasDeleted)
                 addonTable = addonTable,
             }
 
-            tins(subMenuEntriesGlobal, {
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
                 name    = "-",
                 isDivider = true,
                 callback = function() end,
                 disabled = true,
-            })
+            }
             local keybindingEntries = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
-            tins(subMenuEntriesGlobal, {
+            subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
                 name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
                 callback = nil,
                 entries = keybindingEntries,
                 charName = GLOBAL_PACK_NAME,
-            })
+            }
 
 
             addedSubMenuEntryGlobal = true
@@ -4462,6 +4462,7 @@ function getKeybindingLSMEntriesForPacks(packName, charName)
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     savePackToKeybind(keybindNr, packName, charName)
                 end,
+                entryType = LSM_ENTRY_TYPE_NORMAL,
             }
         else
             keybindEntries[#keybindEntries + 1] = {
@@ -4470,10 +4471,11 @@ function getKeybindingLSMEntriesForPacks(packName, charName)
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     removePackFromKeybind(keybindNr, packName, charName)
                 end,
+                entryType = LSM_ENTRY_TYPE_NORMAL,
             }
         end
     end
-
+    return keybindEntries
 end
 
 -- When the save button is clicked, creates a table containing all
