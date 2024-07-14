@@ -57,7 +57,7 @@ local tins = gTab.insert
 --local trem = gTab.remove
 local tsor = gTab.sort
 
-local OnClick_Save, OnClick_DeleteWholeCharacter, AddonSelectorUpdateCount
+local OnClick_Save, OnClick_DeleteWholeCharacter, AddonSelectorUpdateCount, getKeybindingLSMEntriesForPacks
 
 local preventOnClickDDL = false
 
@@ -115,6 +115,9 @@ local enableAllAddonsParent         = ZO_AddOnsList2Row1         --will be re-re
 local enableAllAddonTextCtrl        = ZO_AddOnsList2Row1Text     --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 
+
+--Keybinds
+local MAX_ADDON_LOAD_PACK_KEYBINDS = 5
 
 ------------------------------------------------------------------------------------------------------------------------
 --Language and strings - local references to lang/strings.lua
@@ -2288,7 +2291,7 @@ local function showAddOnsList()
     return
 end
 
-local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, noReloadUI)
+local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, noReloadUI, charName)
     if not args or args == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     if noReloadUI == nil then noReloadUI = true end
@@ -2310,16 +2313,22 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
     if numOptions >= 1 then
         if numOptions == 1 then
             --Save charcater packs is enabled at the settings? Assume we load a character pack then
-            isCharacterPack = AS.acwsv.saveGroupedByCharacterName
+            isCharacterPack = (charName ~= nil and charName ~= GLOBAL_PACK_NAME and true) or AS.acwsv.saveGroupedByCharacterName
             packNameLower = options[1]
         else
-            isCharacterPack = tos(options[1]) == "2" and true or false
+            isCharacterPack = (((charName ~= nil and charName ~= GLOBAL_PACK_NAME) or tos(options[1]) == "2") and true) or false
             packNameLower = table.concat(options, " ", 2)
         end
 
         if packNameLower ~= nil then
+            --Character is the currentlyLoggedIn or any other?
+            local characterIdForSV, charNameForSV = currentCharId, GLOBAL_PACK_NAME
+            if isCharacterPack then
+                characterIdForSV, charNameForSV = getCharacterIdAndNameForSV(charName)
+            end
+
             --Search the packname now as character or global pack
-            svForPacks, charId, characterName = getSVTableForPackBySavedType(not isCharacterPack and GLOBAL_PACK_NAME or nil, isCharacterPack and currentCharId or nil)
+            svForPacks, charId, characterName = getSVTableForPackBySavedType(not isCharacterPack and GLOBAL_PACK_NAME or nil, isCharacterPack and characterIdForSV or nil)
             if svForPacks ~= nil then
                 if not doNotShowAddOnsScene then
                     --Show the game menu and open the AddOns
@@ -3648,6 +3657,19 @@ function AS.UpdateDDL(wasDeleted)
                                     charName = charName,
                                     addonTable = addonsInCharPack,
                                 })
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name    = "-",
+                                    isDivider = true,
+                                    callback = function() end,
+                                    disabled = true,
+                                })
+                                local keybindingEntries = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
+                                tins(nestedSubmenuEntriesOfCharPack, {
+                                    name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
+                                    callback = nil,
+                                    entries = keybindingEntries,
+                                    charName = charName,
+                                })
 
 
                                 --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
@@ -4156,6 +4178,21 @@ function AS.UpdateDDL(wasDeleted)
                 addonTable = addonTable,
             }
 
+            tins(subMenuEntriesGlobal, {
+                name    = "-",
+                isDivider = true,
+                callback = function() end,
+                disabled = true,
+            })
+            local keybindingEntries = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+            tins(subMenuEntriesGlobal, {
+                name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
+                callback = nil,
+                entries = keybindingEntries,
+                charName = GLOBAL_PACK_NAME,
+            })
+
+
             addedSubMenuEntryGlobal = true
 
             --end --if showSubMenuAtGlobalPacks == true then
@@ -4364,6 +4401,79 @@ local function OnClick_SaveDo(wasPackNameProvided, packName, characterName)
         --Disable the "save pack" button
         ChangeSaveButtonEnabledState(true)
     end
+end
+
+local function isPackKeybindUsed(keybindNr, packName, charName)
+    if keybindNr == nil or keybindNr < 1 or keybindNr > MAX_ADDON_LOAD_PACK_KEYBINDS then return false end
+    if packName == nil or packName == "" or charName == nil or charName == "" then return false end
+
+    local packKeybinds = AS.acwsv.packKeybinds
+    local packDataToLoad = packKeybinds[keybindNr]
+    if packDataToLoad ~= nil and packDataToLoad.packName ~= nil then
+        if packName == nil or (packName ~= nil and packName == packDataToLoad.packName) then
+            if charName == nil or (charName ~= nil and charName == packDataToLoad.charName) then
+                return true
+            else
+                return false
+            end
+        else
+            return false
+        end
+        return true
+    end
+    return false
+end
+local function removePackFromKeybind(keybindNr, packName, charName)
+    if keybindNr == nil or keybindNr < 1 or keybindNr > MAX_ADDON_LOAD_PACK_KEYBINDS then return false end
+    if packName == nil or packName == "" or charName == nil or charName == "" then return false end
+
+    local packKeybinds = AS.acwsv.packKeybinds
+    local packDataToLoad = packKeybinds[keybindNr]
+    if packDataToLoad ~= nil and packDataToLoad.packName ~= nil then
+        AS.acwsv.packKeybinds[keybindNr] = {}
+        return true
+    end
+    return false
+end
+
+local function savePackToKeybind(keybindNr, packName, charName)
+    if keybindNr == nil or keybindNr < 1 or keybindNr > MAX_ADDON_LOAD_PACK_KEYBINDS then return false end
+    if packName == nil or packName == "" or charName == nil or charName == "" then return false end
+
+    local packKeybinds = AS.acwsv.packKeybinds
+    packKeybinds[keybindNr] = packKeybinds[keybindNr] or {}
+    local packDataToLoad = packKeybinds[keybindNr]
+    --if packDataToLoad.packName ~= nil then
+    --todo: Ask before overwrite the keybind?
+    --end
+    packDataToLoad.packName = packName
+    packDataToLoad.charName = charName
+    return true
+end
+
+function getKeybindingLSMEntriesForPacks(packName, charName)
+    local keybindEntries = {}
+    for keybindNr = 1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
+        local isPackAlreadySavedAsKeybind = isPackKeybindUsed(keybindNr, packName, charName)
+        if isPackAlreadySavedAsKeybind == false then
+            keybindEntries[#keybindEntries + 1] = {
+                name = "Set as pack keybind " .. tos(keybindNr),
+                label = "Set as pack keybind " .. tos(keybindNr),
+                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                    savePackToKeybind(keybindNr, packName, charName)
+                end,
+            }
+        else
+            keybindEntries[#keybindEntries + 1] = {
+                name = "Remove pack from keybind " .. tos(keybindNr),
+                label = "Remove pack from keybind " .. tos(keybindNr),
+                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                    removePackFromKeybind(keybindNr, packName, charName)
+                end,
+            }
+        end
+    end
+
 end
 
 -- When the save button is clicked, creates a table containing all
@@ -5108,6 +5218,13 @@ function AS.LoadSaveVariables()
         showPacksAddonList = false,
         showSearchFilterAtPacksList = true,
         showPacksOfOtherAccountsChars = true,
+        packKeybinds = {
+            [1] = {},
+            [2] = {},
+            [3] = {},
+            [4] = {},
+            [5] = {},
+        },
     }
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
@@ -5165,6 +5282,27 @@ function AS.LoadSaveVariables()
     end
 end
 
+
+--====================================--
+--====  Keybindings ====--
+--====================================--
+function AS.LoadKeybinds()
+    --AddonSelector UI Keybinds
+    ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_ADDON_SELECTOR", ADDON_NAME)
+    ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        reloadUIStr)
+    ZO_CreateStringId("SI_BINDING_NAME_SHOWACTIVEPACK",         AddonSelector_GetLocalizedText("ShowActivePack"))
+
+    --Pack load keybinds
+    if AS.acwsv == nil or AS.acwsv.packKeybinds == nil then return end
+    local packKeybinds = AS.acwsv.packKeybinds
+    local numKeybinds = #packKeybinds
+    if numKeybinds <= 0 then return end
+
+    for i=1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
+        ZO_CreateStringId("SI_BINDING_NAME_ADDONS_LOAD_PACK" .. tos(i), AddonSelector_GetLocalizedText("LoadPackByKeybind" .. tos(i)))
+    end
+end
+
 --====================================--
 --====  Initialize ====--
 --====================================--
@@ -5176,6 +5314,8 @@ function AS.Initialize()
 
     --Load the SavedVariables and do "after SV loaded checks"
     AS.LoadSaveVariables()
+
+    AS.LoadKeybinds()
 
     --Create the controls, and update them
     AS.CreateControlReferences()
@@ -5407,24 +5547,6 @@ function AddonSelector_ReloadTheUI()
     ReloadUI("ingame")
 end
 
---Show the current user's active pack in the chat
-function AddonSelector_ShowActivePackInChat()
-    local currentCharacterId, currentlySelectedPackNameData = getCurrentCharsPackNameData()
---d(">currentCharacterId: " ..tos(currentCharacterId) .. ", currentlySelectedPackNameData.packName: " ..tos(currentlySelectedPackNameData.packName))
-    if not currentCharacterId or not currentlySelectedPackNameData then return end
-    local currentlySelectedPackName = currentlySelectedPackNameData.packName
-    local charNameOfSelectedPack = currentlySelectedPackNameData.charName
---d(">charNameOfSelectedPack: " ..tos(charNameOfSelectedPack))
-    if not currentlySelectedPackName or currentlySelectedPackName == "" then return end
-    local currentPackInfoText = (packNameStr) .. " " ..tos(currentlySelectedPackName)
-    if charNameOfSelectedPack == nil or charNameOfSelectedPack == "" or charNameOfSelectedPack == GLOBAL_PACK_NAME then
-        charNameOfSelectedPack = ", " .. packNameGlobal
-    else
-        charNameOfSelectedPack = ", " .. packCharNameStr .. ": " ..tos(charNameOfSelectedPack)
-    end
-    d("[" .. ADDON_NAME .. "]" .. currentPackInfoText .. charNameOfSelectedPack)
-end
-
 local function searchAddOnSlashCommandHandlder(args)
     if not args or args == "" then
         showAddOnsList()
@@ -5445,12 +5567,43 @@ local function searchAddOnSlashCommandHandlder(args)
 end
 
 local function loadAddOnPackSlashCommandHandler(args, noReloadUI)
-    openGameMenuAndAddOnsAndThenLoadPack(args, nil, noReloadUI)
+    openGameMenuAndAddOnsAndThenLoadPack(args, nil, noReloadUI, nil)
 end
 
 local function ShowLAMAddonSettings()
     LibAddonMenu2:OpenToPanel(nil)
 end
+
+-------------------------------------------------------------------
+--  Global functions  --
+-------------------------------------------------------------------
+function AddonSelector_LoadPackByKeybind(keybindNr)
+    if keybindNr == nil or keybindNr < 1 or keybindNr > MAX_ADDON_LOAD_PACK_KEYBINDS then return end
+    local packKeybinds = AS.acwsv.packKeybinds
+    local packDataToLoad = packKeybinds[keybindNr]
+    if packDataToLoad == nil or packDataToLoad.packName == nil or packDataToLoad.packName == "" or packDataToLoad.charName == nil or packDataToLoad.charName == "" then return end
+
+    openGameMenuAndAddOnsAndThenLoadPack(packDataToLoad.packName, nil, false, packDataToLoad.charName)
+end
+
+--Show the current user's active pack in the chat
+function AddonSelector_ShowActivePackInChat()
+    local currentCharacterId, currentlySelectedPackNameData = getCurrentCharsPackNameData()
+--d(">currentCharacterId: " ..tos(currentCharacterId) .. ", currentlySelectedPackNameData.packName: " ..tos(currentlySelectedPackNameData.packName))
+    if not currentCharacterId or not currentlySelectedPackNameData then return end
+    local currentlySelectedPackName = currentlySelectedPackNameData.packName
+    local charNameOfSelectedPack = currentlySelectedPackNameData.charName
+--d(">charNameOfSelectedPack: " ..tos(charNameOfSelectedPack))
+    if not currentlySelectedPackName or currentlySelectedPackName == "" then return end
+    local currentPackInfoText = (packNameStr) .. " " ..tos(currentlySelectedPackName)
+    if charNameOfSelectedPack == nil or charNameOfSelectedPack == "" or charNameOfSelectedPack == GLOBAL_PACK_NAME then
+        charNameOfSelectedPack = ", " .. packNameGlobal
+    else
+        charNameOfSelectedPack = ", " .. packCharNameStr .. ": " ..tos(charNameOfSelectedPack)
+    end
+    d("[" .. ADDON_NAME .. "]" .. currentPackInfoText .. charNameOfSelectedPack)
+end
+
 -------------------------------------------------------------------
 --  OnAddOnLoaded  --
 -------------------------------------------------------------------
@@ -5509,11 +5662,6 @@ local function OnAddOnLoaded(event, addonName)
         SLASH_COMMANDS["/addonsettings"] =  ShowLAMAddonSettings
         SLASH_COMMANDS["/lam"] =            ShowLAMAddonSettings
     end
-
-    --Keybinding
-    ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_ADDON_SELECTOR", ADDON_NAME)
-    ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        reloadUIStr)
-    ZO_CreateStringId("SI_BINDING_NAME_SHOWACTIVEPACK",         AddonSelector_GetLocalizedText("ShowActivePack"))
 
     --Hook the scrollable combobox OnMouseEnter function to show the menu entry to select/delete the pack of the row
     --SecurePostHook("ZO_ScrollableComboBox_Entry_OnMouseEnter", PackScrollableComboBox_Entry_OnMouseEnter)

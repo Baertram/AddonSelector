@@ -102,6 +102,11 @@ AddonSelectorGlobal.langArray = {
         ["saveChangesNow"] = "--- Sichere Änderungen ---",
         ["packNameLoadFound"] = "Packname wurde geladen: %q, GlobalOderCharakterName: %s",
         ["packNameLoadNotFound"] = "Packname wurde nicht gefunden: %q, GlobalOderCharakterName: %s",
+        ["LoadPackByKeybind1"] = "Lade Pack 1",
+        ["LoadPackByKeybind2"] = "Lade Pack 2",
+        ["LoadPackByKeybind3"] = "Lade Pack 3",
+        ["LoadPackByKeybind4"] = "Lade Pack 4",
+        ["LoadPackByKeybind5"] = "Lade Pack 5",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -192,6 +197,11 @@ AddonSelectorGlobal.langArray = {
         ["saveChangesNow"] = "--- Save changes now ---",
         ["packNameLoadFound"] = "Packname was loaded: %q, globalOrCharacterName: %s",
         ["packNameLoadNotFound"] = "Packname was not found: %q, globalOrCharacterName: %s",
+        ["LoadPackByKeybind1"] = "Load pack 1",
+        ["LoadPackByKeybind2"] = "Load pack 2",
+        ["LoadPackByKeybind3"] = "Load pack 3",
+        ["LoadPackByKeybind4"] = "Load pack 4",
+        ["LoadPackByKeybind5"] = "Load pack 5",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz
