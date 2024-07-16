@@ -5803,7 +5803,7 @@ local function loadAddOnPackSlashCommandHandler(args, noReloadUI)
 end
 
 local function skipLoadAddonPackOnLogoutToggle(args)
-    if args == nil then
+    if args == nil or args == "" then
         AS.acwsvChar.skipLoadAddonPackOnLogout = not AS.acwsvChar.skipLoadAddonPackOnLogout
     else
         if args == "0" or args == "false" or args == "off" then
