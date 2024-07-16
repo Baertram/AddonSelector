@@ -109,6 +109,10 @@ local skipOnAddonPackSelected = false
 local reloadUITexture = "/esoui/art/miscellaneous/eso_icon_warning.dds"
 local reloadUITextureStr = "|cFF0000".. zo_iconFormatInheritColor(reloadUITexture, 24, 24) .."|r"
 
+local autoLoadOnLogoutTexture = "/esoui/art/menubar/gamepad/gp_playermenu_icon_logout.dds"
+--local autoLoadOnLogoutTextureStr = "|c00FF22".. zo_iconFormatInheritColor(autoLoadOnLogoutTexture, 24, 24) .."|r"
+
+
 --The "Enable all addons" checkbox introduced with API101031
 local ZOAddOns                      = ZO_AddOns
 local ZOAddOnsList                  = ZO_AddOnsList
@@ -3291,6 +3295,15 @@ local function saveUpdatedAddonPackCallbackFuncSubmenu(p_comboBox, p_item, entri
     end
 end
 
+
+local function isAddonPackEnabledForAutoLoadOnLogout(packName, characterOrGlobalPackName)
+    local loadAddonPackOnLogout = AS.acwsvChar.loadAddonPackOnLogout
+    if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
+    if loadAddonPackOnLogout.packName == packName and loadAddonPackOnLogout.charName == characterOrGlobalPackName then return true end
+    return false
+end
+
+
 -- Called on load or when a new addon pack is saved & added to the comboBox
 -- Clear & re-add all items + submenus, including new ones. Easier/quicker than
 -- trying to see if an item already exists & editing it. Just adding
@@ -3374,7 +3387,9 @@ function AS.UpdateDDL(wasDeleted)
 
                         --The entry in the DDL is the characterName -> We need to add the submenu entries for each packName
                         for _, packNameOfChar in pairs(addonPacksOfCharSortedLookup) do
-                            if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then
+                            if packNameOfChar ~= CHARACTER_PACK_CHARNAME_IDENTIFIER then --not the "_charName" entry
+                                local iconData
+
                                 local nestedSubmenuEntriesOfCharPack = {}
                                 local addonsInCharPack = addonPacks[packNameOfChar]
 
@@ -3840,17 +3855,24 @@ function AS.UpdateDDL(wasDeleted)
                                     end,
                                     entryType = LSM_ENTRY_TYPE_CHECKBOX,
                                     checked = function()
-                                        local loadAddonPackOnLogout = AS.acwsvChar.loadAddonPackOnLogout
-                                        if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
-                                        if loadAddonPackOnLogout.packName == packNameOfCharCopy and loadAddonPackOnLogout.charName == charNameCopy then return true end
-                                        return false
+                                        return isAddonPackEnabledForAutoLoadOnLogout(packNameOfCharCopy, charNameCopy)
                                     end,
                                 }
 
                                 --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
+                                local labelCharacterPack = packNameOfChar
+                                local autoLoadThisPackOnLogout = isAddonPackEnabledForAutoLoadOnLogout(packNameOfChar, charName)
+                                --if autoLoadThisPackOnLogout == true then
+                                --labelCharacterPack = labelCharacterPack .. autoLoadOnLogoutTextureStr
+                                --end
+                                if autoLoadThisPackOnLogout == true then
+                                    iconData = iconData or {}
+                                    tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint="00FF22", tooltip=loadOnLogoutOrQuitStr })
+                                end
+
                                 subMenuEntriesChar[#subMenuEntriesChar + 1] = {
                                     name = packNameOfChar,
-                                    label = packNameOfChar,
+                                    label = labelCharacterPack,
                                     charName = charName,
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                                     OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
@@ -3863,6 +3885,7 @@ function AS.UpdateDDL(wasDeleted)
                                     addonTable = addonsInCharPack,
                                     entries = nestedSubmenuEntriesOfCharPack,
                                     tooltip = tooltipCharPack,
+                                    icon = iconData,
                                 }
 
                                 addedSubMenuEntry = true
@@ -4386,10 +4409,7 @@ function AS.UpdateDDL(wasDeleted)
                 end,
                 entryType = LSM_ENTRY_TYPE_CHECKBOX,
                 checked = function()
-                    local loadAddonPackOnLogout = AS.acwsvChar.loadAddonPackOnLogout
-                    if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
-                    if loadAddonPackOnLogout.packName == packNameCopy and loadAddonPackOnLogout.charName == GLOBAL_PACK_NAME then return true end
-                    return false
+                    return isAddonPackEnabledForAutoLoadOnLogout(packNameCopy, GLOBAL_PACK_NAME)
                 end,
             }
 
@@ -4398,6 +4418,7 @@ function AS.UpdateDDL(wasDeleted)
             --end --if showSubMenuAtGlobalPacks == true then
 
             local label = packName
+
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
             local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
@@ -4449,6 +4470,15 @@ function AS.UpdateDDL(wasDeleted)
                 subMenuEntriesGlobal = nil
             end
             ------------------------------------------------------------------------------------------------------------------------
+
+            local autoLoadThisPackOnLogout = isAddonPackEnabledForAutoLoadOnLogout(packName, GLOBAL_PACK_NAME)
+            --if autoLoadThisPackOnLogout == true then
+            --    label = label .. autoLoadOnLogoutTextureStr
+            --end
+            if autoLoadThisPackOnLogout == true then
+                iconData = iconData or {}
+                tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint="00FF22", tooltip=loadOnLogoutOrQuitStr })
+            end
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
             local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..accountWideStr.." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
