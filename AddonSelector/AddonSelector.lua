@@ -2415,7 +2415,7 @@ d(">got here, #options: " .. tos(numOptions))
                 local firstParamIsNumber = tonumber(options[1])
                 local firstParamType = type(firstParamIsNumber)
 d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
-                if firstParamType ~= "number" and firstParamType ~= "nil" then
+                if firstParamType ~= "number" then
                     charName = tos(options[1])
                     charNameForMsg = charName
                 end
