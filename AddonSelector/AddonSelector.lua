@@ -119,6 +119,8 @@ local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-re
 --Keybinds
 local MAX_ADDON_LOAD_PACK_KEYBINDS = 5
 
+local defaultCallbackFunc = function()  end
+
 ------------------------------------------------------------------------------------------------------------------------
 --Language and strings - local references to lang/strings.lua
 ------------------------------------------------------------------------------------------------------------------------
@@ -212,12 +214,38 @@ local prefixStrings = {
     ["AddonSelectorSearchBox"] =            searchHistoryStr,
 }
 
+local narrateComboBoxOnMouseEnter, narrateDropdownOnMouseExit, narrateDropdownOnOpened, narrateDropdownOnClosed
+local narrateDropdownOnSubmenuShown, narrateDropdownOnSubmenuHidden, narrateDropdownOnEntryMouseEnter, narrateDropdownOnEntryMouseExit
+local narrateDropdownOnEntrySelected, narrateDropdownOnCheckboxUpdated
+
 --LibScrollableMenu - Default contextMenu options
+local LSM_defaultAddonPackMenuOptions = {
+    visibleRowsDropdown = 15,
+    visibleRowsSubmenu = 15,
+    sortEntries = false,
+    enableFilter        = function() return AS.acwsv.showSearchFilterAtPacksList end,
+    headerCollapsible   = true,
+
+    narrate = {
+        ["OnComboBoxMouseEnter"] =  narrateComboBoxOnMouseEnter,
+        --["OnComboBoxMouseExit"] =   narrateDropdownOnMouseExit,
+        --["OnMenuShow"] =			narrateDropdownOnOpened,
+        --["OnMenuHide"] =			narrateDropdownOnClosed,
+        ["OnSubMenuShow"] =			narrateDropdownOnSubmenuShown,
+        ["OnSubMenuHide"] =		    narrateDropdownOnSubmenuHidden,
+        ["OnEntryMouseEnter"] =		narrateDropdownOnEntryMouseEnter,
+        --["OnEntryMouseExit"] =	narrateDropdownOnEntryMouseExit,
+        ["OnEntrySelected"] =		narrateDropdownOnEntrySelected,
+        ["OnCheckboxUpdated"] =		narrateDropdownOnCheckboxUpdated,
+    }
+}
+
 local LSM_defaultContextMenuOptions = {
     visibleRowsDropdown = 15,
     visibleRowsSubmenu  = 15,
     sortEntries         = false,
     enableFilter        = function() return AS.acwsv.showSearchFilterAtPacksList end,
+    headerCollapsible   = true,
 }
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -238,6 +266,33 @@ local function throttledCall(func, delay, updaterName, ...)
         end
     end
 end
+
+--Split string at whitespace unless quoted with " or ' or escaped with \"
+local spat, epat, escap = [=[^(['"])]=], [=[(['"])$]=], [=[(\*)['"]$]=]
+local function splitStringAndRespectQuotes(text)
+    local retTab = {}
+    if text == nil or text == "" then return retTab end
+    local buf, quoted
+    for str in text:gmatch("%S+") do
+        local squoted = str:match(spat)
+        local equoted = str:match(epat)
+        local escaped = str:match(escap)
+        if squoted and not quoted and not equoted then
+            buf, quoted = str, squoted
+        elseif buf and equoted == quoted and #escaped % 2 == 0 then
+            str, buf, quoted = buf .. ' ' .. str, nil, nil
+        elseif buf then
+            buf = buf .. ' ' .. str
+        end
+        if not buf then
+            local val = str:gsub(spat,""):gsub(epat,"")
+--d(">Found: " .. tos(val))
+            retTab[#retTab+1] = strlow(val) --lower string
+        end
+    end
+    return retTab
+end
+--AS.splitStringAndRespectQuotes = splitStringAndRespectQuotes
 
 local function checkIfMenuOwnerIsZOAddOns()
     local menuOwner = GetMenuOwner()
@@ -842,7 +897,7 @@ local function onMenuItemMouseEnterNarrate(menuItem)
 end
 ]]
 
-local function narrateComboBoxOnMouseEnter()
+function narrateComboBoxOnMouseEnter()
     onMouseEnterDoNarrate(AS.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AS.ddl) end)
     AS.narrateSelectedPackEntryStr = nil
    --return "Test text", false
@@ -850,13 +905,13 @@ end
 
 local entryMouseEnterTextForSubmenuOpen, entryOnMouseEnterDone, entryOnSelectedDone
 
-local function narrateDropdownOnSubmenuHidden(scrollHelper, ctrl)
+function narrateDropdownOnSubmenuHidden(scrollHelper, ctrl)
 --d("Submenu closed: " ..tos(entryOnSelectedDone) .. ", entryOnMouseEnterDone: " ..tos(entryOnMouseEnterDone))
     local submenuClosedText = "["..submenuClosedStr.."]"
     return submenuClosedText, false
 end
 
-local function narrateDropdownOnSubmenuShown(scrollHelper, ctrl, anchorPoint)
+function narrateDropdownOnSubmenuShown(scrollHelper, ctrl, anchorPoint)
     --d("OnSubmenuOpened - anchorPoint: " ..tos(anchorPoint))
     --This will unfortunately fire AFTER the entry was selected which opens the submenu (only logical ;-) ) so we need to
     --add the text of this here, to the last text of the narrateDropdownOnEntryMouseEnter
@@ -876,7 +931,7 @@ local function narrateDropdownOnSubmenuShown(scrollHelper, ctrl, anchorPoint)
     return submenuOpenedText, false --do not stop any other narration (e.g. OnMousEnter on a menu entry)
 end
 
-local function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl, data, hasSubmenu, comingFromCheckbox)
+function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl, data, hasSubmenu, comingFromCheckbox)
 --d("OnEntryMouseEnter - hasSubmenu: " ..tos(hasSubmenu) .. ", comingFomrCheckbox: " ..tos(comingFromCheckbox) .. ", name: " ..tos(data.label or data.name))
     entryOnMouseEnterDone = true
     entryMouseEnterTextForSubmenuOpen = nil
@@ -913,7 +968,7 @@ local function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl
     return entryMouseEnterText, false --do not stop narration of e.g. submenu opened
 end
 
-local function narrateDropdownOnEntrySelected(scrollhelperObject, entryControl, data, hasSubmenu)
+function narrateDropdownOnEntrySelected(scrollhelperObject, entryControl, data, hasSubmenu)
     entryOnSelectedDone = true
     --d("OnEntrySelected - hasSubmenu: " ..tos(hasSubmenu))
     local entryTextWithoutPrefix = getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
@@ -921,7 +976,7 @@ local function narrateDropdownOnEntrySelected(scrollhelperObject, entryControl, 
     return entrySelectedText, true --stop narration of others, if you select an entry
 end
 
-local function narrateDropdownOnCheckboxUpdated(scrollhelperObject, checkboxControl, data)
+function narrateDropdownOnCheckboxUpdated(scrollhelperObject, checkboxControl, data)
     --d("OnCHeckboxUpdated")
     return narrateDropdownOnEntryMouseEnter(scrollhelperObject, checkboxControl, data, nil, true)
 end
@@ -2316,6 +2371,7 @@ local function showAddOnsList()
 end
 
 local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, noReloadUI, charName)
+d("[AS]openGameMenuAndAddOnsAndThenLoadPack - args: " .. tos(args) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", noReloadUI: " ..tos(noReloadUI) .. ", charName: " ..tos(charName))
     if not args or args == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     if noReloadUI == nil then noReloadUI = true end
@@ -2326,47 +2382,91 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
 
     --Parse the arguments string
     local options = {}
+    --[[ -- Split only at spaces
     --local searchResult = {} --old: searchResult = { string.match(args, "^(%S*)%s*(.-)$") }
     for param in strgma(args, "([^%s]+)%s*") do
         if (param ~= nil and param ~= "") then
             options[#options+1] = strlow(param)
         end
     end
+    ]]
+    local charNameForMsg = charName
 
+    --Split and respect quotes and double quotes
+    options = splitStringAndRespectQuotes(args)
+    if ZO_IsTableEmpty(options) then return end
     local numOptions = #options
+d(">got here, #options: " .. tos(numOptions))
     if numOptions >= 1 then
+
+        local characterIdForSV, charNameForSV = currentCharId, GLOBAL_PACK_NAME
+
         if numOptions == 1 then
-            --Save charcater packs is enabled at the settings? Assume we load a character pack then
+            --Save character packs is enabled at the settings? Assume we load a character pack then
+            --if not: Assume we load a global pack then
             isCharacterPack = (charName ~= nil and charName ~= GLOBAL_PACK_NAME and true) or AS.acwsv.saveGroupedByCharacterName
             packNameLower = options[1]
         else
-            isCharacterPack = (((charName ~= nil and charName ~= GLOBAL_PACK_NAME) or tos(options[1]) == "2") and true) or false
+            --2 or more params have been enered at the chat.
+            --1st param == "string": Character name
+            --or 1st param == "number": 1 = global, 2 = character pack
+            --2nd param == string: Addon pack
+            if charName == nil or charName == "" then
+                local firstParamIsNumber = tonumber(options[1])
+                local firstParamType = type(firstParamIsNumber)
+d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
+                if firstParamType ~= "number" and firstParamType ~= "nil" then
+                    charName = tos(options[1])
+                    charNameForMsg = charName
+                end
+            end
+
+            isCharacterPack = (((charName ~= nil and charName ~= GLOBAL_PACK_NAME) or tos(options[1]) == "2") and true) or AS.acwsv.saveGroupedByCharacterName
             packNameLower = table.concat(options, " ", 2)
         end
 
+d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower))
+
         if packNameLower ~= nil then
             --Character is the currentlyLoggedIn or any other?
-            local characterIdForSV, charNameForSV = currentCharId, GLOBAL_PACK_NAME
-            if isCharacterPack then
+            if isCharacterPack == true then
                 characterIdForSV, charNameForSV = getCharacterIdAndNameForSV(charName)
+                charNameForMsg = charNameForSV
             end
 
             --Search the packname now as character or global pack
-            svForPacks, charId, characterName = getSVTableForPackBySavedType(not isCharacterPack and GLOBAL_PACK_NAME or nil, isCharacterPack and characterIdForSV or nil)
-            if svForPacks ~= nil then
-                if not doNotShowAddOnsScene then
-                    --Show the game menu and open the AddOns
-                    if not showAddOnsList() then
-                        return
-                    end
-                end
+            svForPacks, charId, characterName = getSVTableForPackBySavedType((not isCharacterPack and GLOBAL_PACK_NAME) or nil, (isCharacterPack and characterIdForSV) or nil)
 
+AS._debugSlashLoadPack = {
+    __doNotShowAddOnsScene = doNotShowAddOnsScene,
+    __saveGroupedByCharacterName = AS.acwsv.saveGroupedByCharacterName,
+    _charName = charName,
+    _packNameLower = packNameLower,
+    ___options = options,
+    _isCharacterPack = isCharacterPack,
+    svForPacks = svForPacks,
+    charId = charId,
+    characterName = characterName,
+    characterIdForSV = characterIdForSV,
+    charNameForSV = charNameForSV,
+}
+            if svForPacks ~= nil then
+                charNameForMsg = characterName
+                local addOnsUIwasNotOpened = false
                 --Now check if the packname is in the list
                 for packName, addonsInPack in pairs(svForPacks) do
                     if strlow(packName) == packNameLower then
+                        --Show the game menu and open the AddOns manager now (if not suppressed)
+                        if not addOnsUIwasNotOpened and not doNotShowAddOnsScene then
+                            if not showAddOnsList() then
+                                return
+                            end
+                            addOnsUIwasNotOpened = true
+                        end
+
                         --d(">pack found -> loading it now!")
                         local packData = ZO_ShallowTableCopy(addonsInPack)
-                        packData.charName = packData.charName or (isCharacterPack and charId or GLOBAL_PACK_NAME)
+                        packData.charName = packData.charName or ((isCharacterPack == true and characterName) or GLOBAL_PACK_NAME)
 
                         --Clear the dropdown selected entry
                         doNotReloadUI = noReloadUI
@@ -2383,14 +2483,14 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
 
                         clearAndUpdateDDL()
 
-                        d(string.format(packNameLoadFoundStr, tos(packNameLower), tos(not isCharacterPack and packNameGlobal or characterName)))
+                        d(string.format(packNameLoadFoundStr, tos(packName), tos(not isCharacterPack and packNameGlobal or characterName)))
                         return true
                     end
                 end
             end
         end
     end
-    d(string.format(packNameLoadNotFoundStr, tos(packNameLower), tos(not isCharacterPack and packNameGlobal or characterName)))
+    d(string.format(packNameLoadNotFoundStr, tos(packNameLower), tos((not isCharacterPack and packNameGlobal) or charNameForMsg)))
     return false
 end
 
@@ -2930,6 +3030,9 @@ function OnClick_DeleteWholeCharacter(characterId)
     local svTable, charId, characterName = getSVTableForPacksOfCharname(charName, characterId)
     if svTable ~= nil and charId ~= nil and characterName ~= nil then
         if NonContiguousCount(svTable) == 1 then return end --only _charName entry is in there!
+        --Hide the dropdown
+        ClearCustomScrollableMenu()
+        AS.comboBox:HideDropdown()
         --Show security dialog
         ShowConfirmationDialog("DeleteCharacterPacksDialog",
                     deleteWholeCharacterPacksTitleStr .. "\n[" .. characterName .. "]",
@@ -3049,7 +3152,7 @@ function AS.CreateItemEntry(packName, label, addonTable, isCharacterPack, charNa
         contextMenuCallback = contextMenuCallbackFunc,
     }
 
-    if not isSubmenu then
+    if not isSubmenu and not isHeader then
         entry.callback = OnClickDDL
     end
     --Enable the main entry, which got a submenu, to be clickable too (add a callback to it)
@@ -4288,17 +4391,31 @@ function AS.UpdateDDL(wasDeleted)
                     ClearCustomScrollableMenu()
                     if not ZO_IsTableEmpty(subMenuEntriesCopy) then
                         for idx, submenuEntryData in ipairs(subMenuEntriesCopy) do
+                            local entryType = submenuEntryData.entryType
+                                    or (
+                                        ((submenuEntryData.isDivider or submenuEntryData.name == "-") and LSM_ENTRY_TYPE_DIVIDER)
+                                        or ((submenuEntryData.isHeader) and LSM_ENTRY_TYPE_HEADER)
+                                        or ((submenuEntryData.isCheckbox) and LSM_ENTRY_TYPE_CHECKBOX)
+                                        or ((submenuEntryData.isRadiobutton) and LSM_ENTRY_TYPE_RADIOBUTTON)
+                                        or ((submenuEntryData.isButton) and LSM_ENTRY_TYPE_BUTTON)
+                                    ) or LSM_ENTRY_TYPE_NORMAL
+                            local callbackFunc = submenuEntryData.callback ~= nil and function(...) return submenuEntryData.callback(...) end or ((entryType == LSM_ENTRY_TYPE_HEADER and nil) or defaultCallbackFunc)
                             AddCustomScrollableMenuEntry(nil,
-                                    submenuEntryData.callback ~= nil and function(...) submenuEntryData.callback(...) end,
-                                    ((submenuEntryData.isDivider or submenuEntryData.name == "-") and LSM_ENTRY_TYPE_DIVIDER) or LSM_ENTRY_TYPE_NORMAL,
-                                    (idx == 1 and subSubMenuEntriesCopy) or nil, --entries
-                                    {
+                                    callbackFunc,
+                                    entryType,
+                                    (idx == 1 and subSubMenuEntriesCopy) or nil,    --entries
+                                    {                                               --additionalData
                                         label = submenuEntryData.label,
                                         name = submenuEntryData.name,
                                         enabled = (submenuEntryData.disabled ~= nil and not submenuEntryData.disabled) or nil,
+                                        checked = submenuEntryData.checked,
+                                        buttonGroup = submenuEntryData.buttonGroup,
+                                        buttonGroupOnSelectionChangedCallback = submenuEntryData.buttonGroupOnSelectionChangedCallback,
+
+                                        --AddonSelector data
                                         charName = submenuEntryData.charName,
-                                        addonTable = submenuEntryData.addonTable
-                                    } --additionalData
+                                        addonTable = submenuEntryData.addonTable,
+                                    }
                             )
                         end
                         ShowCustomScrollableMenu(nil, LSM_defaultContextMenuOptions)
@@ -4940,27 +5057,7 @@ function AS.CreateControlReferences()
     --												"OnEntrySelected"		function(scrollhelperObject, entryControl, data, isSubmenu) end
     --												"OnCheckboxUpdated"		function(scrollhelperObject, checkboxControl, data) end
     --			Example:	narrate = { ["OnDropdownMouseEnter"] = myAddonsNarrateDropdownOnMouseEnter, ... }
-    AS.ddl.scrollHelper                    = AddCustomScrollableComboBoxDropdownMenu(addonSelector, AS.ddl,
-            {
-                visibleRowsDropdown = 15,
-                visibleRowsSubmenu = 15,
-                sortEntries = false,
-                enableFilter = function() return AS.acwsv.showSearchFilterAtPacksList end,
-
-                narrate = {
-                    ["OnComboBoxMouseEnter"] =  narrateComboBoxOnMouseEnter,
-                    --["OnComboBoxMouseExit"] =   narrateDropdownOnMouseExit,
-                    --["OnMenuShow"] =			narrateDropdownOnOpened,
-                    --["OnMenuHide"] =			narrateDropdownOnClosed,
-                    ["OnSubMenuShow"] =			narrateDropdownOnSubmenuShown,
-                    ["OnSubMenuHide"] =		    narrateDropdownOnSubmenuHidden,
-                    ["OnEntryMouseEnter"] =		narrateDropdownOnEntryMouseEnter,
-                    --["OnEntryMouseExit"] =	narrateDropdownOnEntryMouseExit,
-                    ["OnEntrySelected"] =		narrateDropdownOnEntrySelected,
-                    ["OnCheckboxUpdated"] =		narrateDropdownOnCheckboxUpdated,
-                }
-            }
-    ) --Entries will be added at AddonSelector.UpdateDDL(wasDeleted)
+    AS.ddl.scrollHelper                    = AddCustomScrollableComboBoxDropdownMenu(addonSelector, AS.ddl, LSM_defaultAddonPackMenuOptions) --Entries will be added at AddonSelector.UpdateDDL(wasDeleted)
 
     AS.comboBox                            = AS.ddl.m_comboBox
     local savedPacksComboBox               = AS.comboBox
@@ -5372,6 +5469,8 @@ local function myLogoutCallback()
     local addonPackToLoad = settings.loadAddonPackOnLogout
     if addonPackToLoad == nil then return end
     loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
+
+    --return true --todo: Comment again after debugging! For debugging abort logout and quit!
 end
 
 --====================================--
@@ -5646,6 +5745,7 @@ end
 function AddonSelector_ReloadTheUI()
     ReloadUI("ingame")
 end
+
 
 local function searchAddOnSlashCommandHandlder(args)
     if not args or args == "" then
