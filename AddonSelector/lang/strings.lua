@@ -107,10 +107,11 @@ AddonSelectorGlobal.langArray = {
         ["LoadPackByKeybind3"] = "Lade Pack 3",
         ["LoadPackByKeybind4"] = "Lade Pack 4",
         ["LoadPackByKeybind5"] = "Lade Pack 5",
-        ["addPackToKeybind"] =   "Pack zu Tastenkombination %s hinzufügen",
-        ["removePackFromKeybind"] = "Pack von Tastenkombination %s entfernen",
+        ["addPackToKeybind"] =   "+ Pack zu Tastenkombination %s hinzufügen",
+        ["removePackFromKeybind"] = "- Pack von Tastenkombination %s entfernen",
         ["loadOnLogoutOrQuit"] = "Beim Logout/Beenden automatisch laden",
         ["skipLoadAddonPack"] = "AddOn Pack laden beim Logout/Beenden überspringen: %q",
+        ["keybind"] = "|t80.000000%:80.000000%:/esoui/art/buttons/keyboard/nav_pc_arrowkeys_down.dds|t",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -206,10 +207,11 @@ AddonSelectorGlobal.langArray = {
         ["LoadPackByKeybind3"] = "Load pack 3",
         ["LoadPackByKeybind4"] = "Load pack 4",
         ["LoadPackByKeybind5"] = "Load pack 5",
-        ["addPackToKeybind"] =   "Add pack to keybind %s",
-        ["removePackFromKeybind"] = "Remove pack from keybind %s",
+        ["addPackToKeybind"] =      "+ Add pack to keybind %s",
+        ["removePackFromKeybind"] = "- Remove pack from keybind %s",
         ["loadOnLogoutOrQuit"] = "Load automatically at logout/quit",
         ["skipLoadAddonPack"] = "Skip loading addon pack at logout/quit: %q",
+        ["keybind"] = "|t80.000000%:80.000000%:/esoui/art/buttons/keyboard/nav_pc_arrowkeys_down.dds|t",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz

@@ -109,8 +109,18 @@ local skipOnAddonPackSelected = false
 local reloadUITexture = "/esoui/art/miscellaneous/eso_icon_warning.dds"
 local reloadUITextureStr = "|cFF0000".. zo_iconFormatInheritColor(reloadUITexture, 24, 24) .."|r"
 
-local autoLoadOnLogoutTexture = "/esoui/art/menubar/gamepad/gp_playermenu_icon_logout.dds"
+local autoLoadOnLogoutTexture = "/esoui/art/buttons/log_out_up.dds"
 --local autoLoadOnLogoutTextureStr = "|c00FF22".. zo_iconFormatInheritColor(autoLoadOnLogoutTexture, 24, 24) .."|r"
+
+--Keybinds
+local MAX_ADDON_LOAD_PACK_KEYBINDS = 5
+local keybindTexturesLoadPack = {}
+--Create the keybinding textures/Strings
+local keybindStr = AddonSelector_GetLocalizedText("keybind")
+for keybindNr  = 1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
+    keybindTexturesLoadPack[keybindNr] = "  " .. keybindStr .. " " .. keybindNr  --does not work: ZO_Keybindings_GenerateIconKeyMarkup(22 + keybindNr, 100, false)
+end
+AS._keybindTexturesLoadPack = keybindTexturesLoadPack
 
 
 --The "Enable all addons" checkbox introduced with API101031
@@ -122,10 +132,9 @@ local enableAllAddonTextCtrl        = ZO_AddOnsList2Row1Text     --will be re-re
 local enableAllAddonsCheckboxCtrl   = ZO_AddOnsList2Row1Checkbox --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
 
 
---Keybinds
-local MAX_ADDON_LOAD_PACK_KEYBINDS = 5
-
+--Callback functions
 local defaultCallbackFunc = function()  end
+
 
 ------------------------------------------------------------------------------------------------------------------------
 --Language and strings - local references to lang/strings.lua
@@ -2388,7 +2397,7 @@ local function showAddOnsList()
 end
 
 local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, noReloadUI, charName)
-d("[AS]openGameMenuAndAddOnsAndThenLoadPack - args: " .. tos(args) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", noReloadUI: " ..tos(noReloadUI) .. ", charName: " ..tos(charName))
+--d("[AS]openGameMenuAndAddOnsAndThenLoadPack - args: " .. tos(args) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", noReloadUI: " ..tos(noReloadUI) .. ", charName: " ..tos(charName))
     if not args or args == "" then return end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     if noReloadUI == nil then noReloadUI = true end
@@ -2413,7 +2422,7 @@ d("[AS]openGameMenuAndAddOnsAndThenLoadPack - args: " .. tos(args) .. ", doNotSh
     options = splitStringAndRespectQuotes(args)
     if ZO_IsTableEmpty(options) then return end
     local numOptions = #options
-d(">got here, #options: " .. tos(numOptions))
+--d(">got here, #options: " .. tos(numOptions))
     if numOptions >= 1 then
 
         local characterIdForSV, charNameForSV = currentCharId, GLOBAL_PACK_NAME
@@ -2431,7 +2440,7 @@ d(">got here, #options: " .. tos(numOptions))
             if charName == nil or charName == "" then
                 local firstParamIsNumber = tonumber(options[1])
                 local firstParamType = type(firstParamIsNumber)
-d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
+--d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
                 if firstParamType ~= "number" then
                     charName = tos(options[1])
                     charNameForMsg = charName
@@ -2442,7 +2451,7 @@ d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
             packNameLower = table.concat(options, " ", 2)
         end
 
-d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower))
+--d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower))
 
         if packNameLower ~= nil then
             --Character is the currentlyLoggedIn or any other?
@@ -3828,7 +3837,7 @@ function AS.UpdateDDL(wasDeleted)
                                     callback = function() end,
                                     disabled = true,
                                 }
-                                local keybindingEntries = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
+                                local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
                                 nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
                                     name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
                                     callback = nil,
@@ -3869,6 +3878,13 @@ function AS.UpdateDDL(wasDeleted)
                                     iconData = iconData or {}
                                     local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
                                     tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=loadOnLogoutOrQuitStr })
+                                end
+                                if not ZO_IsTableEmpty(keybindIconData) then
+                                    iconData = iconData or {}
+                                    for _, v in ipairs(keybindIconData) do
+                                        --tins(iconData, v)
+                                        labelCharacterPack = labelCharacterPack .. v.iconTexture
+                                    end
                                 end
 
                                 subMenuEntriesChar[#subMenuEntriesChar + 1] = {
@@ -4383,7 +4399,7 @@ function AS.UpdateDDL(wasDeleted)
                 callback = function() end,
                 disabled = true,
             }
-            local keybindingEntries = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+            local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
             subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
                 name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
                 callback = nil,
@@ -4421,6 +4437,14 @@ function AS.UpdateDDL(wasDeleted)
             local label = packName
 
             local iconData = (autoReloadUI == true and { iconTexture=reloadUITexture, iconTint="FF0000", tooltip=reloadUIStrWithoutIcon }) or nil
+            if not ZO_IsTableEmpty(keybindIconData) then
+                iconData = iconData or {}
+                for _, v in ipairs(keybindIconData) do
+                    --tins(iconData, v)
+                    label = label .. v.iconTexture
+                end
+            end
+
             local enabledAddonsInPackStrAddition = (addPackTooltip == true and numAddonsInGlobalPack ~= nil and ("\n" .. enabledAddonsInPackStr .. ": " ..tos(numAddonsInGlobalPack))) or ""
 
             ------------------------------------------------------------------------------------------------------------------------
@@ -4699,11 +4723,12 @@ end
 
 function getKeybindingLSMEntriesForPacks(packName, charName)
     local keybindEntries = {}
+    local keybindIconData = {}
     for keybindNr = 1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
         local isPackAlreadySavedAsKeybind = isPackKeybindUsed(keybindNr, packName, charName)
         if isPackAlreadySavedAsKeybind == false then
             keybindEntries[#keybindEntries + 1] = {
-                name = string.format(addPackToKeybindStr, tos(keybindNr)),
+                name = strfor(addPackToKeybindStr, tos(keybindNr)),
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     savePackToKeybind(keybindNr, packName, charName)
                     clearAndUpdateDDL()
@@ -4712,16 +4737,20 @@ function getKeybindingLSMEntriesForPacks(packName, charName)
             }
         else
             keybindEntries[#keybindEntries + 1] = {
-                name = string.format(removePackFromKeybindStr, tos(keybindNr)),
+                name = strfor(removePackFromKeybindStr, tos(keybindNr)),
                 callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                     removePackFromKeybind(keybindNr, packName, charName)
                     clearAndUpdateDDL()
                 end,
                 entryType = LSM_ENTRY_TYPE_NORMAL,
             }
+
+            keybindIconData[#keybindIconData +1] = {
+                iconTexture=keybindTexturesLoadPack[keybindNr], iconTint="FFFFFF", tooltip=AddonSelector_GetLocalizedText("LoadPackByKeybind" .. tos(keybindNr))
+            }
         end
     end
-    return keybindEntries
+    return keybindEntries, keybindIconData
 end
 
 -- When the save button is clicked, creates a table containing all
