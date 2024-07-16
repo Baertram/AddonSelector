@@ -3867,7 +3867,8 @@ function AS.UpdateDDL(wasDeleted)
                                 --end
                                 if autoLoadThisPackOnLogout == true then
                                     iconData = iconData or {}
-                                    tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint="00FF22", tooltip=loadOnLogoutOrQuitStr })
+                                    local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
+                                    tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=loadOnLogoutOrQuitStr })
                                 end
 
                                 subMenuEntriesChar[#subMenuEntriesChar + 1] = {
@@ -4477,7 +4478,8 @@ function AS.UpdateDDL(wasDeleted)
             --end
             if autoLoadThisPackOnLogout == true then
                 iconData = iconData or {}
-                tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint="00FF22", tooltip=loadOnLogoutOrQuitStr })
+                local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
+                tins(iconData, { iconTexture=autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=loadOnLogoutOrQuitStr })
             end
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
