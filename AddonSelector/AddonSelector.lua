@@ -287,7 +287,7 @@ local function splitStringAndRespectQuotes(text)
         if not buf then
             local val = str:gsub(spat,""):gsub(epat,"")
 --d(">Found: " .. tos(val))
-            retTab[#retTab+1] = strlow(val) --lower string
+            retTab[#retTab+1] = val
         end
     end
     return retTab
@@ -330,29 +330,38 @@ updateEnableAllAddonsCtrls()
 -->False: the key of the returned table is the unique character ID (standard)
 local function getCharactersOfAccount(keyIsCharName)
     keyIsCharName = keyIsCharName or false
-    local charactersOfAccount
+    local charactersOfAccount, charactersOfAccountLower
     --Check all the characters of the account
     for i = 1, GetNumCharacters() do
         local name, _, _, _, _, _, characterId = GetCharacterInfo(i)
         local charName = zo_strformat(SI_UNIT_NAME, name)
         if characterId ~= nil and charName ~= "" then
             if charactersOfAccount == nil then charactersOfAccount = {} end
+            if charactersOfAccountLower == nil then charactersOfAccountLower = {} end
             if keyIsCharName then
                 charactersOfAccount[charName]   = characterId
+                charactersOfAccountLower[strlow(charName)]   = characterId
             else
                 charactersOfAccount[characterId]= charName
+                charactersOfAccountLower[characterId]= strlow(charName)
             end
         end
     end
-    return charactersOfAccount
+    return charactersOfAccount, charactersOfAccountLower
 end
-AS.charactersOfAccount      = getCharactersOfAccount(false)
-AS.characterIdsOfAccount    = getCharactersOfAccount(true)
+AS.charactersOfAccount, AS.charactersOfAccountLower     = getCharactersOfAccount(false)
+AS.characterIdsOfAccount, AS.characterIdsOfAccountLower = getCharactersOfAccount(true)
 local charactersOfAccount   = AS.charactersOfAccount
+local charactersOfAccountLower   = AS.charactersOfAccountLower
 local characterIdsOfAccount = AS.characterIdsOfAccount
+local characterIdsOfAccountLowerCase = AS.characterIdsOfAccountLower
 
 local function getCharacterIdByName(characterName)
-    return characterIdsOfAccount[characterName]
+    local characterIdOfCharacterName = characterIdsOfAccount[characterName]
+    if characterIdOfCharacterName == nil then
+        characterIdOfCharacterName = characterIdsOfAccountLowerCase[strlow(characterName)]
+    end
+    return characterIdOfCharacterName
 end
 
 local function unselectAnyPack(selectedPackLabelToo)
@@ -1187,8 +1196,8 @@ end
 local function getCharacterIdFromSVTableByCharacterName(charName)
     local addonPacksOfChar = AS.acwsv.addonPacksOfChar
     for charId, packsData in pairs(addonPacksOfChar) do
-        local addonPacksCharName = packsData[CHARACTER_PACK_CHARNAME_IDENTIFIER]
-        if addonPacksCharName ~= GLOBAL_PACK_NAME and addonPacksCharName == charName then
+        local addonPacksCharName = strlow(packsData[CHARACTER_PACK_CHARNAME_IDENTIFIER])
+        if addonPacksCharName ~= strlow(GLOBAL_PACK_NAME) and addonPacksCharName == strlow(charName) then
             return charId
         end
     end
@@ -2437,6 +2446,7 @@ d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower))
             --Search the packname now as character or global pack
             svForPacks, charId, characterName = getSVTableForPackBySavedType((not isCharacterPack and GLOBAL_PACK_NAME) or nil, (isCharacterPack and characterIdForSV) or nil)
 
+            --[[
 AS._debugSlashLoadPack = {
     __doNotShowAddOnsScene = doNotShowAddOnsScene,
     __saveGroupedByCharacterName = AS.acwsv.saveGroupedByCharacterName,
@@ -2450,7 +2460,11 @@ AS._debugSlashLoadPack = {
     characterIdForSV = characterIdForSV,
     charNameForSV = charNameForSV,
 }
+            ]]
+
             if svForPacks ~= nil then
+                packNameLower = strlow(packNameLower)
+
                 charNameForMsg = characterName
                 local addOnsUIwasNotOpened = false
                 --Now check if the packname is in the list
@@ -3813,15 +3827,15 @@ function AS.UpdateDDL(wasDeleted)
                                     name    = loadOnLogoutOrQuitStr,
                                     isCheckbox = true,
                                     callback = function(comboBox, itemName, rowControl, checked)
-                                        AS.acwsv.loadAddonPackOnLogout = nil
+                                        AS.acwsvChar.loadAddonPackOnLogout = nil
                                         if checked == true then
-                                            AS.acwsv.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
+                                            AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
                                         end
                                         clearAndUpdateDDL()
                                     end,
                                     entryType = LSM_ENTRY_TYPE_CHECKBOX,
                                     checked = function()
-                                        local loadAddonPackOnLogout = AS.acwsv.loadAddonPackOnLogout
+                                        local loadAddonPackOnLogout = AS.acwsvChar.loadAddonPackOnLogout
                                         if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
                                         if loadAddonPackOnLogout.packName == packNameOfCharCopy and loadAddonPackOnLogout.charName == charNameCopy then return true end
                                         return false
@@ -4358,15 +4372,15 @@ function AS.UpdateDDL(wasDeleted)
                 name    = loadOnLogoutOrQuitStr,
                 isCheckbox = true,
                 callback = function(comboBox, itemName, rowControl, checked)
-                    AS.acwsv.loadAddonPackOnLogout = nil
+                    AS.acwsvChar.loadAddonPackOnLogout = nil
                     if checked == true then
-                        AS.acwsv.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
+                        AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
                     end
                     clearAndUpdateDDL()
                 end,
                 entryType = LSM_ENTRY_TYPE_CHECKBOX,
                 checked = function()
-                    local loadAddonPackOnLogout = AS.acwsv.loadAddonPackOnLogout
+                    local loadAddonPackOnLogout = AS.acwsvChar.loadAddonPackOnLogout
                     if ZO_IsTableEmpty(loadAddonPackOnLogout) then return false end
                     if loadAddonPackOnLogout.packName == packNameCopy and loadAddonPackOnLogout.charName == GLOBAL_PACK_NAME then return true end
                     return false
@@ -5401,8 +5415,11 @@ function AS.LoadSaveVariables()
             [4] = {},
             [5] = {},
         },
+    }
+    local defaultSavedVarsChar = {
         loadAddonPackOnLogout = nil, --table with packName and charName
     }
+
     local worldName = GetWorldName()
     --Get the saved addon packages without a server reference
     local oldSVWithoutServer = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars)
@@ -5410,6 +5427,7 @@ function AS.LoadSaveVariables()
     --Show packs of all accounts at the same time
     --ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
     AS.acwsv                = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars, worldName, "AllAccounts")
+    AS.acwsvChar            = ZO_SavedVars:NewCharacterIdSettings(svName, SAVED_VAR_VERSION, nil, defaultSavedVarsChar, worldName, nil)
     --Old non-server dependent SV exist and new SV too and were not migrated yet
     if oldSVWithoutServer ~= nil and not AS.acwsv.svMigrationToServerDone then
         --Copy all addon packages from the old SV to the new server dependent ones, but do not overwrite any existing ones
@@ -5464,9 +5482,9 @@ end
 --====  Logout / Quit ====--
 --====================================--
 local function myLogoutCallback()
-    local settings = AS.acwsv
-    if settings == nil then return end
-    local addonPackToLoad = settings.loadAddonPackOnLogout
+    local charSettings = AS.acwsvChar
+    if charSettings == nil then return end
+    local addonPackToLoad = charSettings.loadAddonPackOnLogout
     if addonPackToLoad == nil then return end
     loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
 
