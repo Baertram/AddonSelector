@@ -120,7 +120,6 @@ local keybindStr = AddonSelector_GetLocalizedText("keybind")
 for keybindNr  = 1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
     keybindTexturesLoadPack[keybindNr] = "  " .. keybindStr .. " " .. keybindNr  --does not work: ZO_Keybindings_GenerateIconKeyMarkup(22 + keybindNr, 100, false)
 end
-AS._keybindTexturesLoadPack = keybindTexturesLoadPack
 
 
 --The "Enable all addons" checkbox introduced with API101031
@@ -4400,10 +4399,11 @@ function AS.UpdateDDL(wasDeleted)
                 disabled = true,
             }
             local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+            local keybindingEntriesCopy = ZO_ShallowNumericallyIndexedTableCopy(keybindingEntries)
             subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
                 name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
                 callback = nil,
-                entries = keybindingEntries,
+                entries = keybindingEntriesCopy,
                 charName = GLOBAL_PACK_NAME,
             }
 
@@ -4451,8 +4451,8 @@ function AS.UpdateDDL(wasDeleted)
             ---Context menu (right click) at the addon pack name
             local globalPackContextMenuCallbackFunc
             if addedSubMenuEntryGlobal then
-                local subMenuEntriesCopy    = ZO_ShallowTableCopy(subMenuEntriesGlobal)
-                local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowTableCopy(subSubMenuEntriesGlobal)) or nil
+                local subMenuEntriesCopy    = ZO_ShallowNumericallyIndexedTableCopy(subMenuEntriesGlobal)
+                local subSubMenuEntriesCopy = (showPacksAddonList == true and ZO_ShallowNumericallyIndexedTableCopy(subSubMenuEntriesGlobal)) or nil
                 globalPackContextMenuCallbackFunc = function()
                     ClearCustomScrollableMenu()
                     if not ZO_IsTableEmpty(subMenuEntriesCopy) then
@@ -4469,7 +4469,7 @@ function AS.UpdateDDL(wasDeleted)
                             AddCustomScrollableMenuEntry(nil,
                                     callbackFunc,
                                     entryType,
-                                    (idx == 1 and subSubMenuEntriesCopy) or nil,    --entries
+                                    ((idx == 1 and subSubMenuEntriesCopy) or submenuEntryData.entries) or nil,    --entries
                                     {                                               --additionalData
                                         label = submenuEntryData.label,
                                         name = submenuEntryData.name,
@@ -5966,6 +5966,9 @@ local function OnAddOnLoaded(event, addonName)
     SLASH_COMMANDS["/loadpackrl"]         = function(args) loadAddOnPackSlashCommandHandler(args, false) end
     if SLASH_COMMANDS["/aslskip"] == nil then
         SLASH_COMMANDS["/aslskip"]      = skipLoadAddonPackOnLogoutToggle
+    end
+    if SLASH_COMMANDS["/asls"] == nil then
+        SLASH_COMMANDS["/asls"]         = skipLoadAddonPackOnLogoutToggle
     end
     SLASH_COMMANDS["/loadpackskip"]     = skipLoadAddonPackOnLogoutToggle
 
