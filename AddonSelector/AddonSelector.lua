@@ -5837,11 +5837,14 @@ end
 local function skipLoadAddonPackOnLogoutToggle(args)
     if args == nil or args == "" then
         AS.acwsvChar.skipLoadAddonPackOnLogout = not AS.acwsvChar.skipLoadAddonPackOnLogout
+        updateDDL()
     else
         if args == "0" or args == "false" or args == "off" then
             AS.acwsvChar.skipLoadAddonPackOnLogout = false
+            updateDDL()
         elseif args == "1" or args == "true" or args == "on" then
             AS.acwsvChar.skipLoadAddonPackOnLogout = true
+            updateDDL()
         end
     end
     local currentValue = AS.acwsvChar.skipLoadAddonPackOnLogout
