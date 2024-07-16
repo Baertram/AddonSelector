@@ -110,6 +110,7 @@ AddonSelectorGlobal.langArray = {
         ["addPackToKeybind"] =   "Pack zu Tastenkombination %s hinzufügen",
         ["removePackFromKeybind"] = "Pack von Tastenkombination %s entfernen",
         ["loadOnLogoutOrQuit"] = "Beim Logout/Beenden automatisch laden",
+        ["skipLoadAddonPack"] = "AddOn Pack laden beim Logout/Beenden überspringen: %q",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["en"] = { -- by Circonian & Baertram
@@ -208,6 +209,7 @@ AddonSelectorGlobal.langArray = {
         ["addPackToKeybind"] =   "Add pack to keybind %s",
         ["removePackFromKeybind"] = "Remove pack from keybind %s",
         ["loadOnLogoutOrQuit"] = "Load automatically at logout/quit",
+        ["skipLoadAddonPack"] = "Skip loading addon pack at logout/quit: %q",
     },
 ---------------------------------------------------------------------------------------------------------------------
     ["es"] = { -- by Kwisatz

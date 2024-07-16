@@ -23,6 +23,8 @@ local AS                            = AddonSelectorGlobal
 AS.version                          = "2.33"
 
 local ADDON_NAME	= "AddonSelector"
+local addonNamePrefix = "["..ADDON_NAME.."]"
+
 local ADDON_MANAGER
 local ADDON_MANAGER_OBJECT
 
@@ -202,6 +204,8 @@ local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
 local addPackToKeybindStr = AddonSelector_GetLocalizedText("addPackToKeybind")
 local removePackFromKeybindStr = AddonSelector_GetLocalizedText("removePackFromKeybind")
 local loadOnLogoutOrQuitStr = AddonSelector_GetLocalizedText("loadOnLogoutOrQuit")
+local skipLoadAddonPackStr = AddonSelector_GetLocalizedText("skipLoadAddonPack")
+
 
 --Boolean to on/off texts for narration
 local booleanToOnOff = {
@@ -3277,7 +3281,7 @@ local function saveUpdatedAddonPackCallbackFuncSubmenu(p_comboBox, p_item, entri
             end
         end
     end
-    d(string.format("[" .. ADDON_NAME .."]" .. changedAddonPackStr, tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (packCharNameStr .. ": " .. p_character)), tos(addonsChanged)))
+    d(string.format(addonNamePrefix .. changedAddonPackStr, tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (packCharNameStr .. ": " .. p_character)), tos(addonsChanged)))
     if addonsChanged > 0 then
         updateDDL()
         --Disable the saved button's enabled state
@@ -3828,6 +3832,7 @@ function AS.UpdateDDL(wasDeleted)
                                     isCheckbox = true,
                                     callback = function(comboBox, itemName, rowControl, checked)
                                         AS.acwsvChar.loadAddonPackOnLogout = nil
+                                        AS.acwsvChar.skipLoadAddonPackOnLogout = false
                                         if checked == true then
                                             AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
                                         end
@@ -4373,6 +4378,7 @@ function AS.UpdateDDL(wasDeleted)
                 isCheckbox = true,
                 callback = function(comboBox, itemName, rowControl, checked)
                     AS.acwsvChar.loadAddonPackOnLogout = nil
+                    AS.acwsvChar.skipLoadAddonPackOnLogout = false
                     if checked == true then
                         AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
                     end
@@ -5418,6 +5424,7 @@ function AS.LoadSaveVariables()
     }
     local defaultSavedVarsChar = {
         loadAddonPackOnLogout = nil, --table with packName and charName
+        skipLoadAddonPackOnLogout = false,
     }
 
     local worldName = GetWorldName()
@@ -5428,6 +5435,11 @@ function AS.LoadSaveVariables()
     --ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
     AS.acwsv                = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars, worldName, "AllAccounts")
     AS.acwsvChar            = ZO_SavedVars:NewCharacterIdSettings(svName, SAVED_VAR_VERSION, nil, defaultSavedVarsChar, worldName, nil)
+
+    --Reset "Skip load addon pack on logout"
+    AS.acwsvChar.skipLoadAddonPackOnLogout = false
+
+
     --Old non-server dependent SV exist and new SV too and were not migrated yet
     if oldSVWithoutServer ~= nil and not AS.acwsv.svMigrationToServerDone then
         --Copy all addon packages from the old SV to the new server dependent ones, but do not overwrite any existing ones
@@ -5486,8 +5498,10 @@ local function myLogoutCallback()
     if charSettings == nil then return end
     local addonPackToLoad = charSettings.loadAddonPackOnLogout
     if addonPackToLoad == nil then return end
-    loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
+    --Skip tthe current logout/quit addon pack loading?
+    if charSettings.skipLoadAddonPackOnLogout == true then return end
 
+    loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
     --return true --todo: Comment again after debugging! For debugging abort logout and quit!
 end
 
@@ -5788,6 +5802,20 @@ local function loadAddOnPackSlashCommandHandler(args, noReloadUI)
     openGameMenuAndAddOnsAndThenLoadPack(args, nil, noReloadUI, nil)
 end
 
+local function skipLoadAddonPackOnLogoutToggle(args)
+    if args == nil then
+        AS.acwsvChar.skipLoadAddonPackOnLogout = not AS.acwsvChar.skipLoadAddonPackOnLogout
+    else
+        if args == "0" or args == "false" or args == "off" then
+            AS.acwsvChar.skipLoadAddonPackOnLogout = false
+        elseif args == "1" or args == "true" or args == "on" then
+            AS.acwsvChar.skipLoadAddonPackOnLogout = true
+        end
+    end
+    local currentValue = AS.acwsvChar.skipLoadAddonPackOnLogout
+    d(strfor(addonNamePrefix .. skipLoadAddonPackStr, tos(booleanToOnOff[currentValue])))
+end
+
 local function ShowLAMAddonSettings()
     LibAddonMenu2:OpenToPanel(nil)
 end
@@ -5818,7 +5846,7 @@ function AddonSelector_ShowActivePackInChat()
     else
         charNameOfSelectedPack = ", " .. packCharNameStr .. ": " ..tos(charNameOfSelectedPack)
     end
-    d("[" .. ADDON_NAME .. "]" .. currentPackInfoText .. charNameOfSelectedPack)
+    d(addonNamePrefix .. currentPackInfoText .. charNameOfSelectedPack)
 end
 
 -------------------------------------------------------------------
@@ -5872,6 +5900,10 @@ local function OnAddOnLoaded(event, addonName)
     end
     SLASH_COMMANDS["/addonloadrl"]        = function(args) loadAddOnPackSlashCommandHandler(args, false) end
     SLASH_COMMANDS["/loadpackrl"]         = function(args) loadAddOnPackSlashCommandHandler(args, false) end
+    if SLASH_COMMANDS["/aslskip"] == nil then
+        SLASH_COMMANDS["/aslskip"]      = skipLoadAddonPackOnLogoutToggle
+    end
+    SLASH_COMMANDS["/loadpackskip"]     = skipLoadAddonPackOnLogoutToggle
 
 
     SLASH_COMMANDS["/asap"]             = AddonSelector_ShowActivePackInChat
