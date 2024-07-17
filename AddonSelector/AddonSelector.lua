@@ -1221,12 +1221,15 @@ local function getCharacterIdFromSVTableByCharacterName(charName)
 end
 
 local function getCharacterIdAndNameForSV(characterName)
+--d("[AS]getCharacterIdAndNameForSV - characterName: " ..tos(characterName))
     local characterIdForSV = currentCharId
     local charNameForSV = currentCharName
 
     if characterName ~= nil then
+        characterIdForSV = nil
+        charNameForSV = characterName
         characterIdForSV = getCharacterIdByName(characterName)
-
+--d(">>characterIdForSV: " ..tos(characterIdForSV) .. " / currentCharId: " ..tos(currentCharId))
         local settings = AS.acwsv
         local addonPacksOfChar = settings.addonPacksOfChar
 
@@ -1236,6 +1239,7 @@ local function getCharacterIdAndNameForSV(characterName)
         end
         if characterIdForSV == nil or addonPacksOfChar == nil or addonPacksOfChar[characterIdForSV] == nil then return nil, nil end
     end
+--d("<characterIdForSV: " .. tos(characterIdForSV) .. ", charNameForSV: " ..tos(charNameForSV))
     return characterIdForSV, charNameForSV
 end
 
@@ -1262,7 +1266,7 @@ local function createSVTableForPack(packName, characterName, wasPackNameProvided
 end
 
 local function getSVTableForPacks(characterName)
-    --d("[AS]getSVTableForPacks - characterName: " ..tos(characterName))
+--d("[AS]getSVTableForPacks - characterName: " ..tos(characterName))
 
     local settings = AS.acwsv
     if settings.saveGroupedByCharacterName or (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME) then
@@ -4783,22 +4787,24 @@ function OnClick_Save(packName, packData, characterName)
 
 
     local savePerCharacter = AS.acwsv.saveGroupedByCharacterName
-    if wasPackNameProvided == true and (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME) then
+    if savePerCharacter == false and wasPackNameProvided == true and (characterName ~= nil and characterName ~= GLOBAL_PACK_NAME) then
         savePerCharacter = true
     end
 
     local packCharacter = packNameGlobal
     --Save grouped by charactername
 --d(">savePerChar: " ..tos(savePerCharacter) .. ", newPackName: " ..tos(newPackName))
-    if savePerCharacter then
+    if savePerCharacter == true then
         local svTableOfCurrentChar, charName
         if wasPackNameProvided == true then
+--d(">charname was provided")
             svTableOfCurrentChar, charName = getSVTableForPacks(characterName)
         else
             svTableOfCurrentChar, charName = getSVTableForPacks()
         end
---d(">charName: " ..tos(charName))
+--d(">>charName: " ..tos(charName))
         if svTableOfCurrentChar ~= nil and charName ~= nil then
+--d(">>>svTableOfCurrentChar ~= nil and charName ~= nil -> simulate saveGroupedByChar = true")
             saveGroupedByChar = true
             svTable = svTableOfCurrentChar
             packCharacter = charName
@@ -4808,8 +4814,10 @@ function OnClick_Save(packName, packData, characterName)
         svTable = AS.acwsv.addonPacks
     end
 
+--AS._debugSvTable = svTable
+
     --Does the pack name already exist?
-    doesPackAlreadyExist = svTable[newPackName] ~= nil or false
+    doesPackAlreadyExist = (svTable[newPackName] ~= nil and true) or false
     if doesPackAlreadyExist == true then
         local addonPackName = "\'" .. newPackName .. "\'"
         local savePackQuestion = strfor(AddonSelector_GetLocalizedText("savePackBody"), tos(addonPackName))
