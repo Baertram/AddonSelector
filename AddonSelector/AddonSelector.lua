@@ -5575,7 +5575,7 @@ local function myLogoutCallback()
 
     loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
 
-    return true --todo: Comment again after debugging! For debugging abort logout and quit!
+    --return true --todo: Comment again after debugging! For debugging abort logout and quit!
 end
 
 --====================================--
