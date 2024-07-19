@@ -1439,8 +1439,8 @@ local function getCurrentCharsPackNameData()
 end
 
 --Update the currently selected packName label
-local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
---d(">1")
+local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData, isCharacterPack)
+--d("[AS]UpdateCurrentlySelectedPackName-wasDeleted: " ..tos(wasDeleted) .. ", packName: " .. tos(packName) .. ", charName: " .. tos(packData ~= nil and packData.charName) .. ", isCharacterPack: " .. tos(isCharacterPack))
     wasDeleted = wasDeleted or false
     local packNameLabel = AS.selectedPackNameLabel
     if not packNameLabel then return end
@@ -1472,11 +1472,11 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
     end
 --d("[AddonSelector]currentlySelectedPackName: " ..tos(currentlySelectedPackName) ..", currentlySelectedPackCharName: " ..tos(currentlySelectedPackCharName))
 
-    --Pack wurde nicht gelöscht, sondern soll normal updaten?
+    --Pack was not deleted -> normal upate of label?
     if not wasDeleted then
         if not currentlySelectedPackName then return end
     else
-        --Pack wurde gelöscht. Entfernen und label leeren
+        --Pack was deleted. Remove currently selected pack from SV and clear the label
         currentlySelectedPackName                                  = ""
         AS.acwsv.selectedPackNameForCharacters[currentCharacterId] = nil
     end
@@ -1484,15 +1484,6 @@ local function UpdateCurrentlySelectedPackName(wasDeleted, packName, packData)
 --d(">6")
         --Packs are saved per character? Show the character that belongs to teh currently selected pack
         local packNameText
-        --[[
-        local settings = AddonSelector.acwsv
-        if settings.saveGroupedByCharacterName == true then
-            packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
-        else
-            --Show the "global pack" info
-            packNameText = strfor(selectedPackNameStr, packNameGlobal)
-        end
-        ]]
         packNameText = strfor(selectedPackNameStr, strfor(charNamePackColorTemplate, currentlySelectedPackCharName))
         packNameText = packNameText .. currentlySelectedPackName
         packNameLabel:SetText(packNameText)
@@ -1515,7 +1506,7 @@ end
 
 
 --Set the currently selected pack name and the character owning the pack for the currently logged in character
-local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, packData)
+local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, packData, isCharacterPack)
 --d("SetCurrentCharacterSelectedPackname: " ..tos(currentlySelectedPackName) .. ", charName: " ..tos(packData.charName))
     if not currentlySelectedPackName or currentlySelectedPackName == "" or packData == nil then return end
     --Get the current character's uniqueId
@@ -1523,7 +1514,7 @@ local function SetCurrentCharacterSelectedPackname(currentlySelectedPackName, pa
     --Set the currently selected packname to the SavedVariables
     AS.acwsv.selectedPackNameForCharacters[currentCharId] = {
         packName = currentlySelectedPackName,
-        charName = (AS.acwsv.saveGroupedByCharacterName == true and packData.charName) or GLOBAL_PACK_NAME,
+        charName = ((isCharacterPack ~= nil and packData.charName) or (AS.acwsv.saveGroupedByCharacterName == true and packData.charName)) or GLOBAL_PACK_NAME,
         timestamp = GetTimeStamp()
     }
 end
@@ -1619,7 +1610,7 @@ local function updateDDLThrottled(delay)
     throttledCall(updateDDL, delay, ASUpdateDDLThrottleName)
 end
 
-local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
+local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate, isCharacterPack)
     noPackUpdate = noPackUpdate or false
 --d("[AS]onAddonPackSelected - RefreshData()")
     ADDON_MANAGER_OBJECT:RefreshData()
@@ -1633,9 +1624,9 @@ local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate)
         --Enable the delete button
         ChangeDeleteButtonEnabledState(nil, true)
         --Set the currently selected packname
-        SetCurrentCharacterSelectedPackname(addonPackName, addonPackData)
+        SetCurrentCharacterSelectedPackname(addonPackName, addonPackData, isCharacterPack)
         --Update the currently selected packName label
-        UpdateCurrentlySelectedPackName(nil, addonPackName, addonPackData)
+        UpdateCurrentlySelectedPackName(nil, addonPackName, addonPackData, isCharacterPack)
         --Enable the save pack button
         ChangeSaveButtonEnabledState(true)
     end
@@ -1704,7 +1695,7 @@ local function updateAddonsEnabledStateByPackData(packData, noUIShown)
     return somethingDone
 end
 
-local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown)
+local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown, isCharacterPack)
 --d("[AS]loadAddonPack")
     forAllCharsTheSame = forAllCharsTheSame or false
     -- Clear the edit box:
@@ -1712,7 +1703,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown)
 
     --Prevent that hook to ADDON_MANAGER:SetAddOnEnabled will call updateDDL() and unselect the current selected pack
     skipUpdateDDL = true
-    local somethingDone = updateAddonsEnabledStateByPackData(packData, noUIShown)
+    local somethingDone = updateAddonsEnabledStateByPackData(packData, noUIShown, isCharacterPack)
     skipUpdateDDL = false
 --d(">somethingDone: " ..tos(somethingDone))
 
@@ -1733,7 +1724,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown)
         end
         ]]
         AS.acwsv.packChangedBeforeReloadUI = true
-        onAddonPackSelected(packName, packData, skipOnAddonPackSelected)
+        onAddonPackSelected(packName, packData, skipOnAddonPackSelected, isCharacterPack)
     end
 end
 
@@ -2509,12 +2500,12 @@ AS._debugSlashLoadPack = {
                         doNotReloadUI = noReloadUI
                         --skipOnAddonPackSelected = true
                         --Select this pack now at the dropdown
-                        loadAddonPack(packName, packData, false, doNotShowAddOnsScene)
+                        loadAddonPack(packName, packData, false, doNotShowAddOnsScene, isCharacterPack)
                         --skipOnAddonPackSelected = false
                         doNotReloadUI = noReloadUI
 
                         --We only get here if auto reloadUI pack is disabled
-                        if not doNotReloadUI and AS.acwsv.autoReloadUI == false then
+                        if not wasCalledFromLogout and not doNotReloadUI and AS.acwsv.autoReloadUI == false then
                             ReloadUI("ingame")
                         end
 
