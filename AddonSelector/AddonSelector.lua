@@ -2,8 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2024-08-19
-AddonSelector v2.33
+2024-10-19
+AddonSelector v2.34
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ AddonSelector v2.33
 
 AddonSelectorGlobal = AddonSelectorGlobal or {} --Should be defined in strings.lua
 local AS                            = AddonSelectorGlobal
-AS.version                          = "2.33"
+AS.version                          = "2.34"
 
 local ADDON_NAME	= "AddonSelector"
 local addonNamePrefix = "["..ADDON_NAME.."]"
@@ -3508,6 +3508,7 @@ function AS.UpdateDDL(wasDeleted)
                                             isSaveButton = true,
                                             entryType = LSM_ENTRY_TYPE_BUTTON,
                                             buttonTemplate = 'ZO_DefaultButton',
+                                            doNotFilter = true,
                                         }
                                     end
 
@@ -4066,6 +4067,7 @@ function AS.UpdateDDL(wasDeleted)
                         isSaveButton = true,
                         entryType = LSM_ENTRY_TYPE_BUTTON,
                         buttonTemplate = 'ZO_DefaultButton',
+                        doNotFilter = true,
                     }
                 end
 
