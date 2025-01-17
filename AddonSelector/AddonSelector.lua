@@ -2,13 +2,16 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2024-10-19
-AddonSelector v2.34
+2025-01-17
+AddonSelector v2.35
 
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs - Max: 15
 ------------------------------------------------------------------------------------------------------------------------
+
+Feature requests:
+20241223 - Add new setting for keybinds to automatically reload the UI directly upon pack loading (regardless the setting "Auto reload UI after pack load" for te dropdown box)
 
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -20,7 +23,7 @@ AddonSelector v2.34
 
 AddonSelectorGlobal = AddonSelectorGlobal or {} --Should be defined in strings.lua
 local AS                            = AddonSelectorGlobal
-AS.version                          = "2.34"
+AS.version                          = "2.35"
 
 local ADDON_NAME	= "AddonSelector"
 local addonNamePrefix = "["..ADDON_NAME.."]"
@@ -5591,6 +5594,32 @@ function AS.LoadKeybinds()
     end
 end
 
+--Update the keybind descriptor for the 2nd keybind ("Clear unused") to use the 4th keybind instead, as AddonSelector also uses 2nd (and recently also 3rd -> Enable/Disable addon below mouse cursor)
+--keybinds since years!
+local function moveAddonManager2ndKeybindDescriptorTo4th()
+    --[[
+    local secondaryKeybindDescriptor =
+    {
+        keybind = "ADDONS_PANEL_SECONDARY",
+        name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
+        callback = function()
+            ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
+        end,
+    }
+    ]]
+    ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
+    if ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor ~= nil then
+        ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor = {
+            keybind = "ADDONS_PANEL_QUATERNARY",
+            name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
+            callback = function()
+                ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
+            end,
+        }
+        ADDON_MANAGER_OBJECT:RefreshKeybinds()
+    end
+end
+
 --====================================--
 --====  Initialize ====--
 --====================================--
@@ -5665,46 +5694,65 @@ function AS.Initialize()
     end
 
     local function AddonSelectorOnShow_HideStuff()
-        --With API101035 - "Custom bindings" text
-        --ZO_AddOnsCurrentBindingsSaved:SetHidden(true)
-        --Reanchor the custom bindings text
-        ZO_AddOnsCurrentBindingsSaved:ClearAnchors()
-        ZO_AddOnsCurrentBindingsSaved:SetAnchor(TOP, ZO_AddOnsSecondaryButton, BOTTOM, 0, 10)
+        local addonManagerControl = ADDON_MANAGER_OBJECT.control
+
+        --ZOs addon manager controls
+        local primaryButton = addonManagerControl:GetNamedChild("PrimaryButton") --Reload UI
+        local secondaryButton = addonManagerControl:GetNamedChild("SecondaryButton") --Clear unused
+        local currentBindingsSaved = addonManagerControl:GetNamedChild("CurrentBindingsSaved") --Currently saved 83/100
+        local advancedUIErrors = addonManagerControl:GetNamedChild("AdvancedUIErrors")
+        local advancedUIErrorsLabel = advancedUIErrors.label
+
+        --AddonSelector custom added controls
+        local selectAllButton = AddonSelectorSelectAddonsButton --Select all --AddonSelectorSelectAddonsButton
+        local deSelectAllButton = AddonSelectorDeselectAddonsButton --Select all --AddonSelectorDeselectAddonsButton
+        local startAddonSearchButton = AddonSelectorStartAddonSearchButton --Start search --AddonSelectorStartAddonSearchButton
+        local toggleStateButton = AddonSelectorToggleAddonStateButton --Toggle state --AddonSelectorToggleAddonStateButton
+
+
         --Move the AddonSelector keybind buttons to the left below each other to show the vanilla UI keybindings
         --properly
-        AddonSelectorSelectAddonsButton:ClearAnchors()
-        AddonSelectorSelectAddonsButton:SetAnchor(TOPLEFT, AddonSelectorDeselectAddonsButton, BOTTOMLEFT, 0, 0)
+        selectAllButton:ClearAnchors()
+        selectAllButton:SetAnchor(TOPLEFT, deSelectAllButton, BOTTOMLEFT, 0, 0)
         --Toggle Addon On/Off button
-        AddonSelectorToggleAddonStateButton:ClearAnchors()
-        AddonSelectorToggleAddonStateButton:SetAnchor(TOPLEFT, AddonSelectorDeselectAddonsButton, TOPRIGHT, 5, 0)
+        toggleStateButton:ClearAnchors()
+        toggleStateButton:SetAnchor(TOPLEFT, deSelectAllButton, TOPRIGHT, 5, 0)
 
         --Start addon search button
-        AddonSelectorStartAddonSearchButton:SetText(searchMenuStr)
-        AddonSelectorStartAddonSearchButton:ClearAnchors()
-        AddonSelectorStartAddonSearchButton:SetAnchor(TOPLEFT, AddonSelectorSelectAddonsButton, TOPRIGHT, 5, 0)
-        --With API101038 - "Advanced error messages" checkbox - reacnhor 1 frame later, or it won't move properly
+        startAddonSearchButton:SetText(searchMenuStr)
+        startAddonSearchButton:ClearAnchors()
+        startAddonSearchButton:SetAnchor(TOPLEFT, selectAllButton, TOPRIGHT, 5, 0)
+
+        --Reanchor the custom bindings text (below "deselect all" button)
+        currentBindingsSaved:ClearAnchors()
+        currentBindingsSaved:SetAnchor(TOPLEFT, selectAllButton, BOTTOMLEFT, 0, 5)
+
+        --Reanchor the "Clear unused" button (right of "custom bindings text")
+        secondaryButton:ClearAnchors()
+        secondaryButton:SetAnchor(LEFT, currentBindingsSaved, RIGHT, 10, 0)
+
+        --With API101038 - "Advanced error messages" checkbox - reanchor 1 frame later, or it won't move properly
         zo_callLater(function()
-            ZO_AddOnsAdvancedUIErrors:ClearAnchors()
-            ZO_AddOnsAdvancedUIErrors:SetAnchor(TOPLEFT, ZO_AddOnsCurrentBindingsSaved, TOPRIGHT, 10, 0)
+            advancedUIErrors:ClearAnchors()
+            advancedUIErrors:SetAnchor(TOPLEFT, secondaryButton, TOPRIGHT, 10, 10)
         end, 0)
 
-        if not ZO_AddOnsAdvancedUIErrors.wasHookedByAddonSelector then
-            ZO_AddOnsAdvancedUIErrors.wasHookedByAddonSelector = true
+        if not advancedUIErrors.wasHookedByAddonSelector then
+            advancedUIErrors.wasHookedByAddonSelector = true
 
-            onMouseEnterDoNarrate(ZO_AddOnsAdvancedUIErrors.label)
-            onMouseEnterDoNarrate(ZO_AddOnsAdvancedUIErrors)
-            ZO_PostHookHandler(ZO_AddOnsAdvancedUIErrors, "OnMouseUp", function(ctrl, button, upInside)
+            onMouseEnterDoNarrate(advancedUIErrorsLabel)
+            onMouseEnterDoNarrate(advancedUIErrors)
+            ZO_PostHookHandler(advancedUIErrors, "OnMouseUp", function(ctrl, button, upInside)
                 if upInside and button == MOUSE_BUTTON_INDEX_LEFT then
                     OnControlClickedNarrate(ctrl, true)
                 end
             end)
-            ZO_PostHookHandler(ZO_AddOnsAdvancedUIErrors.label, "OnMouseUp", function(ctrl, button, upInside)
+            ZO_PostHookHandler(advancedUIErrorsLabel, "OnMouseUp", function(ctrl, button, upInside)
                 if upInside and button == MOUSE_BUTTON_INDEX_LEFT then
                     OnControlClickedNarrate(ctrl, true)
                 end
             end)
         end
-
     end
     AS.OnShow_HideStuff = AddonSelectorOnShow_HideStuff
 
@@ -5794,31 +5842,7 @@ function AS.Initialize()
         end
     end)
     ]]
-
-
-    --Update the keybind descriptor for the 2nd keybind ("Clear unused") to use the 4th keybind instead, as AddonSelector also uses 2nd (and recently also 3rd -> Enable/Disable addon below mouse cursor)
-    --keybinds since years!
-    --[[
-    local secondaryKeybindDescriptor =
-    {
-        keybind = "ADDONS_PANEL_SECONDARY",
-        name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
-        callback = function()
-            ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
-        end,
-    }
-    ]]
-    ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
-    if ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor ~= nil then
-        ADDON_MANAGER_OBJECT.secondaryKeybindDescriptor = {
-            keybind = "ADDONS_PANEL_QUATERNARY",
-            name =  GetString(SI_CLEAR_UNUSED_KEYBINDS_KEYBIND),
-            callback = function()
-                ZO_Dialogs_ShowDialog("CONFIRM_CLEAR_UNUSED_KEYBINDS")
-            end,
-        }
-        ADDON_MANAGER_OBJECT:RefreshKeybinds()
-    end
+    moveAddonManager2ndKeybindDescriptorTo4th()
 
     --Get the currently loaded packname of the char, if it was changed before reloadUI
     if AS.acwsv.packChangedBeforeReloadUI == true then
