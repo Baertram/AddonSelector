@@ -216,6 +216,7 @@ local changedAddonPackStr = AddonSelector_GetLocalizedText("changedAddonPack")
 local saveChangesNowStr = AddonSelector_GetLocalizedText("saveChangesNow")
 local packNameLoadNotFoundStr = AddonSelector_GetLocalizedText("packNameLoadNotFound")
 local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
+local packNameLoadAtLogoutFoundStr = AddonSelector_GetLocalizedText("packNameLoadAtLogoutFound")
 local addPackToKeybindStr = AddonSelector_GetLocalizedText("addPackToKeybind")
 local removePackFromKeybindStr = AddonSelector_GetLocalizedText("removePackFromKeybind")
 local loadOnLogoutOrQuitStr = AddonSelector_GetLocalizedText("loadOnLogoutOrQuit")
@@ -2514,7 +2515,9 @@ AS._debugSlashLoadPack = {
 
                         clearAndUpdateDDL()
 
-                        d(string.format(packNameLoadFoundStr, tos(packName), tos(not isCharacterPack and packNameGlobal or characterName)))
+                        local textForChat = wasCalledFromLogout and packNameLoadAtLogoutFoundStr or packNameLoadFoundStr
+
+                        d(string.format(textForChat, tos(packName), tos(not isCharacterPack and packNameGlobal or characterName), (wasCalledFromLogout and currentCharName) or nil))
                         return true
                     end
                 end
@@ -2555,9 +2558,9 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     addonListWasOpenedByAddonSelector = false
 end
 
-local function loadAddonPackNow(packName, charName, doNotShowAddonsList, noReloadUI)
+local function loadAddonPackNow(packName, charName, doNotShowAddonsList, noReloadUI, comingFromLogout)
     if packName == nil or packName == "" or charName == nil or charName == "" then return end
-    openGameMenuAndAddOnsAndThenLoadPack(packName, doNotShowAddonsList, noReloadUI, charName)
+    openGameMenuAndAddOnsAndThenLoadPack(packName, doNotShowAddonsList, noReloadUI, charName, comingFromLogout)
 end
 
 --Add the active addon count to the header text
@@ -5091,16 +5094,34 @@ end
 -- Used to change the layout of the Addon scrollList to
 -- make room for the AddonSelector control
 function AS.ChangeLayout()
-	--local template = ZO_AddOns
+	--Make the addons manager not movable outside of the screen, same for the keybindings etc. below
+    local controlsToSetClampedToScreen = {
+        ZO_AddOns,
+        ZO_AddOnsCurrentBindingsSaved,
+        AddonSelectorStartAddonSearchButton,
+        AddonSelectorToggleAddonStateButton,
+        AddonSelectorSelectAddonsButton,
+        AddonSelectorDeselectAddonsButton,
+        ZO_AddOnsSecondaryButton,
+        ZO_AddOnsPrimaryButton,
+        ZO_AddOnsAdvancedUIErrors,
+        ZO_AddOnsAdvancedUIErrors.label,
+    }
+    for _, ctrl in ipairs(controlsToSetClampedToScreen) do
+        if ctrl then ctrl:SetClampedToScreen(true) end
+    end
+
+
+    --local template = ZO_AddOns
 	--local divider = ZO_AddOnsDivider
 	local list = ZOAddOnsList
 	--local bg = ZO_AddonsBGLeft
 	list:ClearAnchors()
 	list:SetAnchor(TOPLEFT, AS.addonSelectorControl, BOTTOMLEFT, 0, 10)
 	-- This does not work ?? Items get cut off.
-	--list:SetAnchor(BOTTOMRIGHT, bg, BOTTOMRIGHT, -20, -100)
+	list:SetAnchor(BOTTOMRIGHT, ZOAddOns, BOTTOMRIGHT, -20, -50)
 	--list:SetDimensions(885, 560)
-	ZO_ScrollList_SetHeight(list, 600)
+	--ZO_ScrollList_SetHeight(list, 600)
 	ZO_ScrollList_Commit(list)
 end
 
@@ -5161,8 +5182,8 @@ function AS.CreateControlReferences()
     --PerfectPixel: Reposition of the settings "gear" icon -> move up to other icons (like Votans Addon List)
     AS.settingsOpenDropdown:ClearAnchors()
     --<Anchor point="TOPLEFT" relativeTo="ZO_AddOns" relativePoint="TOP" offsetX="100" offsetY="65"/>
-    local offsetX = (PP ~= nil and 40) or 100
-    local offsetY = (PP ~= nil and -7) or 65
+    local offsetX = 100
+    local offsetY = 65
     AS.settingsOpenDropdown:SetAnchor(TOPLEFT, ZOAddOns, TOP, offsetX, offsetY)
 
     AS.searchBox = addonSelector:GetNamedChild("SearchBox")
@@ -5569,7 +5590,7 @@ local function myLogoutCallback()
     --Skip tthe current logout/quit addon pack loading?
     if charSettings.skipLoadAddonPackOnLogout == true then return end
 
-    loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true)
+    loadAddonPackNow(addonPackToLoad.packName, addonPackToLoad.charName, true, true, true)
 
     --return true --todo: Comment again after debugging! For debugging abort logout and quit!
 end
