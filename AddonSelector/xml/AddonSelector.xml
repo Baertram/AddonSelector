@@ -107,14 +107,14 @@
                 </Button>
 
                 <Control name="$(parent)DeselectAddonsButton" inherits="ZO_DialogButton">
-                    <Anchor point="TOPLEFT" relativeTo="ZO_AddOnsList" relativePoint="BOTTOMLEFT" offsetY="5" />
+                    <Anchor point="TOPLEFT" relativeTo="ZO_AddOnsList" relativePoint="BOTTOMLEFT" offsetY="15" />
                     <OnInitialized>
                         self:SetParent(ZO_AddOns)
                         ZO_KeybindButtonTemplate_Setup(self, "ADDONS_DESELECT_ALL", function() AddonSelector_SelectAddons(false) end, AddonSelector_GetLocalizedText("DeselectAllAddons"))
                     </OnInitialized>
                 </Control>
                 <Control name="$(parent)SelectAddonsButton" inherits="ZO_DialogButton">
-                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="15" />
                     <OnInitialized>
                         self:SetParent(ZO_AddOns)
                         ZO_KeybindButtonTemplate_Setup(self, "ADDONS_SELECT_ALL", function() AddonSelector_SelectAddons(true) end, AddonSelector_GetLocalizedText("SelectAllAddons"))
@@ -122,7 +122,7 @@
                 </Control>
 
                 <Control name="$(parent)ToggleAddonStateButton" inherits="ZO_DialogButton">
-                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="15" />
                     <OnInitialized>
                         self:SetParent(ZO_AddOns)
                         ZO_KeybindButtonTemplate_Setup(self, "ADDONS_TOGGLE_ADDON_STATE", function() AddonSelector_ToggleCurrentAddonState() end, AddonSelector_GetLocalizedText("ToggleAddonState"))
@@ -130,7 +130,7 @@
                 </Control>
 
                 <Control name="$(parent)StartAddonSearchButton" inherits="ZO_DialogButton">
-                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="5" />
+                    <Anchor point="TOP" relativeTo="ZO_AddOnsList" relativePoint="BOTTOM" offsetY="15" />
                     <OnInitialized>
                         self:SetParent(ZO_AddOns)
                         ZO_KeybindButtonTemplate_Setup(self, "ADDONS_SEARCH", function() AddonSelector_StartAddonSearch() end, AddonSelector_GetLocalizedText("AddonSearch"))

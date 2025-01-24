@@ -5733,6 +5733,9 @@ function AS.Initialize()
 
         --Move the AddonSelector keybind buttons to the left below each other to show the vanilla UI keybindings
         --properly
+        primaryButton:ClearAnchors()
+        primaryButton:SetAnchor(TOPRIGHT, ZOAddOnsList, BOTTOMRIGHT, 0, 15)
+
         selectAllButton:ClearAnchors()
         selectAllButton:SetAnchor(TOPLEFT, deSelectAllButton, BOTTOMLEFT, 0, 0)
         --Toggle Addon On/Off button
