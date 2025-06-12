@@ -2,8 +2,8 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2025-01-17
-AddonSelector v2.35
+2025-06-12
+AddonSelector v2.37
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ Feature requests:
 
 AddonSelectorGlobal = AddonSelectorGlobal or {} --Should be defined in strings.lua
 local AS                            = AddonSelectorGlobal
-AS.version                          = "2.35"
+AS.version                          = "2.37"
 
 local ADDON_NAME	= "AddonSelector"
 local addonNamePrefix = "["..ADDON_NAME.."]"
@@ -82,6 +82,13 @@ local addonsWhichShouldNotBeDisabled = {
     ["LibDialog"] =         true,
     ["LibCustomMenu"] =     true,
     ["LibScrollableMenu"] = true,
+}
+
+--Check if any dependency needs to automatically enable another dependency
+local addOnDependencySpecials = {
+    ["LibMediaProvider-1.0"] = {
+        automaticEnableThis = { "LibMediaProvider" }
+    }
 }
 
 --Settings that need to udate the dropdown entries at the combobox if setting is changed
@@ -645,6 +652,26 @@ local function getAddonNameAndData(control)
 --d(">getAddonNameAndData: " ..tos(addonName) .. ", data: " ..tos(addonData))
     if addonName == nil or addonName == "" then return nil, nil end
     return addonName, addonData
+end
+
+local function getAddOnOrLibraryDataByName(name)
+    if name == nil or name == "" then return end
+    local librariesLookup = AS.Libraries
+    local addonsLookup    = AS.NameLookup
+
+    if librariesLookup ~= nil then
+        local librariesData = librariesLookup[name]
+        if librariesData ~= nil then
+            return librariesData
+        end
+    end
+
+    if addonsLookup ~= nil then
+        local addonData = addonsLookup[name]
+        if addonData ~= nil then
+            return addonData
+        end
+    end
 end
 
 local function isAddonRow(rowControl)
@@ -1341,8 +1368,10 @@ local function selectPreviouslySelectedPack(beforeSelectedPackData)
     AS.comboBox:SelectItem(beforeSelectedPackData, true) --ignore the callback for entry selected!
 end
 
+
 --Check if dependencies of an addon are given and enable them, if not already enabled
 --> This function was taken from addon "Votans Addon List". All credits go to Votan!
+--->Improved ba dependend dependencies like LibMediaProvider-1.0 -> LibMediaProvider
 local dependencyLevel = 0
 local function checkDependsOn(data)
 --d(">checkDependsOn")
@@ -1351,6 +1380,23 @@ local function checkDependsOn(data)
     data.addOnEnabled, data.addOnState = true, ADDON_STATE_ENABLED
 
     dependencyLevel = dependencyLevel + 1
+
+    --Is e.g. LibMediaProvider-1.0 checked -> Find other addon LibMediaProvider and enable it when not enabled
+    local specialDependencyChecks = addOnDependencySpecials[data.strippedAddOnName]
+    if specialDependencyChecks ~= nil then
+d(">specialDependencyChecks (level "..tos(dependencyLevel).."): " ..tos(data.strippedAddOnName))
+        local automaticEnableThis = specialDependencyChecks.automaticEnableThis
+        if not ZO_IsTableEmpty(automaticEnableThis) then
+            for _, enableMeNow in ipairs(automaticEnableThis) do
+d(">>enableMeNow: " .. tos(enableMeNow))
+                local enableMeNowData = getAddOnOrLibraryDataByName(data.strippedAddOnName or data.addOnFileName or data.addOnName)
+                if enableMeNowData and enableMeNowData.addOnState ~= ADDON_STATE_ENABLED and not enableMeNowData.missing then
+d(">>>enabled the addon at index: " .. tos(enableMeNowData.index) .. ", name: " ..tos(enableMeNowData.addOnName))
+                    ADDON_MANAGER:SetAddOnEnabled(enableMeNowData.index, true)
+                end
+            end
+        end
+    end
 
     local other
     for i = 1, #data.dependsOn do
@@ -1616,7 +1662,7 @@ end
 
 local function onAddonPackSelected(addonPackName, addonPackData, noPackUpdate, isCharacterPack)
     noPackUpdate = noPackUpdate or false
---d("[AS]onAddonPackSelected - RefreshData()")
+--d("[AS]onAddonPackSelected - RefreshData() - noPackUpdate: " ..tos(noPackUpdate))
     ADDON_MANAGER_OBJECT:RefreshData()
     ADDON_MANAGER_OBJECT.isDirty = true
     if ADDON_MANAGER_OBJECT.RefreshMultiButton then
@@ -1712,6 +1758,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown, 
 --d(">somethingDone: " ..tos(somethingDone))
 
     if not doNotReloadUI and AS.acwsv.autoReloadUI == true then -- and somethingDone == true then
+--d(">pack loaded and reloadUI now")
         --Set the currently selected packname
         SetCurrentCharacterSelectedPackname(packName, packData)
         --[[
@@ -1722,6 +1769,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown, 
         AS.acwsv.packChangedBeforeReloadUI = true
         ReloadUI("ingame")
     else
+--d(">load pack w/o reloadUI")
         --[[
         if forAllCharsTheSame == true then
             SetAllCharactersSelectedPackname(packName, packData)
@@ -2958,7 +3006,7 @@ local function OnClickDDL(comboBox, packName, packData, selectionChanged, oldIte
         oldItem = oldItem,
     }
 ]]
---d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AddonSelector.acwsv.autoReloadUI))
+--d("OnClickDDL-packName: " ..tos(packName) .. ", doNotReloadUI: " ..tos(doNotReloadUI) ..", autoReloadUI: " ..tos(AS.acwsv.autoReloadUI))
     if preventOnClickDDL == true then preventOnClickDDL = false return end
     loadAddonPack(packName, packData, forAllCharsTheSame, false)
 end
@@ -3019,13 +3067,26 @@ local function OnClick_DeleteDo(itemData, charId, beforeSelectedPackData, button
 
     if wasDeleted == true then
         --Was the pack deleted which was currently selected, or any other?
-        local currentlySelectedPackWasDeleted = (buttonWasPressed == true or (beforeSelectedPackData ~= nil and itemData == beforeSelectedPackData) and true) or false
+        local currentlySelectedPackWasDeleted = ((buttonWasPressed == true or (beforeSelectedPackData ~= nil and itemData == beforeSelectedPackData)) and true) or false
+
+        --[[
+AS._debugDoDelete = {
+    buttonWasPressed = buttonWasPressed,
+    itemData = itemData,
+    beforeSelectedPackData = beforeSelectedPackData,
+    currentlySelectedPackWasDeleted = currentlySelectedPackWasDeleted,
+    charId = charId,
+}
+]]
+
 --d(">currentlySelectedPackWasDeleted: " ..tos(currentlySelectedPackWasDeleted).. ", buttonWasPressed: " ..tos(buttonWasPressed))
         clearAndUpdateDDL(currentlySelectedPackWasDeleted)
         --Select the before selected pack again -> No "selected" callback so it does not accidently reload the UI or changes any enabled/disabled addons
         if not currentlySelectedPackWasDeleted and beforeSelectedPackData ~= nil then
+--d(">>selectPreviouslySelectedPack")
             selectPreviouslySelectedPack(beforeSelectedPackData)
         else
+--d(">>was deleted")
             --Disable the "delete pack" button
             ChangeDeleteButtonEnabledState(nil, false)
             --Disable the "save pack" button
@@ -4637,8 +4698,10 @@ end
 ]]
 
 local function OnClick_SaveDo(wasPackNameProvided, packName, characterName)
+--d("[AS]OnClick_SaveDo-wasPackNameProvided: " .. tos(wasPackNameProvided) .. "; packName: " .. tos(packName))
     wasPackNameProvided = wasPackNameProvided or false
     if wasPackNameProvided == false then
+--d(">AS.editBox:GetText")
         packName = AS.editBox:GetText()
     end
 
@@ -4651,15 +4714,20 @@ local function OnClick_SaveDo(wasPackNameProvided, packName, characterName)
             return
         end
         packName = itemData.name
+--d(">packName is now: " .. tos(packName))
     end
+
 
     --Overwrite an existing pack without selecting it (chose "Overwrite" from submenu)
     if wasPackNameProvided == true then
+--d(">>saveAddonsAsPackToSV")
         --Get SavedVariables table for the existing pack and update the pack there
         saveAddonsAsPackToSV(packName, false, characterName, wasPackNameProvided)
 
         clearAndUpdateDDL()
     else
+--d(">>Create new entry in Dropdown")
+
         --Get SavedVariables table for the pack and update the pack there
         local svForPack = saveAddonsAsPackToSV(packName, false, nil, false)
         -- Create a temporary copy of the itemEntry data so we can select it
@@ -4671,9 +4739,16 @@ local function OnClick_SaveDo(wasPackNameProvided, packName, characterName)
         clearAndUpdateDDL()
         --Prevent reloadui for a currently new saved addon pack!
         doNotReloadUI = true
-        AS.comboBox:SelectItem(itemData)
+--d("[AS]SelectItem")
+        AS.comboBox:SelectItem(itemData) --itemData.callback(...) -> Should call OnClickDDL
         doNotReloadUI = false
 
+
+        ChangeDeleteButtonEnabledState(nil, true)
+
+        local isCharacterPack = ((itemData.charName ~= nil and itemData.charName ~= GLOBAL_PACK_NAME) and true) or savePackPerCharacter
+        SetCurrentCharacterSelectedPackname(packName, itemData, isCharacterPack)
+        UpdateCurrentlySelectedPackName(nil, packName, itemData, isCharacterPack)
         --Disable the "save pack" button
         ChangeSaveButtonEnabledState(true)
     end
