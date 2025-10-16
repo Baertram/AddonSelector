@@ -56,7 +56,7 @@ local EM = EVENT_MANAGER
 
 --Local function references
 local OnClickDDL, OnClick_Save, OnClick_Delete, OnClick_DeleteWholeCharacter
-
+local createItemEntry
 
 --======================================================================================================================
 -- Create/update controls
@@ -778,6 +778,7 @@ function AS.UpdateDDL(wasDeleted)
     utility.BuildAddOnReverseLookUpTable()
     local librariesLookup = AS.Libraries
     local addonsLookup    = AS.NameLookup
+    createItemEntry = createItemEntry or AS.CreateItemEntry
 
 ------------------------------------------------------------------------------------------------------------------------
     --!LibScrollableMenu - Create the dropdown menu entries now - CharacterName entries!
@@ -789,7 +790,7 @@ function AS.UpdateDDL(wasDeleted)
         local addedSubMenuEntry  = false
 
         --Create a header "Character packs"
-        local itemDataCharacterPackHeader = AS.createItemEntry(AddonSelector_GetLocalizedText("packNameCharacter"), nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. AddonSelector_GetLocalizedText("characterWides"),
+        local itemDataCharacterPackHeader = createItemEntry(AddonSelector_GetLocalizedText("packNameCharacter"), nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. AddonSelector_GetLocalizedText("characterWides"),
                 nil, false, true)
         tins(packTable, itemDataCharacterPackHeader)
 
@@ -1348,7 +1349,7 @@ function AS.UpdateDDL(wasDeleted)
                     end
 
                     --packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData, contextMenuCallbackFunc
-                    local itemCharData = AS.createItemEntry(charName .. ((not isCharOfCurrentAcc and " " .. AddonSelector_GetLocalizedText("otherAccount")) or ""), label, addonPacks, true,
+                    local itemCharData = createItemEntry(charName .. ((not isCharOfCurrentAcc and " " .. AddonSelector_GetLocalizedText("otherAccount")) or ""), label, addonPacks, true,
                             charName, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("characterWide")..": \'" ..tostring(charName) .. "\' (ID: " .. tostring(charId)..")",
                             subMenuEntriesChar, subMenuEntriesChar ~= nil, false, nil, charContextMenuCallbackFunc)
                     tins(packTable, itemCharData)
@@ -1371,7 +1372,7 @@ function AS.UpdateDDL(wasDeleted)
         local addedSubMenuEntryGlobal
 
         --Create a header "Global packs"
-        local itemDataGlobalPackHeader = AS.createItemEntry(packNameGlobal, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. AddonSelector_GetLocalizedText("accountWides"),
+        local itemDataGlobalPackHeader = createItemEntry(packNameGlobal, nil, nil, false, nil, "[" .. tostring(megaServer) .. "]" .. AddonSelector_GetLocalizedText("accountWides"),
                 nil, false, true)
         tins(packTable, itemDataGlobalPackHeader)
 
@@ -1933,7 +1934,7 @@ function AS.UpdateDDL(wasDeleted)
             end
 
             --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
-            local itemGlobalData = AS.createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("accountWide").." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
+            local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("accountWide").." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
                     subMenuEntriesGlobal, subMenuEntriesGlobal ~= nil, false, iconData, globalPackContextMenuCallbackFunc)
             tins(packTable, itemGlobalData)
             wasItemAdded = true
@@ -2003,7 +2004,7 @@ function AS.CreateItemEntry(packName, label, addonTable, isCharacterPack, charNa
 
     return entry
 end
-local createItemEntry = AS.CreateItemEntry
+createItemEntry = AS.CreateItemEntry
 
 
 local function OnAbort_Do(wasSave, wasDelete, itemData, charId, beforeSelectedPackData)

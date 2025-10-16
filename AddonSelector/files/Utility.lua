@@ -610,7 +610,6 @@ AS.ShowConfirmationDialog = ShowConfirmationDialog
 -------------------------------------------------------------------
 -- -v- Other addons -v-
 -------------------------------------------------------------------
-utility.otherAddOns = {}
 
 --[AddonCategory]
 local isAddonCategoryAddOnEnabled
@@ -620,7 +619,8 @@ local function isAddonCategoryEnabled()
     end
     return isAddonCategoryAddOnEnabled
 end
-utility.otherAddOns.isAddonCategoryAddOnEnabled = isAddonCategoryAddOnEnabled
+utility.otherAddOns.isAddonCategoryAddOnEnabled = isAddonCategoryEnabled
+
 
 local function getAddonCategoryCategories()
     otherAddonsData.addonCategories = {}

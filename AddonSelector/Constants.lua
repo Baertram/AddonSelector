@@ -62,6 +62,7 @@ AS.searchAndFoundData = searchAndFoundData
 
 --Utility
 AS.utility = {}
+AS.utility.otherAddOns = {}
 
 --Constants
 local constants = AS.constants --defined in en.lua
