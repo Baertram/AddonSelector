@@ -2,6 +2,8 @@
 --              DO NOT CHANGE THIS FILE!
 --    DO NOT COPY THIS FILE FOR YOUR LANGUAGE TRANSLATIONS!
 --          Copy any other file like de.lua or fr.lua
+--        and just check which translation strings below
+--           in en.lua's table langArray are missing
 --!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 --Define the global variable
@@ -14,18 +16,37 @@ local addonNamePrefix = "["..ADDON_NAME.."]"
 AS.addonNamePrefix = addonNamePrefix
 -->Only name and prefix are added here. Further values are added at Constants.lua
 
+--Create constants table
+AS.constants = {}
+local constants = AS.constants
 
+
+--Variables for translations
 local addonSelectorStrPrefix = "SI_ADDONSEL_"
-AS.constants.addonSelectorStrPrefix = addonSelectorStrPrefix
+constants.addonSelectorStrPrefix = addonSelectorStrPrefix
+local stringConstants
 
+
+--Helper functions for translations
 --Get localized texts
 function AddonSelector_GetLocalizedText(textToFind)
-    local stringConstants = AS.constants.strings
+    stringConstants = stringConstants or AS.constants.strings
     if stringConstants[textToFind] ~= nil then return stringConstants[textToFind] end
     return GetString(addonSelectorStrPrefix .. textToFind)
 end
 
 
+--!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+--              DO NOT CHANGE THIS FILE!
+--    DO NOT COPY THIS FILE FOR YOUR LANGUAGE TRANSLATIONS!
+--          Copy any other file like de.lua or fr.lua
+--        and just check which translation strings below
+--           in en.lua's table langArray are missing
+--!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+------------------------------------------------------------------------------------------------------------------------
+-- En Strings for translations
+------------------------------------------------------------------------------------------------------------------------
 --The strings
 local langArray = {
     ["packName"]			= "Pack name:",

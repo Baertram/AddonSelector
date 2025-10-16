@@ -862,6 +862,12 @@ local function AS_Initialize()
     ADDON_MANAGER_OBJECT    = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
     AS.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
 
+    --Fill the characters of the account tables -> Should have been prefilled at Utility.lua already
+    if AS.charactersOfAccount == nil or AS.characterIdsOfAccount == nil or AS.charactersOfAccountLower == nil or AS.characterIdsOfAccountLower == nil then
+        AS.charactersOfAccount, AS.charactersOfAccountLower     = getCharactersOfAccount(false)
+        AS.characterIdsOfAccount, AS.characterIdsOfAccountLower = getCharactersOfAccount(true)
+    end
+
     --Load the SavedVariables and do "after SV loaded checks"
     AS.LoadSaveVariables()
 

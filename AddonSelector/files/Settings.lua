@@ -277,7 +277,18 @@ local function OnClick_CheckBoxLabel(selfVar, currentStateVar)
     end
 end
 
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 --Show the settings context menu at the dropdown button
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
     local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or nil
@@ -309,7 +320,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     if currentAddonSelectorSelectAllButtonText ~= AddonSelector_GetLocalizedText("SelectAllAddons") then
         AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     end
-    AddCustomMenuItem(selectAllText,                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+    AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllAddons"),                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
     AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
@@ -404,7 +415,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             itemType = MENU_ADD_OPTION_CHECKBOX,
         }
     }
-    AddCustomSubMenuItem(searchMenuStr, searchOptionsSubmenu)
+    AddCustomSubMenuItem(AddonSelector_GetLocalizedText("searchMenuStr"), searchOptionsSubmenu)
 
     --Add the auto reload pack after selection checkbox
     local cbAutoReloadUIindex = AddCustomMenuItem(textures.reloadUITextureStr .. AddonSelector_GetLocalizedText("autoReloadUIHint"),

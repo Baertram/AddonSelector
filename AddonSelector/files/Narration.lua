@@ -12,6 +12,8 @@ local LSMconstants = constants.LSM
 local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
 
 local narration = AS.narration
+local narrateOnMouseEnterHandlerName = narration.narrateOnMouseEnterHandlerName
+
 local narrationBlackList = narration.blacklist
 local ZOAddOns_BlacklistedNarrationChilds = narrationBlackList.ZOAddOns_BlacklistedNarrationChilds
 local ZOAddOns_AddonSelector_BlacklistedNarrationChilds = narrationBlackList.ZOAddOns_AddonSelector_BlacklistedNarrationChilds
@@ -50,6 +52,7 @@ local onMouseEnterHandlers_ZOAddOns_done = {}
 ------------------------------------------------------------------------------------------------------------------------
 -- Accessibility - Narration
 ------------------------------------------------------------------------------------------------------------------------
+
 
 local function IsAccessibilitySettingEnabled(settingId)
     return GetSetting_Bool(SETTING_TYPE_ACCESSIBILITY, settingId)
@@ -478,7 +481,7 @@ local function onMouseEnterDoNarrate(control, narrateTextTemplate, narrateTextFu
                 if narrateAddonUIControlText ~= nil then
                     OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateAddonUIControlText, stopNarration)  end)
                 end
-            end, "AddonSelector_NarrateUIControlOnMouseEnter")
+            end, narrateOnMouseEnterHandlerName)
             onMouseEnterHandlers_ZOAddOns_done[control] = true
         else
             ZO_PostHookHandler(control, "OnMouseEnter", function(ctrl)
@@ -619,9 +622,9 @@ local function enableZO_AddOnsUI_controlNarration()
     end
 
     --Title
-    if ZO_AddOnsTitle ~= nil then
-        ZO_AddOnsTitle:SetMouseEnabled(true)
-        onMouseEnterDoNarrate(ZO_AddOnsTitle, nil, narrateAddonsEnabledTotal)
+    if ZOsControls.ZOAddOnsTitle ~= nil then
+        ZOsControls.ZOAddOnsTitle:SetMouseEnabled(true)
+        onMouseEnterDoNarrate(ZOsControls.ZOAddOnsTitle, nil, narrateAddonsEnabledTotal)
     end
 
     --Search box

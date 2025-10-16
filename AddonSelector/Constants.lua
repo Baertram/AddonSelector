@@ -54,8 +54,7 @@ AS.searchAndFoundData = searchAndFoundData
 AS.utility = {}
 
 --Constants
-AS.constants = {}
-local constants = AS.constants
+local constants = AS.constants --defined in en.lua
 
 
 --Currently loggedIn account info
@@ -172,6 +171,7 @@ constants.keybinds.MAX_ADDON_LOAD_PACK_KEYBINDS = MAX_ADDON_LOAD_PACK_KEYBINDS
 constants.ZOsControls = {
     ZOAddOns        =               ZO_AddOns,
     ZOAddOnsList    =               ZO_AddOnsList,
+    ZOAddOnsTitle   =               ZO_AddOnsTitle,
     enableAllAddonsParent =         ZO_AddOnsList2Row1,       --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
     enableAllAddonTextCtrl =        ZO_AddOnsList2Row1Text,     --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
     enableAllAddonsCheckboxCtrl =   ZO_AddOnsList2Row1Checkbox, --will be re-referenced at event_add_on_loaded or ADDON_MANAGER_OBJECT OnShow
@@ -207,6 +207,8 @@ constants.updaterNames = updaterNames
 --Narration
 local narration = {}
 AS.narration = narration
+narration.narrateOnMouseEnterHandlerName = ADDON_NAME .. "_NarrateUIControlOnMouseEnter"
+
 --Do not narrate any text if mouse is moved above this control at ZO_AddOns
 local ZOAddOns_BlacklistedNarrationChilds = {
     ["ZO_AddOnsTitle"]                      = true, --Title
@@ -277,6 +279,8 @@ local colors = {
     globalPackColorTemplate = "|c7EC8E3%s|r",
     numAddonsColorTemplate = "|cf9a602%s|r",
     numLibrariesColorTemplate = "|cf9a602%s|r",
+
+    simplyRed = "|cFF0000%s|r",
 }
 constants.colors = colors
 local globalPackColorTemplate = colors.globalPackColorTemplate

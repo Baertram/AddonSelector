@@ -4,18 +4,18 @@ local ADDON_NAME = AS.name
 local constants = AS.constants
 local utility = AS.utility
 
-local SEARCH_TYPE_NAME = constants.SEARCH_TYPE_NAME
+--local SEARCH_TYPE_NAME = constants.SEARCH_TYPE_NAME
 local stringConstants = constants.strings
-local prefixStrings = stringConstants.prefixStrings
+--local prefixStrings = stringConstants.prefixStrings
 local ZOsControls = constants.ZOsControls
 local LSMconstants = constants.LSM
-local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
+--local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
 local narration = AS.narration
+local colors = constants.colors
 
-
-local currentCharIdNum = constants.currentCharIdNum
+--local currentCharIdNum = constants.currentCharIdNum
 local currentCharId = constants.currentCharId
-local currentCharName = constants.currentCharName
+--local currentCharName = constants.currentCharName
 local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 
 local updaterNames = constants.updaterNames
@@ -23,6 +23,7 @@ local ASUpdateDDLThrottleName = updaterNames.ASUpdateDDLThrottleName
 local ASUpdateAddonCountThrottleName = updaterNames.ASUpdateAddonCountThrottleName
 local searchHistoryEventUpdaterName = updaterNames.searchHistoryEventUpdaterName
 
+local simplyRedColorPattern = colors.simplyRed
 local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
 
 
@@ -31,6 +32,7 @@ local tos = tostring
 local tins = table.insert
 local tsor = table.sort
 local strlow = string.lower
+local strfor = string.format
 
 local EM = EVENT_MANAGER
 
@@ -99,6 +101,7 @@ utility.updateAddonsEnabledCountThrottled = updateAddonsEnabledCountThrottled
 ------------------------------------------------------------------------------------------------------------------------
 -- Event updater
 ------------------------------------------------------------------------------------------------------------------------
+local eventUpdaterNameTemplate = "AddonSelector_ChangeZO_AddOnsList_Row_Index_%s_%s"
 local function unregisterOldEventUpdater(p_sortIndexOfControl, p_addSelection)
     --Disable the check for the control for the last index so it will not be skipped and thus active for ever!
     local activeUpdateControlEvents = AS.controls.controlData.activeUpdateControlEvents
@@ -106,10 +109,10 @@ local function unregisterOldEventUpdater(p_sortIndexOfControl, p_addSelection)
         for index, eventData in ipairs(activeUpdateControlEvents) do
             local lastEventUpdateName
             if p_sortIndexOfControl == nil and p_addSelection == nil then
-                lastEventUpdateName = "AddonSelector_ChangeZO_AddOnsList_Row_Index_" ..tos(eventData.sortIndex) .. "_" .. tos(eventData.addSelection)
+                lastEventUpdateName = strfor(eventUpdaterNameTemplate, tos(eventData.sortIndex), tos(eventData.addSelection))
             else
                 if eventData.sortIndex == p_sortIndexOfControl and eventData.addSelection == p_addSelection then
-                    lastEventUpdateName = "AddonSelector_ChangeZO_AddOnsList_Row_Index_" ..tos(eventData.sortIndex) .. "_" .. tos(eventData.addSelection)
+                    lastEventUpdateName = strfor(eventUpdaterNameTemplate, tos(eventData.sortIndex), tos(eventData.addSelection))
                 end
             end
             if lastEventUpdateName ~= nil then
@@ -140,7 +143,7 @@ local function eventUpdateFunc(p_sortIndexOfControl, p_addSelection, p_eventUpda
             local newAddonText
             if p_addSelection then
                 currentAddonText = selectedAddonControlName:GetText()
-                newAddonText = "|cFF0000[>|r " .. currentAddonText .. " |cFF0000<]|r"
+                newAddonText = strfor(simplyRedColorPattern, "[>") .. currentAddonText .. strfor(simplyRedColorPattern, "<]")
             else
                 local selectedAddonData = addonList[p_sortIndexOfControl].data
                 newAddonText = selectedAddonData.addOnName
@@ -261,8 +264,6 @@ utility.getCharactersOfAccount = getCharactersOfAccount
 --Fill the tables
 AS.charactersOfAccount, AS.charactersOfAccountLower     = getCharactersOfAccount(false)
 AS.characterIdsOfAccount, AS.characterIdsOfAccountLower = getCharactersOfAccount(true)
-local charactersOfAccount   = AS.charactersOfAccount
-local charactersOfAccountLower   = AS.charactersOfAccountLower
 local characterIdsOfAccount = AS.characterIdsOfAccount
 local characterIdsOfAccountLowerCase = AS.characterIdsOfAccountLower
 
@@ -298,7 +299,7 @@ local function checkIfGlobalPacksShouldBeShown()
     if showGlobalPacks == false and savePerCharacter == false then
         AS.acwsv.showGlobalPacks = true
     end
-    updateSaveModeTexure(savePerCharacter)
+    utility.updateSaveModeTexure(savePerCharacter)
 end
 utility.checkIfGlobalPacksShouldBeShown = checkIfGlobalPacksShouldBeShown
 
@@ -535,7 +536,7 @@ function addonSelectorUpdateCount(delay, doNarrate)
 
         --Update the addon manager title with the number of active/total addons
         --d("[AddonSelector] active/found: " .. tos(countActive) .. "/" .. tos(countFound))
-        local zoAddOnsTitle = ZO_AddOnsTitle
+        local zoAddOnsTitle = ZOsControls.ZOAddOnsTitle
         zoAddOnsTitle:SetText(GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. " (" .. tos(countActive) .. "/" .. tos(countFound) .. ")")
         zoAddOnsTitle:SetMouseEnabled(true)
     end, delay)
@@ -574,14 +575,11 @@ utility.isAddonPackEnabledForAutoLoadOnLogout = isAddonPackEnabledForAutoLoadOnL
 --Function to show a confirmation dialog
 local function ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, callbackSetup, data, forceUpdate)
     --Initialize the library
-    if AS.LDIALOG == nil then
-        AS.LDIALOG = LibDialog
-    end
-    if not AS.LDIALOG then
+    local libDialog = AS.LDIALOG
+    if libDialog then
         d("[AddonSelector]".. AddonSelector_GetLocalizedText("LibDialogMissing"))
         return
     end
-    local libDialog = AS.LDIALOG
     --Force the dialog to be updated with the title, text, etc.?
     forceUpdate = forceUpdate or false
     --Check if the dialog exists already, and if not register it
