@@ -27,6 +27,7 @@ local flags = {
     preventOnClickDDL = false,
     skipUpdateDDL = false,
     wasLogoutPrehooked = false,
+    skipOnAddonPackSelected = false,
 }
 --Other AddOsns
 flags.otherAddons = {
@@ -434,3 +435,11 @@ local asControls = { --these will be updated at EVENT_ADD_ON_LOADED etc.
 }
 AS.controls = asControls
 
+
+--Functions
+--Callback functions
+local defaultCallbackFunc = function()  end
+local constFunctions = {
+    defaultCallbackFunc = defaultCallbackFunc,
+}
+constants.functions = constFunctions

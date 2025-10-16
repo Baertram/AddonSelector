@@ -4,18 +4,17 @@ local addonNamePrefix = AS.addonNamePrefix
 
 local constants = AS.constants
 local utility = AS.utility
+local asControls = AS.controls
 
-local SEARCH_TYPE_NAME = constants.SEARCH_TYPE_NAME
 
 local ZOsControls = constants.ZOsControls
-local LSMconstants = constants.LSM
-local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
 
-local currentCharIdNum = constants.currentCharIdNum
+local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
+local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = constants.GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME
+
 local currentCharId = constants.currentCharId
-local currentCharName = constants.currentCharName
-local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 local addonsWhichShouldNotBeDisabled = constants.addonsWhichShouldNotBeDisabled
+local addonSelectorSelectAddonsButtonNameLabel = asControls.addonSelectorSelectAddonsButtonNameLabel
 
 local onAddonPackSelected = AS.onAddonPackSelected
 
@@ -54,6 +53,7 @@ local function unselectAnyPack(selectedPackLabelToo)
         selectedPackLabel:SetText("")
     end
 end
+utility.unselectAnyPack = unselectAnyPack
 
 --Get the currently selected pack name and the character owning the pack for the currently logged in character
 --as the user interfaces reloaded and the pack was loaded
@@ -122,7 +122,7 @@ local function enableDisabledAddonDependencies(addOnIndex, doDebug, packData, is
                         if strippedAddOnName == nil then strippedAddOnName = dependencyName end
                         local dependencyFileName = filenameLookup[strippedAddOnName] or filenameLookup[dependencyName]
                         if addonTable[dependencyFileName] == nil then
-                            d(addonNamePrefix .. strfor(autoAddedMissingDependencyToPackStr, dependencyFileName, tos(packData.name)))
+                            d(addonNamePrefix .. strfor(AddonSelector_GetLocalizedText("autoAddedMissingDependencyToPack"), dependencyFileName, tos(packData.name)))
                             addonTable[dependencyFileName] = strippedAddOnName
                             anyAddonAddedToPack = true
                         end
@@ -355,7 +355,7 @@ local function loadAddonPack(packName, packData, forAllCharsTheSame, noUIShown, 
         end
         ]]
         AS.acwsv.packChangedBeforeReloadUI = true
-        onAddonPackSelected(packName, packData, skipOnAddonPackSelected, isCharacterPack)
+        onAddonPackSelected(packName, packData, AS.flags.skipOnAddonPackSelected, isCharacterPack)
     end
 end
 AS.loadAddonPack = loadAddonPack
@@ -478,11 +478,12 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
         emptyHouse = false
     end
     if not fullHouse and not emptyHouse then
-        selectAddOnsButton:SetText(selectSavedText)
+        selectAddOnsButton:SetText(AddonSelector_GetLocalizedText("SelectAllAddonsSaved"))
     else
-        selectAddOnsButton:SetText(selectAllText)
+        selectAddOnsButton:SetText(AddonSelector_GetLocalizedText("SelectAllAddons"))
     end
-    local isSelectAddonsButtonTextEqualSelectedSaved = (not enableAll and selectAll == true and addonSelectorSelectAddonsButtonNameLabel:GetText() == selectSavedText and true) or false
+    addonSelectorSelectAddonsButtonNameLabel = addonSelectorSelectAddonsButtonNameLabel or asControls.addonSelectorSelectAddonsButtonNameLabel
+    local isSelectAddonsButtonTextEqualSelectedSaved = (not enableAll and selectAll == true and addonSelectorSelectAddonsButtonNameLabel:GetText() == AddonSelector_GetLocalizedText("SelectAllAddonsSaved") and true) or false
 
 --d(">isSelectAddonsButtonTextEqualSelectedSaved: " ..tos(isSelectAddonsButtonTextEqualSelectedSaved))
 
@@ -523,7 +524,7 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
     if isSelectAddonsButtonTextEqualSelectedSaved == true then
         AS.acwsv.selectAllSave = {}
         --Update the keybind strip's button
-        selectAddOnsButton:SetText(selectAllText)
+        selectAddOnsButton:SetText(AddonSelector_GetLocalizedText("SelectAllAddons"))
     end
 
     --Update the flag for the filters and resort of the addon list

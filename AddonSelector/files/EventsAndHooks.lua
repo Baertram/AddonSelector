@@ -256,10 +256,10 @@ AS._debugSlashLoadPack = {
 
                         --Clear the dropdown selected entry
                         AS.flags.doNotReloadUI = noReloadUI
-                        --skipOnAddonPackSelected = true
+                        --AS.flags.skipOnAddonPackSelected = true
                         --Select this pack now at the dropdown
                         AS.loadAddonPack(packName, packData, false, doNotShowAddOnsScene, isCharacterPack)
-                        --skipOnAddonPackSelected = false
+                        --AS.flags.skipOnAddonPackSelected = false
                         AS.flags.doNotReloadUI = noReloadUI
 
                         --We only get here if auto reloadUI pack is disabled

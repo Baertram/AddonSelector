@@ -66,9 +66,6 @@ local OnClick_Save, OnClick_DeleteWholeCharacter, AddonSelectorUpdateCount, getK
 --Local speed-up reference variables
 local enableAllAddonsCheckboxHooked = false
 
---Callback functions
-local defaultCallbackFunc = function()  end
-
 
 
 ------------------------------------------------------------------------------------------------------------------------
