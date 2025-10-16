@@ -3,7 +3,6 @@ local constants = AS.constants
 local utility = AS.utility
 local narration = AS.narration
 local ZOsControls = constants.ZOsControls
-local flags = AS.flags
 local otherAddonsFlags = AS.flags.otherAddons
 local stringConstants = constants.strings
 
@@ -11,12 +10,17 @@ local SEARCH_TYPE_NAME = constants.SEARCH_TYPE_NAME
 
 local ADDON_NAME = AS.name
 
+local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
+
 local currentCharIdNum = constants.currentCharIdNum
 local currentCharId = constants.currentCharId
 local currentCharName = constants.currentCharName
 local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 
+local booleanToOnOff = stringConstants.booleanToOnOff
+
 --Flags
+local flags = AS.flags
 
 --Functions
 local checkIfMenuOwnerIsZOAddOns = utility.checkIfMenuOwnerIsZOAddOns
@@ -37,6 +41,7 @@ local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
 local getCharactersOfAccount = utility.getCharactersOfAccount
 local getAddonNameAndData = utility.getAddonNameAndData
+local checkIfGlobalPacksShouldBeShown = utility.checkIfGlobalPacksShouldBeShown
 
 local ADDON_MANAGER =           utility.GetAddonManager()
 local ADDON_MANAGER_OBJECT =    utility.GetAddonManagerObject()
@@ -47,6 +52,7 @@ local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 --ZOs reference variables
 local tos = tostring
 local strfor = string.format
+local strlow = string.lower
 
 local EM = EVENT_MANAGER
 local SM = SCENE_MANAGER
@@ -172,7 +178,7 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
     local charNameForMsg = charName
 
     --Split and respect quotes and double quotes
-    options = splitStringAndRespectQuotes(args)
+    options = utility.splitStringAndRespectQuotes(args)
     if ZO_IsTableEmpty(options) then return end
     local numOptions = #options
 --d(">got here, #options: " .. tos(numOptions))
@@ -211,12 +217,12 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
         if packNameLower ~= nil then
             --Character is the currentlyLoggedIn or any other?
             if isCharacterPack == true then
-                characterIdForSV, charNameForSV = getCharacterIdAndNameForSV(charName)
+                characterIdForSV, charNameForSV = AS.getCharacterIdAndNameForSV(charName)
                 charNameForMsg = charNameForSV
             end
 
             --Search the packname now as character or global pack
-            svForPacks, charId, characterName = getSVTableForPackBySavedType((not isCharacterPack and GLOBAL_PACK_NAME) or nil, (isCharacterPack and characterIdForSV) or nil)
+            svForPacks, charId, characterName = AS.getSVTableForPackBySavedType((not isCharacterPack and GLOBAL_PACK_NAME) or nil, (isCharacterPack and characterIdForSV) or nil)
 
             --[[
 AS._debugSlashLoadPack = {
@@ -269,7 +275,7 @@ AS._debugSlashLoadPack = {
 
                         utility.clearAndUpdateDDL()
 
-                        local textForChat = wasCalledFromLogout and packNameLoadAtLogoutFoundStr or packNameLoadFoundStr
+                        local textForChat = wasCalledFromLogout and AddonSelector_GetLocalizedText("packNameLoadAtLogoutFound") or AddonSelector_GetLocalizedText("packNameLoadFound")
 
                         d(string.format(textForChat, tos(packName), tos(not isCharacterPack and packNameGlobal or characterName), (wasCalledFromLogout and currentCharName) or nil))
                         return true
@@ -278,7 +284,7 @@ AS._debugSlashLoadPack = {
             end
         end
     end
-    d(string.format(packNameLoadNotFoundStr, tos(packNameLower), tos((not isCharacterPack and packNameGlobal) or charNameForMsg)))
+    d(string.format(AddonSelector_GetLocalizedText("packNameLoadNotFound"), tos(packNameLower), tos((not isCharacterPack and packNameGlobal) or charNameForMsg)))
     return false
 end
 
@@ -719,7 +725,7 @@ function AS.LoadHooks()
 
             --PostHook the new Enable All addons checkbox function so that the controls of Circonians Addon Selector get disabled/enabled
             updateEnableAllAddonsCtrls()
-            if not enableAllAddonsCheckboxHooked and ZOsControls.enableAllAddonsCheckboxCtrl ~= nil then
+            if not flags.enableAllAddonsCheckboxHooked and ZOsControls.enableAllAddonsCheckboxCtrl ~= nil then
                 ZO_PostHookHandler(ZOsControls.enableAllAddonsCheckboxCtrl, "OnMouseUp", function(checkboxCtrl, mouseButton, isUpInside)
                     if not isUpInside or mouseButton ~= MOUSE_BUTTON_INDEX_LEFT then return end
                     areAllAddonsEnabled(false)
@@ -748,11 +754,11 @@ function AS.LoadHooks()
     --PreHook the Addonmanagers OnEffectivelyHidden function
     if ADDON_MANAGER_OBJECT.control:GetHandler("OnHide") == nil then
         ADDON_MANAGER_OBJECT.control:SetHandler("OnHide", function(ctrl)
-            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. closedStr, true)
+            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. AddonSelector_GetLocalizedText("closedStr"), true)
         end)
     else
         ZO_PostHookHandler(ADDON_MANAGER_OBJECT.control, "OnHide", function(ctrl)
-            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. closedStr, true)
+            AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] " .. AddonSelector_GetLocalizedText("closedStr"), true)
         end)
     end
 
@@ -772,7 +778,7 @@ function AS.LoadHooks()
             --Find out if a submenu exists or if the entry in the ZO_Menu is a checkbox or normal text
             --It got a submenu? Check that first as the .checkbox will be "reused" for a submenu! But the control name won't be "Arror" at the suffix then
             if GetControl(itemCtrl, "Arrow") ~= nil then
-                textToNarrate = "[" .. submenuStr .. "]   " .. strfor(prefixStr, currentMenuItemText)
+                textToNarrate = "[" .. AddonSelector_GetLocalizedText("submenu") .. "]   " .. strfor(prefixStr, currentMenuItemText)
                 isSubmenu = true
                 --Checkbox?
             else
@@ -796,7 +802,7 @@ function AS.LoadHooks()
                 if checkBoxCtrl ~= nil and checkBoxCtrl.GetState ~= nil then
                     currentCbState = ZO_CheckButton_IsChecked(checkBoxCtrl)
                 end
-                textToNarrate = "[" .. checkboxStr .."]   " .. strfor(prefixStr, currentMenuItemText .. " ["..currentlyStr.."]: " ..tos(booleanToOnOff[currentCbState]))
+                textToNarrate = "[" .. AddonSelector_GetLocalizedText("checkBox") .."]   " .. strfor(prefixStr, currentMenuItemText .. " ["..AddonSelector_GetLocalizedText("currently").."]: " ..tos(booleanToOnOff[currentCbState]))
             end
         end
         return textToNarrate, isCheckbox, isSubmenu
@@ -885,7 +891,7 @@ local function AS_Initialize()
 
     --Get the currently loaded packname of the char, if it was changed before reloadUI
     if AS.acwsv.packChangedBeforeReloadUI == true then
-        local currentPackOfchar = GetCurrentCharacterSelectedPackname()
+        local currentPackOfchar = AS.GetCurrentCharacterSelectedPackname()
         if currentPackOfchar ~= nil then
             --Set the last loaded pack data
             AS.acwsv.lastLoadedPackNameForCharacters[currentCharId] = currentPackOfchar

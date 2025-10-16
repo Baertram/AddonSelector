@@ -28,6 +28,7 @@ local flags = {
     skipUpdateDDL = false,
     wasLogoutPrehooked = false,
     skipOnAddonPackSelected = false,
+    enableAllAddonsCheckboxHooked = false,
 }
 --Other AddOsns
 flags.otherAddons = {

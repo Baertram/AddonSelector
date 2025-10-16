@@ -529,11 +529,9 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
 
     --Update the flag for the filters and resort of the addon list
     ZO_AddOnManager.isDirty = true
---d("[AddonSelector]Fragment removed")
-    --Remove the addons fragment from the scene, to refresh it properly
+    --Remove the addons fragment from the scene (to refresh it properly)
     SM:RemoveFragment(ADDONS_FRAGMENT)
---d("[AddonSelector]Fragment added")
-    --Add the addons fragment to the scene, to refresh it properly
+    --Re-Add the addons fragment to the scene (to refresh it properly)
     SM:AddFragment(ADDONS_FRAGMENT)
 
 --Attempt to fix ESC and RETURN key and other global keybinds not woring aftr you have used an AddonManager keybind

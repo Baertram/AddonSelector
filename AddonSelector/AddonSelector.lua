@@ -63,8 +63,6 @@ local tsor = gTab.sort
 --Local function references
 local OnClick_Save, OnClick_DeleteWholeCharacter, AddonSelectorUpdateCount, getKeybindingLSMEntriesForPacks
 
---Local speed-up reference variables
-local enableAllAddonsCheckboxHooked = false
 
 
 
