@@ -704,7 +704,7 @@ function AS.LoadHooks()
     ZO_PreHook(ADDON_MANAGER_OBJECT, "OnShow", function(ctrl)
         --d("ADD_ON_MANAGER:OnShow")
         --Hide other controls/keybinds
-        AS.AddonSelectorOnShow_HideStuff()
+        AS.OnShow_HideStuff()
 
         --Update the count/total number at the addon manager titel
         if not AS.flags.noAddonNumUpdate then

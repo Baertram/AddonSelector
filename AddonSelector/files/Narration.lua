@@ -89,7 +89,7 @@ local function checkActiveSearchByReturnKey()
     end
     return true
 end
-AS.IsAccessibilityUIReaderEnabled = IsAccessibilityUIReaderEnabled
+narration.IsAccessibilityUIReaderEnabled = IsAccessibilityUIReaderEnabled
 
 --[[
 local function StopNarration(UItoo)
@@ -156,7 +156,7 @@ local function AddNewChatNarrationText(newText, stopCurrent)
 	SNM:QueueCustomEntry(customNarrateEntryName)
     RequestReadPendingNarrationTextToClient(NARRATION_TYPE_UI_SCREEN)
 end
-AS.AddNewChatNarrationText = AddNewChatNarrationText
+narration.AddNewChatNarrationText = AddNewChatNarrationText
 
 local function GetKeybindNarration(keybindButtonInfoTable)
     local keybindNarration = SNM:CreateNarratableObject(nil, 100)

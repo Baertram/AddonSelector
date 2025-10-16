@@ -26,6 +26,7 @@ files/Controls.lua
 files/Narration.lua
 files/Packs.lua
 files/EventsAndHooks.lua
+files/SlashCommands.lua
 
 ## Addon main file
 AddonSelector.lua

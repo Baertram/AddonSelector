@@ -1171,7 +1171,7 @@ function AS.UpdateDDL(wasDeleted)
                                 ) or nil
                                 if numLibrariesInSubmenuPack > 0 and tooltipCharPack ~= nil then
                                     tooltipCharPack = tooltipCharPack ..
-                                            "\n" .. librariesStr .. ": " .. tos(numLibrariesInSubmenuPack) ..
+                                            "\n" .. AddonSelector_GetLocalizedText("libraries") .. ": " .. tos(numLibrariesInSubmenuPack) ..
                                             ((numDisabledLibrariesInSubmenuPack > 0 and "\n" .. AddonSelector_GetLocalizedText("disabledRed").. "': " ..tos(numDisabledLibrariesInSubmenuPack)) or "") ..
                                             ((numMissingLibrariesInSubmenuPack > 0 and "\n" .. AddonSelector_GetLocalizedText("missing") .. "': " ..tos(numMissingLibrariesInSubmenuPack)) or "")
                                 end
@@ -1734,7 +1734,7 @@ function AS.UpdateDDL(wasDeleted)
                 ) or nil
                 if numLibrariesInGlobalPack > 0 and tooltipStr ~= nil then
                     tooltipStr = tooltipStr ..
-                    "\n" .. librariesStr .. ": " .. tos(numLibrariesInGlobalPack) ..
+                    "\n" .. AddonSelector_GetLocalizedText("libraries") .. ": " .. tos(numLibrariesInGlobalPack) ..
                     ((numDisabledLibrariesInGlobalPack > 0 and "\n" .. AddonSelector_GetLocalizedText("disabledRed").. "': " ..tos(numDisabledLibrariesInGlobalPack)) or "") ..
                     ((numMissingLibrariesInGlobalPack > 0 and "\n" .. AddonSelector_GetLocalizedText("missing") .. "': " ..tos(numMissingLibrariesInGlobalPack)) or "")
                 end
@@ -1745,7 +1745,7 @@ function AS.UpdateDDL(wasDeleted)
             subMenuEntriesGlobal = {
                 {
                     name    = packName,
-                    label   = selectPackStr .. autoReloadUISuffixSubmenu .. ": " .. packName,
+                    label   = AddonSelector_GetLocalizedText("selectPack") .. autoReloadUISuffixSubmenu .. ": " .. packName,
                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
     --d(">submenuEntry callback of " .. tos(packName) .. ", packNameWithSelectPackStr: " ..tos(packNameWithSelectPackStr))
                         --OnClickDDL(comboBox, packName, packData, selectionChanged, oldItem)
