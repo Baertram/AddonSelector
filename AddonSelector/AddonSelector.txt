@@ -1,19 +1,35 @@
 ## Title: Addon Selector
 ## Description: Allows you to save & reload packages of addons, whether they are turned ON/OFF.
 ## Author: Circonian, current: Baertram
-## APIVersion: 101046 101047
-## AddOnVersion: 203070
-## Version: 2.37
-## DependsOn: LibCustomMenu>=730 LibDialog>=127 LibScrollableMenu>=020306
+## APIVersion: 101047 101048
+## AddOnVersion: 300000
+## Version: 3.00
+## DependsOn: LibCustomMenu>=722 LibDialog>=127 LibScrollableMenu>=020307
 ## OptionalDependsOn: AddonCategory
 ## SavedVariables: AddonSelectorSavedVars
 
 ## Addon strings / translated texts
-lang/strings.lua
+lang/en.lua
+lang/$(language).lua
+
+## Addon constants
+Constants.lua
+
+## XML UI elements
+xml/AddonSelector.xml
 
 ## Addon source
-xml/AddonSelector.xml
-AddonSelector.lua
+files/Utility.lua
+files/Settings.lua
+files/Keybinds.lua
+files/Controls.lua
+files/Narration.lua
+files/Packs.lua
+files/EventsAndHooks.lua
 
-## Keybindings
+## Addon main file
+AddonSelector.lua
+API.lua
+
+## XML Keybindings
 xml/bindings.xml
