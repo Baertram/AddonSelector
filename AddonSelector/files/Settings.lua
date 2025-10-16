@@ -23,6 +23,8 @@ local checkIfGlobalPacksShouldBeShown = utility.checkIfGlobalPacksShouldBeShown
 local clearAndUpdateDDL = utility.clearAndUpdateDDL
 local getCharacterIdByName = utility.getCharacterIdByName
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
 local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 
 --ZOs reference variables

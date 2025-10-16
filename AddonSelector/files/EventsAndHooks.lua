@@ -1,6 +1,7 @@
 local AS = AddonSelectorGlobal
 local constants = AS.constants
 local utility = AS.utility
+local utilityOtherAddOns = utility.otherAddOns
 local narration = AS.narration
 local ZOsControls = constants.ZOsControls
 local otherAddonsFlags = AS.flags.otherAddons
@@ -12,10 +13,10 @@ local ADDON_NAME = AS.name
 
 local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
 
-local currentCharIdNum = constants.currentCharIdNum
+--local currentCharIdNum = constants.currentCharIdNum
 local currentCharId = constants.currentCharId
 local currentCharName = constants.currentCharName
-local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
+--local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 
 local booleanToOnOff = stringConstants.booleanToOnOff
 
@@ -43,9 +44,13 @@ local getCharactersOfAccount = utility.getCharactersOfAccount
 local getAddonNameAndData = utility.getAddonNameAndData
 local checkIfGlobalPacksShouldBeShown = utility.checkIfGlobalPacksShouldBeShown
 
+local isAddonCategoryAddOnEnabled = utility.isAddonCategoryAddOnEnabled
+local getAddonCategoryCategories = utilityOtherAddOns.getAddonCategoryCategories
+
 local ADDON_MANAGER =           utility.GetAddonManager()
 local ADDON_MANAGER_OBJECT =    utility.GetAddonManagerObject()
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 
 
@@ -114,7 +119,7 @@ local function showAddOnsList()
     if headerControls ~= nil then
         local headersHookedCount = 0
         for headerControlText, headerControlData in pairs(headerControls) do
-            if headerControlText == addonsStr then
+            if headerControlText == AddonSelector_GetLocalizedText("addons") then
                 if headerControlData.data and headerControlData.data.callback then
                     --Is the addnons fragment already added to the current scene?
                     if not SM:GetCurrentScene():HasFragment(ADDONS_FRAGMENT) then
@@ -287,6 +292,7 @@ AS._debugSlashLoadPack = {
     d(string.format(AddonSelector_GetLocalizedText("packNameLoadNotFound"), tos(packNameLower), tos((not isCharacterPack and packNameGlobal) or charNameForMsg)))
     return false
 end
+AS.OpenGameMenuAndAddOnsAndThenLoadPack = openGameMenuAndAddOnsAndThenLoadPack
 
 local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScene, isAddonCategorySearched)
 --d("[AS]openGameMenuAndAddOnsAndThenSearch-addonName: " ..tos(addonName) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", isAddonCategorySearched: " ..tos(isAddonCategorySearched))
@@ -849,10 +855,22 @@ end
 
 
 
-
 -------------------------------------------------------------------
 --  AddOnSelector - OnAddOnLoaded  --
 -------------------------------------------------------------------
+
+--====================================--
+--====  Other addons ====--
+--====================================--
+
+function AS.OtherAddonsChecks()
+    --Addon "AddonCategory" is enabled?
+    otherAddonsFlags.isAddonCategoryEnabled = isAddonCategoryAddOnEnabled()
+    if otherAddonsFlags.isAddonCategoryEnabled == true then
+        getAddonCategoryCategories()
+    end
+end
+
 
 --====================================--
 --====  Initialize ====--
@@ -879,6 +897,9 @@ local function AS_Initialize()
 
     --Load the keybinds
     AS.LoadKeybinds()
+
+    --Check for other addons
+    AS.OtherAddonsChecks()
 
     --Create the controls, and update them
     AS.CreateControlReferences()
@@ -920,9 +941,6 @@ function AS.OnAddOnLoaded(_, addonName)
     --Load SavedVariables, create and update controls etc.
     AS_Initialize()
 ---------------------------------------------------------------------
-
-
-    AS.controls.addonSelectorSelectAddonsButtonNameLabel = AddonSelectorSelectAddonsButton.nameLabel --GetControl(AddonSelectorSelectAddonsButton, "NameLabel")
 
     --Load the SlashCommands
     AS.RegisterSlashCommands()

@@ -18,10 +18,17 @@ local currentCharId = constants.currentCharId
 --local currentCharName = constants.currentCharName
 local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 
+--Other Addons
+local otherAddonsData = AS.otherAddonsData
+
+
 local updaterNames = constants.updaterNames
 local ASUpdateDDLThrottleName = updaterNames.ASUpdateDDLThrottleName
 local ASUpdateAddonCountThrottleName = updaterNames.ASUpdateAddonCountThrottleName
 local searchHistoryEventUpdaterName = updaterNames.searchHistoryEventUpdaterName
+
+
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 
 local simplyRedColorPattern = colors.simplyRed
 local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
@@ -616,6 +623,9 @@ end
 utility.otherAddOns.isAddonCategoryAddOnEnabled = isAddonCategoryAddOnEnabled
 
 local function getAddonCategoryCategories()
+    otherAddonsData.addonCategories = {}
+    otherAddonsData.addonCategoriesIndices = {}
+
     if not isAddonCategoryEnabled() then return nil, nil end
     local addonCategories, addonCategoriesIndices
     local possibleAddonCategories = AddonCategory.indexCategories
@@ -635,6 +645,9 @@ local function getAddonCategoryCategories()
         --Sort the output table by category name
         tsor(addonCategories)
     end
+    otherAddonsData.addonCategories = addonCategories
+    otherAddonsData.addonCategoriesIndices = addonCategoriesIndices
+
     return addonCategories, addonCategoriesIndices
 end
 utility.otherAddOns.getAddonCategoryCategories = getAddonCategoryCategories

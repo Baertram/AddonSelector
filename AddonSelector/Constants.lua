@@ -3,6 +3,8 @@ AS.version                          = "3.00"
 local ADDON_NAME	= AS.name
 local addonNamePrefix = AS.addonNamePrefix
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
 --ZOs speed-up variabes
 local tos = tostring
 local strfor = string.format
@@ -31,6 +33,13 @@ local flags = {
     enableAllAddonsCheckboxHooked = false,
 }
 --Other AddOsns
+local otherAddonsData = {
+    --AddonCategory
+    addonCategoryIndices = {},
+    addonCategoryCategories {},
+}
+AS.otherAddonsData = otherAddonsData
+
 flags.otherAddons = {
     isAddonCategoryEnabled = false, --AddonCategory
 }

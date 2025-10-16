@@ -18,6 +18,8 @@ local EM = EVENT_MANAGER
 local openGameMenuAndAddOnsAndThenSearch = AS.OpenGameMenuAndAddOnsAndThenSearch
 local updateDDL = utility.updateDDL
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
 local skipLoadAddonPackStr = AddonSelector_GetLocalizedText("skipLoadAddonPack")
 
 --======================================================================================================================

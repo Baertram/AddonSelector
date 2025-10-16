@@ -22,13 +22,16 @@ local constFunctions = constants.functions
 
 local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
 
-local isAddonCategoryAddOnEnabled = utility.isAddonCategoryAddOnEnabled
+local isAddonCategoryEnabled = utilityOtherAddOns.isAddonCategoryEnabled
 local getAddonCategoryCategories = utilityOtherAddOns.getAddonCategoryCategories
-
+local otherAddonData = AS.otherAddonsData
 
 
 --local ADDON_MANAGER =         utility.GetAddonManager()
 local ADDON_MANAGER_OBJECT =  utility.GetAddonManagerObject()
+
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
 
 --local currentCharIdNum = constants.currentCharIdNum
 local currentCharId = constants.currentCharId
@@ -395,9 +398,10 @@ function AS.CreateControlReferences()
                 end
             end
             --AddonCategory support
-            if utility.isAddonCategoryEnabled() == true then
-                addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
-                if addonCategoryCategories ~= nil and #addonCategoryCategories > 0 then
+            if isAddonCategoryEnabled() == true then
+                getAddonCategoryCategories()
+                local addonCategoryCategories = otherAddonData.addonCategoryCategories
+                if not ZO_IsTableEmpty(addonCategoryCategories) then
                     if not searchHistoryWasAdded then
                         ClearMenu()
                     else
@@ -405,7 +409,7 @@ function AS.CreateControlReferences()
                     end
                     for _, searchTerm in ipairs(addonCategoryCategories) do
                         AddCustomMenuItem(searchTerm, function()
-                            AS.openGameMenuAndAddOnsAndThenSearch(searchTerm, true, true)
+                            AS.OpenGameMenuAndAddOnsAndThenSearch(searchTerm, true, true)
                             ClearMenu()
                         end)
                     end
@@ -522,11 +526,7 @@ function AS.CreateControlReferences()
     end)
     ]]
 
-    --Addon "AddonCategory" is enabled?
-    otherAddonsFlags.isAddonCategoryEnabled = isAddonCategoryAddOnEnabled()
-    if otherAddonsFlags.isAddonCategoryEnabled == true then
-        addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
-    end
+    AS.controls.addonSelectorSelectAddonsButtonNameLabel = AddonSelectorSelectAddonsButton.nameLabel --GetControl(AddonSelectorSelectAddonsButton, "NameLabel")
 end
 
 

@@ -5,6 +5,8 @@ local constants = AS.constants
 local addonNamePrefix = AS.addonNamePrefix
 
 local utility = AS.utility
+local utilityOtherAddons = utility.otherAddOns
+local otherAddonData = AS.otherAddonsData
 local keybinds = constants.keybinds
 local ZOsControls = constants.ZOsControls
 local narration = AS.narration
@@ -22,6 +24,7 @@ local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
 local ADDON_MANAGER_OBJECT = utility.GetAddOnManagerObject()
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 
 local tins = table.insert
@@ -76,9 +79,8 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
         --AddonCategory.indexCategories[categoryName] = addonsIndexInAddonsList
         --Cached data will be stored in local table addonCategoryIndices[categoryName] where categoryName is searchValue!
         -->Get the index tos croll to now
-        if addonCategoryIndices == nil then
-            addonCategoryCategories, addonCategoryIndices = getAddonCategoryCategories()
-        end
+        utilityOtherAddons.getAddonCategoryCategories()
+        local addonCategoryIndices = otherAddonData.addonCategoryIndices
         if addonCategoryIndices == nil then return end
         local indexToScrollTo = addonCategoryIndices[searchValue]
 --d(">addoncategory index: " ..tos(indexToScrollTo))
@@ -91,7 +93,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
             AS.flags.AddedAddonsFragment = true
 --d("[AddonSelector]search done 3: " ..tos(AS.flags.AddedAddonsFragment))
 
-            AddNewChatNarrationText("[Scrolled to] Category: " ..tos(searchValue), true)
+            narration.AddNewChatNarrationText("[Scrolled to] Category: " ..tos(searchValue), true)
         else
             --Scroll to the top -> Unassigned addons (no category)
             AS.flags.AddedAddonsFragment = true
@@ -100,7 +102,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
             AS.flags.AddedAddonsFragment = true
 --d("[AddonSelector]search done 5: " ..tos(AS.flags.AddedAddonsFragment))
 
-            AddNewChatNarrationText("[Scrolled to] AddOns", true)
+            narration.AddNewChatNarrationText("[Scrolled to] AddOns", true)
         end
         AS.flags.AddedAddonsFragment = false
         return

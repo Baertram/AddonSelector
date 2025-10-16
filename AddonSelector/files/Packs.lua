@@ -22,6 +22,9 @@ local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
 local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
+
 --ZOs reference variables
 local tos = tostring
 local strsub = string.sub
@@ -322,7 +325,7 @@ AS.saveAddonsAsPackBeforeMassMarking = saveAddonsAsPackBeforeMassMarking
 ------------------------------------------------------------------------------------------------------------------------
 local function loadAddonPackNow(packName, charName, doNotShowAddonsList, noReloadUI, comingFromLogout)
     if packName == nil or packName == "" or charName == nil or charName == "" then return end
-    AS.openGameMenuAndAddOnsAndThenLoadPack(packName, doNotShowAddonsList, noReloadUI, charName, comingFromLogout)
+    AS.OpenGameMenuAndAddOnsAndThenLoadPack(packName, doNotShowAddonsList, noReloadUI, charName, comingFromLogout)
 end
 AS.loadAddonPackNow = loadAddonPackNow
 

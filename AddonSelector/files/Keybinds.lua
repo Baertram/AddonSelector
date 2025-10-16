@@ -14,6 +14,7 @@ local strfor = string.format
 
 local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 
 
 --======================================================================================================================

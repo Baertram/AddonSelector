@@ -25,6 +25,8 @@ local isAddonPackDropdownOpen = utility.isAddonPackDropdownOpen
 local getAddonNameFromData = utility.getAddonNameFromData
 local getAddonNameAndData = utility.getAddonNameAndData
 
+local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+
 
 --ZOs reference variables
 local tos = tostring
