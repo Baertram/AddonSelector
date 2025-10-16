@@ -54,7 +54,6 @@ local tins = table.insert
 local EM = EVENT_MANAGER
 
 
-local addonCategoryCategories, addonCategoryIndices
 --Local function references
 local OnClickDDL, OnClick_Save, OnClick_Delete, OnClick_DeleteWholeCharacter
 

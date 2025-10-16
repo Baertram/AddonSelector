@@ -22,7 +22,7 @@ local scrollAddonsScrollBarToIndex = utility.scrollAddonsScrollBarToIndex
 local isAddonRow = utility.isAddonRow
 local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
-local ADDON_MANAGER_OBJECT = utility.GetAddOnManagerObject()
+local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
@@ -49,7 +49,7 @@ end
 --Scroll to AddOns or libraries section
 function AddonSelector_ScrollTo(toAddOns)
     if toAddOns == nil then end
-    utility.GetAddOnManagerObject()
+    utility.GetAddonManagerObject()
     local addonManagerObjectList = ADDON_MANAGER_OBJECT.list
     if toAddOns == true then
         --Scroll to AddOns

@@ -36,7 +36,7 @@ local flags = {
 local otherAddonsData = {
     --AddonCategory
     addonCategoryIndices = {},
-    addonCategoryCategories {},
+    addonCategoryCategories = {},
 }
 AS.otherAddonsData = otherAddonsData
 
@@ -439,7 +439,7 @@ local autoAddedMissingDependencyToPackStr = AddonSelector_GetLocalizedText("auto
 --Controls
 local asControls = { --these will be updated at EVENT_ADD_ON_LOADED etc.
     controlData = {
-        firstControl == nil,
+        firstControl = nil,
         firstControlData = nil,
         activeUpdateControlEvents = {},
     },

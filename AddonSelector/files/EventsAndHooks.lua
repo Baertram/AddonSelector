@@ -44,7 +44,7 @@ local getCharactersOfAccount = utility.getCharactersOfAccount
 local getAddonNameAndData = utility.getAddonNameAndData
 local checkIfGlobalPacksShouldBeShown = utility.checkIfGlobalPacksShouldBeShown
 
-local isAddonCategoryAddOnEnabled = utility.isAddonCategoryAddOnEnabled
+local isAddonCategoryAddOnEnabled = utilityOtherAddOns.isAddonCategoryAddOnEnabled
 local getAddonCategoryCategories = utilityOtherAddOns.getAddonCategoryCategories
 
 local ADDON_MANAGER =           utility.GetAddonManager()
@@ -882,9 +882,8 @@ local function AS_Initialize()
     AS.LSM     = LibScrollableMenu
 
     --Get the addon manager and object
-    ADDON_MANAGER           = ADDON_MANAGER or GetAddOnManager()
-    ADDON_MANAGER_OBJECT    = ADDON_MANAGER_OBJECT or ADD_ON_MANAGER
-    AS.ADDON_MANAGER_OBJECT = ADDON_MANAGER_OBJECT
+    ADDON_MANAGER =           utility.GetAddonManager()
+    ADDON_MANAGER_OBJECT =    utility.GetAddonManagerObject()
 
     --Fill the characters of the account tables -> Should have been prefilled at Utility.lua already
     if AS.charactersOfAccount == nil or AS.characterIdsOfAccount == nil or AS.charactersOfAccountLower == nil or AS.characterIdsOfAccountLower == nil then

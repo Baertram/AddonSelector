@@ -31,7 +31,7 @@ local stringConstants
 --Get localized texts
 function AddonSelector_GetLocalizedText(textToFind)
     stringConstants = stringConstants or AS.constants.strings
-    if stringConstants[textToFind] ~= nil then return stringConstants[textToFind] end
+    if stringConstants and stringConstants[textToFind] ~= nil then return stringConstants[textToFind] end
     return GetString(addonSelectorStrPrefix .. textToFind)
 end
 
