@@ -16,6 +16,8 @@ local narrationBlackList = narration.blacklist
 local ZOAddOns_BlacklistedNarrationChilds = narrationBlackList.ZOAddOns_BlacklistedNarrationChilds
 local ZOAddOns_AddonSelector_BlacklistedNarrationChilds = narrationBlackList.ZOAddOns_AddonSelector_BlacklistedNarrationChilds
 
+local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
+
 local chatNarrationUpdaterName = constants.updaterNames.chatNarrationUpdaterName
 local isAddonPackDropdownOpen = utility.isAddonPackDropdownOpen
 local getAddonNameFromData = utility.getAddonNameFromData
@@ -24,8 +26,7 @@ local getAddonNameAndData = utility.getAddonNameAndData
 
 --ZOs reference variables
 local tos = tostring
-local tins = table.insert
-local tsor = table.sort
+local strfor = string.format
 
 local EM = EVENT_MANAGER
 local SNM = SCREEN_NARRATION_MANAGER
@@ -245,9 +246,9 @@ local function getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
     local isGlobalPack        = (charName == GLOBAL_PACK_NAME and true) or false
     local globalOrCharPackStr = ""
     if isGlobalPack == true then
-        globalOrCharPackStr = packGlobalStr.. ", " .. packNameStr
+        globalOrCharPackStr = AddonSelector_GetLocalizedText("packGlobal") .. ", " .. AddonSelector_GetLocalizedText("selectedPackName")
     else
-        globalOrCharPackStr = packCharNameStr
+        globalOrCharPackStr = AddonSelector_GetLocalizedText("packCharName")
         if not data.isCharacterPackHeader then
             globalOrCharPackStr = globalOrCharPackStr .. ": '"..charName.."' - "
         end
@@ -285,22 +286,22 @@ local function getAddonNarrateTextByData(addonData, prefixStr)
     local hasDependencyError = false
     local isLibrary = false
     if addonData.hasDependencyError ~= nil and addonData.hasDependencyError == true then
-        narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE5) .. " " .. GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION)) -- Dependency missing
+        narrateAboutAddonText = narrateAboutAddonText .. string.format("["..AddonSelector_GetLocalizedText("stateText").."] %s", GetString(SI_ADDONLOADSTATE5) .. " " .. GetString(SI_GAMEPAD_ARMORY_MISSING_ENTRY_NARRATION)) -- Dependency missing
         hasDependencyError = true
     end
     if hasDependencyError == false then
         if addonData.addOnEnabled ~= nil and addonData.addOnEnabled == false then
-            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE3)) --Disabled
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..AddonSelector_GetLocalizedText("stateText").."] %s", GetString(SI_ADDONLOADSTATE3)) --Disabled
         elseif addonData.addOnEnabled ~= nil and addonData.addOnEnabled == true then
-            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..stateText.."] %s", GetString(SI_ADDONLOADSTATE2)) --Enabled
+            narrateAboutAddonText = narrateAboutAddonText .. string.format("["..AddonSelector_GetLocalizedText("stateText").."] %s", GetString(SI_ADDONLOADSTATE2)) --Enabled
         end
     end
     if addonData.isLibrary ~= nil and addonData.isLibrary == true then
-        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
+        narrateAboutAddonText = "[" .. AddonSelector_GetLocalizedText("libraryText") .. "] " .. narrateAboutAddonText
         isLibrary = true
     end
     if isLibrary == false and zo_strfind(addonName, "Lib", 1, true) ~= nil then
-        narrateAboutAddonText = "[" .. libraryText .. "] " .. narrateAboutAddonText
+        narrateAboutAddonText = "[" .. AddonSelector_GetLocalizedText("libraryText") .. "] " .. narrateAboutAddonText
     end
 
     if prefixStr ~= nil and prefixStr ~= "" then
@@ -353,13 +354,13 @@ local function narrateCurrentlyScrolledToAddonName(scrollToIndex, wasLastFoundRe
 
     local foundText = ""
     if wasLastFoundReached == true then
-        foundText = searchFoundLast .. " "
+        foundText = AddonSelector_GetLocalizedText("foundSearchLast") .. " "
     else
-        foundText = searchFound .. " "
+        foundText = AddonSelector_GetLocalizedText("foundSearch") .. " "
     end
 
     if searchValue ~= nil and searchValue ~= "" then
-        foundText = searchedForStr .. "  " ..searchValue .. "  -  " .. foundText
+        foundText = AddonSelector_GetLocalizedText("searchedForStr") .. "  " ..searchValue .. "  -  " .. foundText
     end
 
     local narrateAboutAddonText = getAddonNarrateTextByData(addonData, foundText)
@@ -385,9 +386,9 @@ local function getZOAddOnsUI_ControlText(control)
     if parentCtrl.GetState ~= nil then
         local currentState = parentCtrl:GetState()
         if currentState == BSTATE_PRESSED then
-            retTextSuffix = " [" .. checkboxStr .. " " .. currentlyStr .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
+            retTextSuffix = " [" .. AddonSelector_GetLocalizedText("checkBox") .. " " .. AddonSelector_GetLocalizedText("currently") .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
         else
-            retTextSuffix = " [" .. checkboxStr .. " " .. currentlyStr .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
+            retTextSuffix = " [" .. AddonSelector_GetLocalizedText("checkBox") .. " " .. AddonSelector_GetLocalizedText("currently") .. "]   " .. GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
         end
     end
 
@@ -503,7 +504,7 @@ end
 ]]
 
 function narrateComboBoxOnMouseEnter()
-    onMouseEnterDoNarrate(AS.controls.ddl, "["..selectPackStr .. " %s]   -   " .. openDropdownStr, function() return getZOAddOnsUI_ControlText(AS.controls.ddl) end)
+    onMouseEnterDoNarrate(AS.controls.ddl, "["..AddonSelector_GetLocalizedText("selectPack") .. " %s]   -   " .. AddonSelector_GetLocalizedText("openDropdownStr"), function() return getZOAddOnsUI_ControlText(AS.controls.ddl) end)
     AS.narrateSelectedPackEntryStr = nil
    --return "Test text", false
 end
@@ -512,7 +513,7 @@ narration.narrateComboBoxOnMouseEnter = narrateComboBoxOnMouseEnter
 
 function narrateDropdownOnSubmenuHidden(scrollHelper, ctrl)
 --d("Submenu closed: " ..tos(entryOnSelectedDone) .. ", entryOnMouseEnterDone: " ..tos(entryOnMouseEnterDone))
-    local submenuClosedText = "["..submenuClosedStr.."]"
+    local submenuClosedText = "["..AddonSelector_GetLocalizedText("submenuClosedStr").."]"
     return submenuClosedText, false
 end
 narration.narrateDropdownOnSubmenuHidden = narrateDropdownOnSubmenuHidden
@@ -527,7 +528,7 @@ function narrateDropdownOnSubmenuShown(scrollHelper, ctrl, anchorPoint)
     elseif anchorPoint == RIGHT then
         anchoredToStr = "   -" .. GetString(SI_KEYCODE_NARRATIONTEXTPS4126)
     end
-    local submenuOpenedText = "["..submenuOpenedStr.."]" .. anchoredToStr
+    local submenuOpenedText = "["..AddonSelector_GetLocalizedText("submenuOpenedStr").."]" .. anchoredToStr
 
     --Add text from narrateDropdownOnEntryMouseEnter?
     if entryMouseEnterTextForSubmenuOpen ~= nil then
@@ -544,7 +545,7 @@ function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl, data
     entryMouseEnterTextForSubmenuOpen = nil
     local entryTextWithoutPrefix = getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
 
-    local entryMouseEnterText = "["..entryMouseEnterStr.."]" .. entryTextWithoutPrefix
+    local entryMouseEnterText = "["..AddonSelector_GetLocalizedText("entryMouseEnter").."]" .. entryTextWithoutPrefix
 
     --Was a checkbox OnMouseEnter raised?
     comingFromCheckbox = true
@@ -556,14 +557,14 @@ function narrateDropdownOnEntryMouseEnter(scrollhelperObject, entryControl, data
         else
             currentStateText = GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
         end
-        currentStateText = currentTextStr ..":   " .. currentStateText
-        entryMouseEnterText = entryMouseEnterText .. "  [" .. checkboxStr .. "] " .. currentStateText
+        currentStateText = AddonSelector_GetLocalizedText("currentText") ..":   " .. currentStateText
+        entryMouseEnterText = entryMouseEnterText .. "  [" .. AddonSelector_GetLocalizedText("checkBox") .. "] " .. currentStateText
     end
 
     --Got a submenu that opens?
     if hasSubmenu == true and data and data.entries ~= nil then
         local submenuEntriesCount = tos(countSubmenuEntries(data.entries))
-        entryMouseEnterText = entryMouseEnterText .. " (" .. submenuEntriesCount .. entriesStr .. ")"
+        entryMouseEnterText = entryMouseEnterText .. " (" .. submenuEntriesCount .. AddonSelector_GetLocalizedText("entries") .. ")"
 
         --If a submenu opens: The narrateDropdownOnSubmenuShown will be called. So narrate the total text of the entry selected here, and the
         --submenu opened right/left at this function!
@@ -580,7 +581,7 @@ function narrateDropdownOnEntrySelected(scrollhelperObject, entryControl, data, 
     entryOnSelectedDone = true
     --d("OnEntrySelected - hasSubmenu: " ..tos(hasSubmenu))
     local entryTextWithoutPrefix = getDropdownEntryPackEntryText(entryControl, data, hasSubmenu)
-    local entrySelectedText = "["..entrySelectedStr.."]" .. entryTextWithoutPrefix
+    local entrySelectedText = "["..AddonSelector_GetLocalizedText("entrySelected").."]" .. entryTextWithoutPrefix
     return entrySelectedText, true --stop narration of others, if you select an entry
 end
 narration.narrateDropdownOnEntrySelected = narrateDropdownOnEntrySelected
@@ -603,13 +604,13 @@ local function enableZO_AddOnsUI_controlNarration()
                 local currentStateText2 = ""
                 local currentState = ZOsControls.enableAllAddonsCheckboxCtrl:GetState()
                 if currentState == BSTATE_PRESSED then
-                    currentStateText1 = enableText
+                    currentStateText1 = AddonSelector_GetLocalizedText("enableText")
                     currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_ON)
                 else
-                    currentStateText1 = disableText
+                    currentStateText1 = AddonSelector_GetLocalizedText("disableText")
                     currentStateText2 = GetString(SI_SCREEN_NARRATION_TOGGLE_OFF)
                 end
-                local narrateText = strfor(enDisableCurrentStateTemplateText, currentStateText1, currentStateText2) --"%s all addons. Current state   -   %s"
+                local narrateText = strfor(AddonSelector_GetLocalizedText("enDisableCurrentStateTemplate"), currentStateText1, currentStateText2) --"%s all addons. Current state   -   %s"
                 OnUpdateDoNarrate("OnZOAddOnsUI_ControlMouseEnter", 75, function() AddNewChatNarrationText(narrateText, true)  end)
             end
         end
@@ -625,12 +626,12 @@ local function enableZO_AddOnsUI_controlNarration()
 
     --Search box
     if AS.controls.searchBox ~= nil then
-        onMouseEnterDoNarrate(AS.controls.searchBox, "["..searchMenuStr .. " %s]", function() return getZOAddOnsUI_ControlText(AS.controls.searchBox)  end)
+        onMouseEnterDoNarrate(AS.controls.searchBox, "["..AddonSelector_GetLocalizedText("searchMenuStr") .. " %s]", function() return getZOAddOnsUI_ControlText(AS.controls.searchBox)  end)
     end
 
     --Pack name edit box
     if AS.controls.editBox ~= nil then
-        onMouseEnterDoNarrate(AS.controls.editBox, "["..packNameStr .. " %s]", function() return getZOAddOnsUI_ControlText(AS.controls.editBox) end)
+        onMouseEnterDoNarrate(AS.controls.editBox, "["..AddonSelector_GetLocalizedText("packName") .. " %s]", function() return getZOAddOnsUI_ControlText(AS.controls.editBox) end)
     end
 
     --Pack name dropdown box
