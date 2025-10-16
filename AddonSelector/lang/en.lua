@@ -22,7 +22,7 @@ local constants = AS.constants
 
 
 --Variables for translations
-local addonSelectorStrPrefix = "SI_ADDONSEL_"
+local addonSelectorStrPrefix = "SI_AS_"
 constants.addonSelectorStrPrefix = addonSelectorStrPrefix
 local stringConstants
 
@@ -31,8 +31,13 @@ local stringConstants
 --Get localized texts
 function AddonSelector_GetLocalizedText(textToFind)
     stringConstants = stringConstants or AS.constants.strings
-    if stringConstants and stringConstants[textToFind] ~= nil then return stringConstants[textToFind] end
-    return GetString(addonSelectorStrPrefix .. textToFind)
+    if stringConstants ~= nil then
+        local retStr = stringConstants[textToFind]
+        if retStr ~= nil and retStr ~= "" then
+            return retStr
+        end
+    end
+    return GetString(_G[addonSelectorStrPrefix .. textToFind])
 end
 
 

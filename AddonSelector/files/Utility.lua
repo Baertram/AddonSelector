@@ -440,7 +440,7 @@ utility.setThisAddonsControlsEnabledState = setThisAddonsControlsEnabledState
 
 local function areAddonsCurrentlyEnabled()
     local addOnManagerObject = getAddOnManagerObject()
-    return (addOnManagerObject ~= nil and addOnManagerObject:AreAddOnsEnabled()) or false
+    return (addOnManagerObject ~= nil and addOnManagerObject.AreAddOnsEnabled and addOnManagerObject:AreAddOnsEnabled()) or false
 end
 utility.areAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled
 

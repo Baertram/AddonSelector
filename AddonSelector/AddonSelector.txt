@@ -15,9 +15,6 @@ lang/$(language).lua
 ## Addon constants
 Constants.lua
 
-## XML UI elements
-xml/AddonSelector.xml
-
 ## Addon source
 files/Utility.lua
 files/Settings.lua
@@ -27,6 +24,9 @@ files/Narration.lua
 files/Packs.lua
 files/EventsAndHooks.lua
 files/SlashCommands.lua
+
+## XML UI elements
+xml/AddonSelector.xml
 
 ## Addon main file
 AddonSelector.lua

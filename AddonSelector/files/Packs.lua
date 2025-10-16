@@ -20,6 +20,7 @@ local onAddonPackSelected = AS.onAddonPackSelected
 
 local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
+local ADDON_MANAGER = utility.GetAddonManager()
 local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
