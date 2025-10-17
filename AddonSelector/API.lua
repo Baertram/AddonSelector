@@ -15,6 +15,7 @@ local narration = AS.narration
 
 local currentCharName = constants.currentCharName
 
+local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
 local SEARCH_TYPE_NAME = constants.SEARCH_TYPE_NAME
 local MAX_ADDON_LOAD_PACK_KEYBINDS = keybinds.MAX_ADDON_LOAD_PACK_KEYBINDS
 
@@ -27,7 +28,10 @@ local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 
+local tos = tostring
 local tins = table.insert
+local strlow = string.lower
+local zopsf = zo_plainstrfind
 
 
 --======================================================================================================================
@@ -116,7 +120,7 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
     local searchExcludeFilename = settings.searchExcludeFilename
     local searchSaveHistory = settings.searchSaveHistory
     if searchSaveHistory == true and not isEmptySearch then
-        updateSearchHistoryDelayed(searchType, searchValue)
+        utility.updateSearchHistoryDelayed(searchType, searchValue)
     end
 
     local addonsFound = {}
@@ -128,11 +132,11 @@ function AddonSelector_SearchAddon(searchType, searchValue, doHideNonFound, isAd
         --Reset the searched table completely
         AS.searchAndFoundData.alreadyFound = {}
         --Unregister all update events
-        unregisterOldEventUpdater()
+        utility.unregisterOldEventUpdater()
         AS.flags.AddedAddonsFragment = false
 --d("[AddonSelector]search done FALSE 2: " ..tos(AS.flags.AddedAddonsFragment))
 
-        AddNewChatNarrationText(searchMenuStr .. " " .. GetString(SI_QUICKSLOTS_EMPTY), true)
+        narration.AddNewChatNarrationText(AddonSelector_GetLocalizedText("searchMenuStr") .. " " .. GetString(SI_QUICKSLOTS_EMPTY), true)
         return
     end
 
@@ -387,11 +391,11 @@ function AddonSelector_ShowActivePackInChat()
     local charNameOfSelectedPack = currentlySelectedPackNameData.charName
 --d(">charNameOfSelectedPack: " ..tos(charNameOfSelectedPack))
     if not currentlySelectedPackName or currentlySelectedPackName == "" then return end
-    local currentPackInfoText = (packNameStr) .. " " ..tos(currentlySelectedPackName)
+    local currentPackInfoText = (AddonSelector_GetLocalizedText("packName")) .. " " ..tos(currentlySelectedPackName)
     if charNameOfSelectedPack == nil or charNameOfSelectedPack == "" or charNameOfSelectedPack == GLOBAL_PACK_NAME then
         charNameOfSelectedPack = ", " .. packNameGlobal
     else
-        charNameOfSelectedPack = ", " .. packCharNameStr .. ": " ..tos(charNameOfSelectedPack)
+        charNameOfSelectedPack = ", " .. AddonSelector_GetLocalizedText("packCharName") .. ": " ..tos(charNameOfSelectedPack)
     end
     d(addonNamePrefix .. currentPackInfoText .. charNameOfSelectedPack)
 end
