@@ -597,7 +597,7 @@ local function ShowConfirmationDialog(dialogName, title, body, callbackYes, call
 
     narration.AddDialogTitleBodyKeybindNarration(title, body, nil)
 end
-AS.ShowConfirmationDialog = ShowConfirmationDialog
+utility.ShowConfirmationDialog = ShowConfirmationDialog
 
 
 
