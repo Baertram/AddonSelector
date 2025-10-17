@@ -581,7 +581,7 @@ utility.isAddonPackEnabledForAutoLoadOnLogout = isAddonPackEnabledForAutoLoadOnL
 local function ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, callbackSetup, data, forceUpdate)
     --Initialize the library
     local libDialog = AS.LDIALOG
-    if libDialog then
+    if libDialog ~= nil then
         d("[AddonSelector]".. AddonSelector_GetLocalizedText("LibDialogMissing"))
         return
     end
