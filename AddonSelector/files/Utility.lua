@@ -232,7 +232,7 @@ local function splitStringAndRespectQuotes(text)
     end
     return retTab
 end
-AS.splitStringAndRespectQuotes = splitStringAndRespectQuotes
+utility.splitStringAndRespectQuotes = splitStringAndRespectQuotes
 
 
 ------------------------------------------------------------------------------------------------------------------------
