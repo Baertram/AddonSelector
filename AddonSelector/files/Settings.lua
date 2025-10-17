@@ -294,7 +294,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
---d(">areAllAddonsCurrentlyEnabled: " ..tos(areAllAddonsCurrentlyEnabled))
+    --d(">areAllAddonsCurrentlyEnabled: " ..tos(areAllAddonsCurrentlyEnabled))
     local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or myNormalColor
     addonSelectorSelectAddonsButtonNameLabel = addonSelectorSelectAddonsButtonNameLabel or asControls.addonSelectorSelectAddonsButtonNameLabel
 
@@ -303,31 +303,34 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     --Add the currently logged in character name as header
     AddCustomMenuItem(currentCharName, function() end, MENU_ADD_OPTION_HEADER)
 
-    --Last changed addons backup/restore
-    if AS.acwsv.lastMassMarkingSavedProfile ~= nil then
-        local lastSavedPreMassMarkingTime = ""
-        local countAddonsInBackup = NonContiguousCount(AS.acwsv.lastMassMarkingSavedProfile)
-        if AS.acwsv.lastMassMarkingSavedProfileTime ~= nil then
-            lastSavedPreMassMarkingTime = os.date("%c", AS.acwsv.lastMassMarkingSavedProfileTime)
+    --Addons are all enabled (or disabled)?
+    if areAllAddonsCurrentlyEnabled == true then
+        --Last changed addons backup/restore
+        if AS.acwsv.lastMassMarkingSavedProfile ~= nil then
+            local lastSavedPreMassMarkingTime = ""
+            local countAddonsInBackup = NonContiguousCount(AS.acwsv.lastMassMarkingSavedProfile)
+            if AS.acwsv.lastMassMarkingSavedProfileTime ~= nil then
+                lastSavedPreMassMarkingTime = os.date("%c", AS.acwsv.lastMassMarkingSavedProfileTime)
+            end
+            if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
+                --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment, isHighlighted, onEnter, onExit, enabled)
+                AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+            end
+            AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+            AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
         end
-        if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
-            --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment, isHighlighted, onEnter, onExit, enabled)
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-        end
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-        AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
-    end
 
-    --Deselect/Select all
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-    local currentAddonSelectorSelectAllButtonText = addonSelectorSelectAddonsButtonNameLabel:GetText()
-    if currentAddonSelectorSelectAllButtonText ~= AddonSelector_GetLocalizedText("SelectAllAddons") then
-        AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        --Deselect/Select all
+        AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        local currentAddonSelectorSelectAllButtonText = addonSelectorSelectAddonsButtonNameLabel:GetText()
+        if currentAddonSelectorSelectAllButtonText ~= AddonSelector_GetLocalizedText("SelectAllAddons") then
+            AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        end
+        AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllAddons"),                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
     end
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllAddons"),                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-    AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
 
     --Scroll to addons/libraries
     AddCustomMenuItem(AddonSelector_GetLocalizedText("ScrollToAddons"),         function() AddonSelector_ScrollTo(true)  end, MENU_ADD_OPTION_LABEL)
@@ -467,7 +470,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         local lastLoadedPackCharName = lastLoadedPackData.charName
         local lastLoadedPackCharNameReal = lastLoadedPackData.charName
         if lastLoadedPackCharName == GLOBAL_PACK_NAME then
-           lastLoadedPackCharName = packNameGlobal
+            lastLoadedPackCharName = packNameGlobal
         end
         local lastLoadedPackName = lastLoadedPackData.packName
         local packStillExistsAndIsSelectable = true
@@ -496,30 +499,32 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             end
         end
 
-        local lastLoadedPackTime = ""
-        lastLoadedPackTime = os.date("%c", lastLoadedPackData.timestamp)
-        if lastLoadedPackCharName ~= "" and lastLoadedPackName ~= "" and lastLoadedPackTime ~= "" then
-            --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment)
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6)
-            AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
-                function()
-                    --TODO Set the pack to the dropddown box again
-                    if packStillExistsAndIsSelectable == true then
-                        AS.flags.doNotReloadUI = true
-                        --todo Select the entry in the pack dropdown box now and activate the addons of the pack that way
-                        --But do not reloadUI automatically!
-                        local function evalFunc(entry)
-                            if entry.isCharacterPackHeader == false then
-                                if entry.name == lastLoadedPackName and entry.charName == lastLoadedPackCharNameReal then
-                                    return true
+        if areAllAddonsCurrentlyEnabled == true then
+            local lastLoadedPackTime = ""
+            lastLoadedPackTime = os.date("%c", lastLoadedPackData.timestamp)
+            if lastLoadedPackCharName ~= "" and lastLoadedPackName ~= "" and lastLoadedPackTime ~= "" then
+                --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment)
+                AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6)
+                AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
+                        function()
+                            --TODO Set the pack to the dropddown box again
+                            if packStillExistsAndIsSelectable == true then
+                                AS.flags.doNotReloadUI = true
+                                --todo Select the entry in the pack dropdown box now and activate the addons of the pack that way
+                                --But do not reloadUI automatically!
+                                local function evalFunc(entry)
+                                    if entry.isCharacterPackHeader == false then
+                                        if entry.name == lastLoadedPackName and entry.charName == lastLoadedPackCharNameReal then
+                                            return true
+                                        end
+                                    end
+                                    return false
                                 end
+                                AS.controls.ddl.m_comboBox:SetSelectedItemByEval(evalFunc, false) --do not ignore the callback -> run it!
+                                AS.flags.doNotReloadUI = false
                             end
-                            return false
-                        end
-                        AS.controls.ddl.m_comboBox:SetSelectedItemByEval(evalFunc, false) --do not ignore the callback -> run it!
-                        AS.flags.doNotReloadUI = false
-                    end
-                end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+                        end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+            end
         end
     end
 
