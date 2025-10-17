@@ -392,7 +392,7 @@ end
 -- AddOns of a pack: Select/Deselect at addon list
 ------------------------------------------------------------------------------------------------------------------------
 local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
-local thisAddonIndex
+local thisAddonIndex = 0
 
 --Select/Deselect all addon checkboxes
 function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
@@ -438,7 +438,7 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
 --d(">>>Found AddonSelector at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
                     elseif addonsWhichShouldNotBeDisabled[addonFileName] and not addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] then
                         addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] = true
---d(">>>Found dependency at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
+--d(">>>Found AddonSelector mandatory dependency at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
                     end
                 end
 
