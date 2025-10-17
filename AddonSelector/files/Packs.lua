@@ -384,6 +384,7 @@ function AddonSelector_UndoLastMassMarking(clearBackup)
         updateAddonsEnabledStateByPackData(packData)
         onAddonPackSelected(GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME, packData, true)
     end
+    ClearMenu() -- Hide the context menu (AddonSelector settings)
 end
 
 

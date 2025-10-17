@@ -15,6 +15,7 @@ local currentCharId = constants.currentCharId
 local currentCharName = constants.currentCharName
 
 local addonSelectorSelectAddonsButtonNameLabel = asControls.addonSelectorSelectAddonsButtonNameLabel
+local myNormalColor = colors.myNormalColorDef
 local myDisabledColor = colors.myDisabledColorDef
 local settingNeedsToUpdateDDL = constants.settingNeedsToUpdateDDL
 
@@ -293,7 +294,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
-    local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or nil
+--d(">areAllAddonsCurrentlyEnabled: " ..tos(areAllAddonsCurrentlyEnabled))
+    local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or myNormalColor
     addonSelectorSelectAddonsButtonNameLabel = addonSelectorSelectAddonsButtonNameLabel or asControls.addonSelectorSelectAddonsButtonNameLabel
 
     ClearMenu()

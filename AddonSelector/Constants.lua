@@ -283,6 +283,7 @@ constants.LSM = LSMconstants
 
 --Colors
 local colors = {
+    myNormalColorDef = ZO_NORMAL_TEXT,
     myDisabledColorDef = ZO_DISABLED_TEXT,
     charNamePackColorDef = ZO_ColorDef:New("C9B636"),
 

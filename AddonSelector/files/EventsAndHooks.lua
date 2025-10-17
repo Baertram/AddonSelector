@@ -593,6 +593,7 @@ local function Addon_Toggle_Enabled(rowControl, addonData)
         narration.OnAddonRowClickedNarrateNewState(rowControl, newState, addonData)
     end
 end
+AS.Addon_Toggle_Enabled = Addon_Toggle_Enabled
 
 local OrigAddonGetRowSetupFunc = ZO_AddOnManager.GetRowSetupFunction
 function ZO_AddOnManager:GetRowSetupFunction()

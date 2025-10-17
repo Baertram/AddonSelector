@@ -440,7 +440,18 @@ utility.setThisAddonsControlsEnabledState = setThisAddonsControlsEnabledState
 
 local function areAddonsCurrentlyEnabled()
     local addOnManagerObject = getAddOnManagerObject()
-    return (addOnManagerObject ~= nil and addOnManagerObject.AreAddOnsEnabled and addOnManagerObject:AreAddOnsEnabled()) or false
+    --Function to detect the enabled state exists?
+    if (addOnManagerObject ~= nil and addOnManagerObject.AreAddOnsEnabled) then
+        return addOnManagerObject:AreAddOnsEnabled()
+    end
+    --No, check the checkbox state of ZO_AddOnsList2Row1Checkbox
+    local enableAllAddonsCheckboxCtrl = ZOsControls.enableAllAddonsCheckboxCtrl
+    if enableAllAddonsCheckboxCtrl ~= nil then
+--d("[AS]1areAddonsCurrentlyEnabled: " .. tos(ZO_CheckButton_IsChecked(enableAllAddonsCheckboxCtrl)))
+        return ZO_CheckButton_IsChecked(enableAllAddonsCheckboxCtrl)
+    end
+--d("[AS]1areAddonsCurrentlyEnabled - true")
+    return true --simulate all are enabled as we cannot detect it properly...
 end
 utility.areAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled
 
@@ -448,19 +459,6 @@ utility.areAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled
 --Check if the checkbox to disable all addons is enabled or not
 local function areAllAddonsEnabled(noControlUpdate)
     noControlUpdate = noControlUpdate or false
-    if isAreAddonsEnabledFuncGiven == nil then
-        local addOnManagerObject = getAddOnManagerObject()
-        isAreAddonsEnabledFuncGiven = (addOnManagerObject ~= nil and addOnManagerObject.AreAddOnsEnabled ~= nil and true) or false
-    end
-    if not isAreAddonsEnabledFuncGiven then
-        --[[
-        if not noControlUpdate then
-            setThisAddonsControlsEnabledState(true)
-        end
-        ]]
-        return true
-    end
-
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
     if not noControlUpdate then
         setThisAddonsControlsEnabledState(areAllAddonsCurrentlyEnabled)

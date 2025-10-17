@@ -5,7 +5,7 @@
 	
         <Control name="AddonSelector_AddOnRow" inherits="ZO_AddOnRow" virtual="true" mouseEnabled="true"  >
 			<OnMouseUp>
-				Addon_Toggle_Enabled(self, button, upInside)
+				AddonSelectorGlobal.Addon_Toggle_Enabled(self, button, upInside)
 			</OnMouseUp>
 		</Control>
 	-->
