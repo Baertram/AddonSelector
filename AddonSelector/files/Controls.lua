@@ -383,7 +383,7 @@ function AS.CreateControlReferences()
                     ClearMenu()
                     for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
                         AddCustomMenuItem(searchTerm, function()
-                            AS.openGameMenuAndAddOnsAndThenSearch(searchTerm, true, false)
+                            AS.OpenGameMenuAndAddOnsAndThenSearch(searchTerm, true, false)
                             ClearMenu()
                         end)
                     end
