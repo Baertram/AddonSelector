@@ -22,7 +22,7 @@ local constFunctions = constants.functions
 
 local LSM_defaultAddonPackMenuOptions = LSMconstants.defaultAddonPackMenuOptions
 
-local isAddonCategoryEnabled = utilityOtherAddOns.isAddonCategoryEnabled
+local isAddonCategoryEnabled = utilityOtherAddOns.isAddonCategoryAddOnEnabled
 local getAddonCategoryCategories = utilityOtherAddOns.getAddonCategoryCategories
 local otherAddonData = AS.otherAddonsData
 
