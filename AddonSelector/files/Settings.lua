@@ -31,7 +31,7 @@ local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
 --ZOs reference variables
 local tos = tostring
 local strlow = string.lower
-
+local tins = table.insert
 
 --======================================================================================================================
 -- SavedVariables & settings menu (context menu at the "gear" icon)
@@ -282,10 +282,6 @@ local function OnClick_CheckBoxLabel(selfVar, currentStateVar)
 end
 
 
-
-
-
-
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
@@ -307,15 +303,69 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     --Addons are all enabled (or disabled)?
     if areAllAddonsCurrentlyEnabled == true then
         --Last changed addons backup/restore
-        if AS.acwsv.lastMassMarkingSavedProfile ~= nil then
+        local lastMassMarkingProfile = AS.acwsv.lastMassMarkingSavedProfile
+        if lastMassMarkingProfile ~= nil then
             local lastSavedPreMassMarkingTime = ""
-            local countAddonsInBackup = NonContiguousCount(AS.acwsv.lastMassMarkingSavedProfile)
+            local countAddonsInBackup = NonContiguousCount(lastMassMarkingProfile)
             if AS.acwsv.lastMassMarkingSavedProfileTime ~= nil then
                 lastSavedPreMassMarkingTime = os.date("%c", AS.acwsv.lastMassMarkingSavedProfileTime)
             end
             if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
-                --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment, isHighlighted, onEnter, onExit, enabled)
-                AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+                --AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+                local addonsUndoTab, librariesUndoTab = utility.sortAndGroupAddons(lastMassMarkingProfile)
+                if #addonsUndoTab > 1 or #librariesUndoTab > 1 then
+                    local submenuItemsUndo = {}
+                    local firstSubmenuItem = {
+                        label    = AddonSelector_GetLocalizedText("UndoLastMassMarking"),
+                        callback = function(state)
+                            AddonSelector_UndoLastMassMarking(false)
+                        end,
+                    }
+                    tins(submenuItemsUndo, firstSubmenuItem)
+
+                    --AddOns
+                    for idx, addonUndoName in ipairs(addonsUndoTab) do
+                        if idx == 1 then
+                            local submenuItemUndoAddOnsHeader = {
+                                label    = AddonSelector_GetLocalizedText("addons") .. " (#" .. tos(#addonsUndoTab) .. ")",
+                                callback = function(state)
+                                end,
+                                itemType = MENU_ADD_OPTION_HEADER,
+                            }
+                            tins(submenuItemsUndo, submenuItemUndoAddOnsHeader)
+
+                        end
+                        local submenuItemUndo = {
+                            label    = addonUndoName,
+                            callback = function(state)
+                            end,
+                            disabled = true,
+                        }
+                        tins(submenuItemsUndo, submenuItemUndo)
+                    end
+                    --Libraries
+                    for idx, libraryUndoName in ipairs(librariesUndoTab) do
+                        if idx == 1 then
+                            local submenuItemUndoLibrariesHeader = {
+                                label    = AddonSelector_GetLocalizedText("libraries") .. " (#" .. tos(#librariesUndoTab) .. ")",
+                                callback = function(state)
+                                end,
+                                itemType = MENU_ADD_OPTION_HEADER,
+                            }
+                            tins(submenuItemsUndo, submenuItemUndoLibrariesHeader)
+                        end
+                        local submenuItemUndo = {
+                            label    = libraryUndoName,
+                            callback = function(state)
+                            end,
+                            disabled = true,
+                        }
+                        tins(submenuItemsUndo, submenuItemUndo)
+                    end
+                    if #submenuItemsUndo > 0 then
+                        AddCustomSubMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", submenuItemsUndo)
+                    end
+                end
             end
             AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
             AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)

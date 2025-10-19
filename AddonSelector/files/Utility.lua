@@ -202,8 +202,6 @@ end
 utility.sortNonNumberKeyTableAndBuildSortedLookup = sortNonNumberKeyTableAndBuildSortedLookup
 
 
-
-
 ------------------------------------------------------------------------------------------------------------------------
 -- String functions
 ------------------------------------------------------------------------------------------------------------------------
@@ -322,7 +320,6 @@ utility.selectPreviouslySelectedPack = selectPreviouslySelectedPack
 ------------------------------------------------------------------------------------------------------------------------
 
 
-
 ------------------------------------------------------------------------------------------------------------------------
 -- Search history
 ------------------------------------------------------------------------------------------------------------------------
@@ -368,6 +365,24 @@ utility.clearSearchHistory = clearSearchHistory
 ------------------------------------------------------------------------------------------------------------------------
 -- AddOn (list) helper functions
 ------------------------------------------------------------------------------------------------------------------------
+local function sortAndGroupAddons(addonsTab)
+    local librariesLookup = AS.Libraries
+    local addons = {}
+    local libraries = {}
+    for addonFileName, addOnName in pairs(addonsTab) do
+        local isLibrary = (librariesLookup[addonFileName] ~= nil and true) or false
+        if isLibrary == true then
+            tins(libraries, addOnName)
+        else
+            tins(addons, addOnName)
+        end
+    end
+    tsor(addons)
+    tsor(libraries)
+    return addons, libraries
+end
+utility.sortAndGroupAddons = sortAndGroupAddons
+
 
 local function isAddonPackDropdownOpen()
     return AS.controls.ddl.m_comboBox:IsDropdownVisible()
