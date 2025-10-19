@@ -769,6 +769,7 @@ function AS.LoadHooks()
         end)
     end
 
+    --[[ Old until 2025-10-19 -> LibCustomMenu - Now using: LibScrollableMenu and it's narration features
    --Narrate ZO_Menu.items + submenus of LibCustomMenu
     --Trying via LibCustomMenu.submenu:SetSelectedIndex(control.index) hook as this will be called OnMouseEnter
     local function getNarratableZO_MenuItemText(itemCtrl, isSubMenuEntry)
@@ -815,7 +816,6 @@ function AS.LoadHooks()
         return textToNarrate, isCheckbox, isSubmenu
     end
 
-
     --Normal entries -> Settings menu
     SecurePostHook("ZO_Menu_EnterItem", function(itemCtrl)
         if checkIfMenuOwnerIsZOAddOns() == false or IsAccessibilityUIReaderEnabled() == false then return end
@@ -840,6 +840,7 @@ function AS.LoadHooks()
             OnUpdateDoNarrate("OnAddonSelectorSettingsZOMenuItemEnter", 25, function() AddNewChatNarrationText(textToNarrate, true)  end)
         end
     end)
+    ]]
 
 
     --====================================--
@@ -847,8 +848,8 @@ function AS.LoadHooks()
     --====================================--
     --Prehook the logout and quit functions to check if any addon pack should be loaded now
     if not wasLogoutPrehooked then
-        ZO_PreHook("Logout", myLogoutCallback)
-        ZO_PreHook("Quit", myLogoutCallback)
+        ZO_PreHook("Logout",    myLogoutCallback)
+        ZO_PreHook("Quit",      myLogoutCallback)
         wasLogoutPrehooked = true
     end
 end
@@ -878,8 +879,6 @@ end
 --====================================--
 local function AS_Initialize()
     --Libraries
-    AS.LDIALOG = LibDialog
-    AS.LCM     = LibCustomMenu
     AS.LSM     = LibScrollableMenu
 
     --Get the addon manager and object

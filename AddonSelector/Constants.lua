@@ -146,7 +146,6 @@ constants.SEARCH_TYPE_NAME = SEARCH_TYPE_NAME
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
-    ["LibCustomMenu"] =     true,
     ["LibScrollableMenu"] = true,
 }
 constants.addonsWhichShouldNotBeDisabled = addonsWhichShouldNotBeDisabled
@@ -275,6 +274,11 @@ LSMconstants.defaultContextMenuOptions = {
     sortEntries         = false,
     enableFilter        = function() return AS.acwsv.showSearchFilterAtPacksList end,
     headerCollapsible   = true,
+}
+LSMconstants.defaultSettingsContextMenuOptions = {
+    visibleRowsDropdown = 25,
+    visibleRowsSubmenu  = 25,
+    sortEntries         = false,
 }
 constants.LSM = LSMconstants
 

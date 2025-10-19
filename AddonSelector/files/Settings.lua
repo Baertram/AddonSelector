@@ -7,6 +7,8 @@ local utility = AS.utility
 local asControls = AS.controls
 local textures = constants.textures
 
+local defaultSettingsContextMenuOptions = constants.LSM.defaultSettingsContextMenuOptions
+
 local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
 local CHARACTER_PACK_CHARNAME_IDENTIFIER = constants.CHARACTER_PACK_CHARNAME_IDENTIFIER
 
@@ -273,6 +275,7 @@ local function OnClick_CheckBoxLabel(selfVar, currentStateVar)
 
     --Any setting was changed that needs to update the comboox's dropdown entries?
     if settingNeedsToUpdateDDL[currentStateVar] then
+        ClearCustomScrollableMenu()
         --Rebuild the dropdown entries
         utility.updateDDL()
         if currentStateVar == "autoReloadUI" then
@@ -294,13 +297,14 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
 
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
     --d(">areAllAddonsCurrentlyEnabled: " ..tos(areAllAddonsCurrentlyEnabled))
-    local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or myNormalColor
     addonSelectorSelectAddonsButtonNameLabel = addonSelectorSelectAddonsButtonNameLabel or asControls.addonSelectorSelectAddonsButtonNameLabel
 
-    ClearMenu()
+    local LSMadditionalData = { normalColor = myNormalColor, disabledColor = myDisabledColor, enabled = areAllAddonsCurrentlyEnabled }
+
+    ClearCustomScrollableMenu()
 
     --Add the currently logged in character name as header
-    AddCustomMenuItem(currentCharName, function() end, MENU_ADD_OPTION_HEADER)
+    AddCustomScrollableMenuHeader(currentCharName)
 
     --Addons are all enabled (or disabled)?
     if areAllAddonsCurrentlyEnabled == true then
@@ -313,7 +317,6 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 lastSavedPreMassMarkingTime = os.date("%c", AS.acwsv.lastMassMarkingSavedProfileTime)
             end
             if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
-                --AddCustomMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", function() AddonSelector_UndoLastMassMarking(false) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
                 local addonsUndoTab, librariesUndoTab = utility.sortAndGroupAddons(lastMassMarkingProfile)
                 if #addonsUndoTab > 1 or #librariesUndoTab > 1 then
                     local submenuItemsUndo = {}
@@ -332,7 +335,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                                 label    = AddonSelector_GetLocalizedText("addons") .. " (#" .. tos(#addonsUndoTab) .. ")",
                                 callback = function(state)
                                 end,
-                                itemType = MENU_ADD_OPTION_HEADER,
+                                entryType = LSM_ENTRY_TYPE_HEADER,
                             }
                             tins(submenuItemsUndo, submenuItemUndoAddOnsHeader)
 
@@ -341,7 +344,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                             label    = addonUndoName,
                             callback = function(state)
                             end,
-                            disabled = true,
+                            enabled = false,
                         }
                         tins(submenuItemsUndo, submenuItemUndo)
                     end
@@ -352,7 +355,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                                 label    = AddonSelector_GetLocalizedText("libraries") .. " (#" .. tos(#librariesUndoTab) .. ")",
                                 callback = function(state)
                                 end,
-                                itemType = MENU_ADD_OPTION_HEADER,
+                                entryType = LSM_ENTRY_TYPE_HEADER,
                             }
                             tins(submenuItemsUndo, submenuItemUndoLibrariesHeader)
                         end
@@ -360,35 +363,37 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                             label    = libraryUndoName,
                             callback = function(state)
                             end,
-                            disabled = true,
+                            enabled = false,
                         }
                         tins(submenuItemsUndo, submenuItemUndo)
                     end
                     if #submenuItemsUndo > 0 then
-                        AddCustomSubMenuItem(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", submenuItemsUndo)
+                        --AddCustomScrollableSubMenuEntry(text, entries, callbackFunc)
+                        AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", submenuItemsUndo, function() AddonSelector_UndoLastMassMarking(false) end)
                     end
                 end
             end
-            AddCustomMenuItem(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-            AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
+            --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
+            AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+            AddCustomScrollableMenuDivider()
         end
 
         --Deselect/Select all
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+        AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("DeselectAllAddons"),      function() AddonSelector_SelectAddons(false, nil, nil) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
         local currentAddonSelectorSelectAllButtonText = addonSelectorSelectAddonsButtonNameLabel:GetText()
         if currentAddonSelectorSelectAllButtonText ~= AddonSelector_GetLocalizedText("SelectAllAddons") then
-            AddCustomMenuItem(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+            AddCustomScrollableMenuEntry(currentAddonSelectorSelectAllButtonText,              function() AddonSelector_SelectAddons(true, nil, nil) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
         end
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllAddons"),                                            function() AddonSelector_SelectAddons(true, true, nil) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-        AddCustomMenuItem(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
-        AddCustomMenuItem("-", function()end, MENU_ADD_OPTION_LABEL)
+        AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("SelectAllAddons"),                                            function() AddonSelector_SelectAddons(true, true, nil) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+        AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("DeselectAllLibraries"),   function() AddonSelector_SelectAddons(false, true, true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+        AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("SelectAllLibraries"),     function() AddonSelector_SelectAddons(true, true, true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+        AddCustomScrollableMenuDivider()
     end
 
     --Scroll to addons/libraries
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("ScrollToAddons"),         function() AddonSelector_ScrollTo(true)  end, MENU_ADD_OPTION_LABEL)
-    AddCustomMenuItem(AddonSelector_GetLocalizedText("ScrollToLibraries"),      function() AddonSelector_ScrollTo(false) end, MENU_ADD_OPTION_LABEL)
-    AddCustomMenuItem("-", function() end, MENU_ADD_OPTION_LABEL)
+    AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ScrollToAddons"),         function() AddonSelector_ScrollTo(true)  end, LSM_ENTRY_TYPE_NORMAL)
+    AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ScrollToLibraries"),      function() AddonSelector_ScrollTo(false) end, LSM_ENTRY_TYPE_NORMAL)
+    AddCustomScrollableMenuDivider()
 
     --Add the global pack options
     checkIfGlobalPacksShouldBeShown()
@@ -401,7 +406,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showGlobalPacks end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowSubMenuAtGlobalPacks"),
@@ -410,11 +415,11 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showSubMenuAtGlobalPacks end,
-            disabled = function() return not AS.acwsv.showGlobalPacks end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            enabled = function() return not AS.acwsv.showGlobalPacks end,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
     }
-    AddCustomSubMenuItem(AddonSelector_GetLocalizedText("GlobalPackSettings"), globalPackSubmenu)
+    AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("GlobalPackSettings"), globalPackSubmenu)
 
     --Add the character pack options
     local characterNameSubmenu = {
@@ -429,7 +434,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.saveGroupedByCharacterName end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowGroupedByCharacterName"),
@@ -439,8 +444,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showGroupedByCharacterName end,
-            disabled = function(rootMenu, childControl) return AS.acwsv.saveGroupedByCharacterName end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            enabled = function(rootMenu, childControl) return not AS.acwsv.saveGroupedByCharacterName end,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowPacksOfOtherAccountsChars"),
@@ -449,11 +454,11 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showPacksOfOtherAccountsChars end,
-            disabled = function(rootMenu, childControl) return not AS.acwsv.saveGroupedByCharacterName and not AS.acwsv.showGroupedByCharacterName end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            enabled = function(rootMenu, childControl) return AS.acwsv.saveGroupedByCharacterName and AS.acwsv.showGroupedByCharacterName end,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
     }
-    AddCustomSubMenuItem(AddonSelector_GetLocalizedText("CharacterNameSettings"), characterNameSubmenu)
+    AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("CharacterNameSettings"), characterNameSubmenu)
 
 
     --Add the search options
@@ -464,7 +469,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 AS.acwsv.searchExcludeFilename = state
             end,
             checked  = function() return AS.acwsv.searchExcludeFilename end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
             label    = AddonSelector_GetLocalizedText("searchSaveHistory"),
@@ -472,50 +477,46 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 AS.acwsv.searchSaveHistory = state
             end,
             checked  = function() return AS.acwsv.searchSaveHistory end,
-            itemType = MENU_ADD_OPTION_CHECKBOX,
+            entryType = LSM_ENTRY_TYPE_CHECKBOX,
         }
     }
-    AddCustomSubMenuItem(AddonSelector_GetLocalizedText("searchMenuStr"), searchOptionsSubmenu)
+    AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("searchMenuStr"), searchOptionsSubmenu)
 
     --Add the auto reload pack after selection checkbox
-    local cbAutoReloadUIindex = AddCustomMenuItem(textures.reloadUITextureStr .. AddonSelector_GetLocalizedText("autoReloadUIHint"),
+    local cbAutoReloadUIindex = AddCustomScrollableMenuCheckbox(textures.reloadUITextureStr .. AddonSelector_GetLocalizedText("autoReloadUIHint"),
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "autoReloadUI")
             end,
-            MENU_ADD_OPTION_CHECKBOX)
-    setMenuItemCheckboxState(cbAutoReloadUIindex, AS.acwsv.autoReloadUI)
+            AS.acwsv.autoReloadUI)
 
     --Add the pack tooltip after autoRealoadUI checkbox
-    local cbAddPackTooltipIndex = AddCustomMenuItem(AddonSelector_GetLocalizedText("addPackTooltip"),
+    local cbAddPackTooltipIndex = AddCustomScrollableMenuCheckbox(AddonSelector_GetLocalizedText("addPackTooltip"),
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "addPackTooltip")
             end,
-            MENU_ADD_OPTION_CHECKBOX)
-    setMenuItemCheckboxState(cbAddPackTooltipIndex, AS.acwsv.addPackTooltip)
+            AS.acwsv.addPackTooltip)
 
     --Add the pack's addon list submenu after pack tooltip checkbox
-    local cbShowPacksAddonListIndex = AddCustomMenuItem(AddonSelector_GetLocalizedText("showPacksAddonList"),
+    local cbShowPacksAddonListIndex = AddCustomScrollableMenuCheckbox(AddonSelector_GetLocalizedText("showPacksAddonList"),
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "showPacksAddonList")
             end,
-            MENU_ADD_OPTION_CHECKBOX)
-    setMenuItemCheckboxState(cbShowPacksAddonListIndex, AS.acwsv.showPacksAddonList)
+            AS.acwsv.showPacksAddonList)
 
     --Show search header at the addon packs dropdown
-    local cbShowSearchFilterAtPacksListIndex = AddCustomMenuItem(AddonSelector_GetLocalizedText("showSearchFilterAtPacksList"),
+    local cbShowSearchFilterAtPacksListIndex = AddCustomScrollableMenuCheckbox(AddonSelector_GetLocalizedText("showSearchFilterAtPacksList"),
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "showSearchFilterAtPacksList")
             end,
-            MENU_ADD_OPTION_CHECKBOX)
-    setMenuItemCheckboxState(cbShowSearchFilterAtPacksListIndex, AS.acwsv.showSearchFilterAtPacksList)
+            AS.acwsv.showSearchFilterAtPacksList)
 
     --Automatically add missing dependency to the pack, if pack loads
-    local cbAutoAddMissingDependencyAtPackLoad = AddCustomMenuItem(AddonSelector_GetLocalizedText("autoAddMissingDependencyAtPackLoad"),
+    --AddCustomScrollableMenuCheckbox(text, callback, checked, additionalData)
+    local cbAutoAddMissingDependencyAtPackLoad = AddCustomScrollableMenuCheckbox(AddonSelector_GetLocalizedText("autoAddMissingDependencyAtPackLoad"),
             function(cboxCtrl)
                 OnClick_CheckBoxLabel(cboxCtrl, "autoAddMissingDependencyAtPackLoad")
             end,
-            MENU_ADD_OPTION_CHECKBOX)
-    setMenuItemCheckboxState(cbAutoAddMissingDependencyAtPackLoad, AS.acwsv.autoAddMissingDependencyAtPackLoad)
+            AS.acwsv.autoAddMissingDependencyAtPackLoad)
 
     --Last pack loaded info
     local lastLoadedPackData = AS.acwsv.lastLoadedPackNameForCharacters and AS.acwsv.lastLoadedPackNameForCharacters[currentCharId]
@@ -556,9 +557,9 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             local lastLoadedPackTime = ""
             lastLoadedPackTime = os.date("%c", lastLoadedPackData.timestamp)
             if lastLoadedPackCharName ~= "" and lastLoadedPackName ~= "" and lastLoadedPackTime ~= "" then
-                --AddCustomMenuItem(mytext, myfunction, itemType, myFont, normalColor, highlightColor, itemYPad, horizontalAlignment)
-                AddCustomMenuItem(AddonSelector_GetLocalizedText("LastPackLoaded"), function() end, MENU_ADD_OPTION_HEADER, nil, nil, nil, 6)
-                AddCustomMenuItem("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
+                --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
+                AddCustomScrollableMenuHeader(AddonSelector_GetLocalizedText("LastPackLoaded"))
+                AddCustomScrollableMenuEntry("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
                         function()
                             --TODO Set the pack to the dropddown box again
                             if packStillExistsAndIsSelectable == true then
@@ -576,10 +577,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                                 AS.controls.ddl.m_comboBox:SetSelectedItemByEval(evalFunc, false) --do not ignore the callback -> run it!
                                 AS.flags.doNotReloadUI = false
                             end
-                        end, MENU_ADD_OPTION_LABEL, nil, disabledColor, nil, nil, nil, nil, nil, nil, areAllAddonsCurrentlyEnabled)
+                        end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
             end
         end
     end
 
-    ShowMenu(buttonCtrl)
+    ShowCustomScrollableMenu(buttonCtrl, defaultSettingsContextMenuOptions)
 end

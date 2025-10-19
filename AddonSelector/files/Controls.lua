@@ -382,15 +382,16 @@ function AS.CreateControlReferences()
                 if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
                     ClearMenu()
                     for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
-                        AddCustomMenuItem(searchTerm, function()
+                        --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
+                        AddCustomScrollableMenuEntry(searchTerm, function()
                             AS.OpenGameMenuAndAddOnsAndThenSearch(searchTerm, true, false)
-                            ClearMenu()
+                            ClearCustomScrollableMenu()
                         end)
                     end
-                    AddCustomMenuItem("-", function() end)
-                    AddCustomMenuItem(AddonSelector_GetLocalizedText("searchClearHistory"), function()
+                    AddCustomScrollableMenuDivider()
+                    AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("searchClearHistory"), function()
                         utility.clearSearchHistory(searchType)
-                        ClearMenu()
+                        ClearCustomScrollableMenu()
                     end)
                     doShowMenu = true
                     searchHistoryWasAdded = true
@@ -404,12 +405,12 @@ function AS.CreateControlReferences()
                     if not searchHistoryWasAdded then
                         ClearMenu()
                     else
-                        AddCustomMenuItem(AddonSelector_GetLocalizedText("addonCategories"), function() end, MENU_ADD_OPTION_HEADER)
+                        AddCustomScrollableMenuHeader(AddonSelector_GetLocalizedText("addonCategories"))
                     end
                     for _, searchTerm in ipairs(addonCategoryCategories) do
-                        AddCustomMenuItem(searchTerm, function()
+                        AddCustomScrollableMenuEntry(searchTerm, function()
                             AS.OpenGameMenuAndAddOnsAndThenSearch(searchTerm, true, true)
-                            ClearMenu()
+                            ClearCustomScrollableMenu()
                         end)
                     end
                     doShowMenu = true
@@ -417,7 +418,7 @@ function AS.CreateControlReferences()
             end
             --Show the context menu now?
             if doShowMenu == true then
-                ShowMenu(selfCtrl)
+                ShowCustomScrollableMenu(selfCtrl)
             end
         elseif isUpInside and mouseButton == MOUSE_BUTTON_INDEX_LEFT then
             local currentText = selfCtrl:GetText()
