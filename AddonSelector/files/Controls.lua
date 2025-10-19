@@ -2127,8 +2127,7 @@ function OnClick_Save(packName, packData, characterName)
     if doesPackAlreadyExist == true then
         local addonPackName = "\'" .. newPackName .. "\'"
         local savePackQuestion = strfor(AddonSelector_GetLocalizedText("savePackBody"), tos(addonPackName))
-        utility.ShowConfirmationDialog("SaveAddonPackDialog",
-                (AddonSelector_GetLocalizedText("savePackTitle")) .. "\n" ..
+        utility.ShowConfirmationDialog((AddonSelector_GetLocalizedText("savePackTitle")) .. "\n" ..
                         "[".. (saveGroupedByChar and strfor(colors.charNamePackColorTemplate, packCharacter) or packCharacter) .. "]\n" .. newPackName,
                 savePackQuestion,
                 function() OnClick_SaveDo(wasPackNameProvided, packName, characterName) end,
@@ -2237,8 +2236,7 @@ function OnClick_DeleteWholeCharacter(characterId)
         ClearCustomScrollableMenu()
         AS.comboBox:HideDropdown()
         --Show security dialog
-        utility.ShowConfirmationDialog("DeleteCharacterPacksDialog",
-                    AddonSelector_GetLocalizedText("deleteWholeCharacterPacksTitle") .. "\n[" .. characterName .. "]",
+        utility.ShowConfirmationDialog(AddonSelector_GetLocalizedText("deleteWholeCharacterPacksTitle") .. "\n[" .. characterName .. "]",
                     AddonSelector_GetLocalizedText("deleteWholeCharacterPacksQuestion"),
                     function() OnClick_DeleteWholeCharacterDo(characterName, charId) end,
                     function() end,
@@ -2293,11 +2291,9 @@ function OnClick_Delete(itemData, buttonWasPressed)
     local packCharName
     if charName ~= GLOBAL_PACK_NAME then packCharName = charName end
     local selectedPackName = itemData.name
-    --ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, data)
     local addonPackName = "\'" .. selectedPackName .. "\'"
     local deletePackQuestion = strfor(AddonSelector_GetLocalizedText("deletePackBody"), tos(addonPackName))
-    utility.ShowConfirmationDialog("DeleteAddonPackDialog",
-            (AddonSelector_GetLocalizedText("deletePackTitle")) .. "\n[" .. (packCharName and strfor(colors.charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
+    utility.ShowConfirmationDialog((AddonSelector_GetLocalizedText("deletePackTitle")) .. "\n[" .. (packCharName and strfor(colors.charNamePackColorTemplate, packCharName) or packNameGlobal) .. "]\n" .. selectedPackName,
             deletePackQuestion,
             function() OnClick_DeleteDo(itemData, charId, currentlySelectedPackData, buttonWasPressed) end,
             function() OnAbort_Do(false, true, itemData, charId, currentlySelectedPackData) end,

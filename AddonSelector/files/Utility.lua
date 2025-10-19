@@ -21,6 +21,8 @@ local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledSt
 --Other Addons
 local otherAddonsData = AS.otherAddonsData
 
+local ASYesNoDialogName = constants.ASYesNoDialogName --"ADDON_SELECTOR_YESNO_DIALOG"
+
 
 local updaterNames = constants.updaterNames
 local ASUpdateDDLThrottleName = updaterNames.ASUpdateDDLThrottleName
@@ -592,26 +594,59 @@ utility.isAddonPackEnabledForAutoLoadOnLogout = isAddonPackEnabledForAutoLoadOnL
 ------------------------------------------------------------------------------------------------------------------------
 -- Dialogs
 ------------------------------------------------------------------------------------------------------------------------
---Function to show a confirmation dialog
-local function ShowConfirmationDialog(dialogName, title, body, callbackYes, callbackNo, callbackSetup, data, forceUpdate)
-    --Initialize the library
-    AS.LDIALOG = AS.LDIALOG or LibDialog
-    local libDialog = AS.LDIALOG
-    if libDialog == nil then
-        d("[AddonSelector]".. AddonSelector_GetLocalizedText("LibDialogMissing"))
-        return
+local function GetAddonSelectorYesNoDialog()
+    if(not ESO_Dialogs[ASYesNoDialogName]) then
+d("[AS] Registering dialog: " .. tos(ASYesNoDialogName))
+        ESO_Dialogs[ASYesNoDialogName] = {
+            canQueue = true,
+            title = {
+                text = "",
+            },
+            mainText = {
+                text = "",
+            },
+            buttons = {
+                [1] = {
+                    text = SI_DIALOG_YES,
+                    callback = function()  end,
+                },
+                [2] = {
+                    text = SI_DIALOG_NO,
+                    callback = function()  end,
+                }
+            },
+            noChoiceCallback = function()  end,
+        }
     end
-    --Force the dialog to be updated with the title, text, etc.?
-    forceUpdate = forceUpdate or false
-    --Check if the dialog exists already, and if not register it
-    local existingDialogs = libDialog.dialogs
-    if forceUpdate or existingDialogs[ADDON_NAME] == nil or existingDialogs[ADDON_NAME][dialogName] == nil then
-        libDialog:RegisterDialog(ADDON_NAME, dialogName, title, body, callbackYes, callbackNo, callbackSetup, forceUpdate, callbackNo)
-    end
-    --Show the dialog now
-    libDialog:ShowDialog(ADDON_NAME, dialogName, data)
+    return ESO_Dialogs[ASYesNoDialogName]
+end
 
-    narration.AddDialogTitleBodyKeybindNarration(title, body, nil)
+local function updateDialogTextsAndCallbacks(dialog, title, body, callbackYes, callbackNo)
+d("[AS]updateDialogTextsAndCallbacks - title: " .. tos(title) .. ", body: " .. tos(body) .. ", callbackYes: " .. tos(callbackYes) .. ", callbackNo: " .. tos(callbackNo))
+    if dialog == nil or title == nil or body == nil or type(callbackYes) ~= "function" then return end
+
+    dialog.title.text = title
+    dialog.mainText.text = body
+
+    local buttons = dialog.buttons
+    buttons[1].callback = callbackYes
+    if callbackNo ~= nil then buttons[2].callback = callbackNo else buttons[2].callback = function() end end
+    return true
+end
+
+--Function to show a confirmation dialog
+local function ShowConfirmationDialog(title, body, callbackYes, callbackNo, data)
+    --Initialize the dialogs
+    local yesNoDialog = GetAddonSelectorYesNoDialog()
+d(">yesNoDialog: " .. tos(yesNoDialog))
+    if yesNoDialog == nil then return end
+
+    if updateDialogTextsAndCallbacks(yesNoDialog, title, body, callbackYes, callbackNo) == true then
+d(">Showing the platform dialog now")
+        --Show the dialog now
+        ZO_Dialogs_ShowPlatformDialog(ASYesNoDialogName, data)
+        narration.AddDialogTitleBodyKeybindNarration(title, body, nil)
+    end
 end
 utility.ShowConfirmationDialog = ShowConfirmationDialog
 

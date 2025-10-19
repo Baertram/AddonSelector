@@ -67,7 +67,6 @@ AS.utility.otherAddOns = {}
 --Constants
 local constants = AS.constants --defined in en.lua
 
-
 --Currently loggedIn account info
 constants.currentAccount = GetDisplayName()
 
@@ -79,7 +78,7 @@ constants.currentCharIdNum = currentCharIdNum
 constants.currentCharId = currentCharId
 constants.currentCharName = currentCharName
 
-
+constants.ASYesNoDialogName ="ADDON_SELECTOR_YESNO_DIALOG"
 
 --SavedVariables
 local savedVariablesConst = {
@@ -147,7 +146,6 @@ constants.SEARCH_TYPE_NAME = SEARCH_TYPE_NAME
 --Other Addons/Libraries which should not be disabled if you use the "disable all" keybind
 --> see function AddonSelector_SelectAddons(false)
 local addonsWhichShouldNotBeDisabled = {
-    ["LibDialog"] =         true,
     ["LibCustomMenu"] =     true,
     ["LibScrollableMenu"] = true,
 }
