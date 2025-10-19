@@ -596,7 +596,6 @@ utility.isAddonPackEnabledForAutoLoadOnLogout = isAddonPackEnabledForAutoLoadOnL
 ------------------------------------------------------------------------------------------------------------------------
 local function GetAddonSelectorYesNoDialog()
     if(not ESO_Dialogs[ASYesNoDialogName]) then
-d("[AS] Registering dialog: " .. tos(ASYesNoDialogName))
         ESO_Dialogs[ASYesNoDialogName] = {
             canQueue = true,
             title = {
@@ -622,7 +621,6 @@ d("[AS] Registering dialog: " .. tos(ASYesNoDialogName))
 end
 
 local function updateDialogTextsAndCallbacks(dialog, title, body, callbackYes, callbackNo)
-d("[AS]updateDialogTextsAndCallbacks - title: " .. tos(title) .. ", body: " .. tos(body) .. ", callbackYes: " .. tos(callbackYes) .. ", callbackNo: " .. tos(callbackNo))
     if dialog == nil or title == nil or body == nil or type(callbackYes) ~= "function" then return end
 
     dialog.title.text = title
@@ -638,11 +636,9 @@ end
 local function ShowConfirmationDialog(title, body, callbackYes, callbackNo, data)
     --Initialize the dialogs
     local yesNoDialog = GetAddonSelectorYesNoDialog()
-d(">yesNoDialog: " .. tos(yesNoDialog))
     if yesNoDialog == nil then return end
 
     if updateDialogTextsAndCallbacks(yesNoDialog, title, body, callbackYes, callbackNo) == true then
-d(">Showing the platform dialog now")
         --Show the dialog now
         ZO_Dialogs_ShowPlatformDialog(ASYesNoDialogName, data)
         narration.AddDialogTitleBodyKeybindNarration(title, body, nil)

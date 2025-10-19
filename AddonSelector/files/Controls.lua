@@ -44,7 +44,7 @@ local selectPreviouslySelectedPack = utility.selectPreviouslySelectedPack
 local isAddonPackEnabledForAutoLoadOnLogout = utility.isAddonPackEnabledForAutoLoadOnLogout
 local sortNonNumberKeyTableAndBuildSortedLookup = utility.sortNonNumberKeyTableAndBuildSortedLookup
 
-local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
+local packNameGlobal = AddonSelector_GetLocalizedText("packNameGlobal")
 
 --ZOs reference variables
 local tos = tostring

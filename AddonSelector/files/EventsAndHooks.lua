@@ -51,7 +51,7 @@ local ADDON_MANAGER =           utility.GetAddonManager()
 local ADDON_MANAGER_OBJECT =    utility.GetAddonManagerObject()
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
-local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
+local packNameGlobal = AddonSelector_GetLocalizedText("packNameGlobal")
 
 
 --ZOs reference variables

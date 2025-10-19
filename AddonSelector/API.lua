@@ -26,7 +26,7 @@ local areAllAddonsEnabled = utility.areAllAddonsEnabled
 local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
-local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
+local packNameGlobal = AddonSelector_GetLocalizedText("packNameGlobal")
 
 local tos = tostring
 local tins = table.insert

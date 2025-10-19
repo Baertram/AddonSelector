@@ -26,7 +26,7 @@ local getCharacterIdByName = utility.getCharacterIdByName
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 
-local packNameGlobal = AddonSelector_GetLocalizedText("packGlobal")
+local packNameGlobal = AddonSelector_GetLocalizedText("packNameGlobal")
 
 --ZOs reference variables
 local tos = tostring
@@ -290,6 +290,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
+    clearAndUpdateDDL = clearAndUpdateDDL or utility.clearAndUpdateDDL
+
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
     --d(">areAllAddonsCurrentlyEnabled: " ..tos(areAllAddonsCurrentlyEnabled))
     local disabledColor = ( not areAllAddonsCurrentlyEnabled and myDisabledColor) or myNormalColor
