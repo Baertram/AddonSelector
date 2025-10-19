@@ -298,14 +298,12 @@ local charNamePackColorTemplate = colors.charNamePackColorTemplate
 
 
 --Textures
-constants.textures = {}
 local textures = AS.constants.textures
 local reloadUITexture = "/esoui/art/miscellaneous/eso_icon_warning.dds"
 textures.reloadUITexture = reloadUITexture
 local reloadUITextureStr = "|cFF0000".. zo_iconFormatInheritColor(reloadUITexture, 24, 24) .."|r"
 textures.reloadUITextureStr = reloadUITextureStr
 textures.autoLoadOnLogoutTexture = "/esoui/art/buttons/log_out_up.dds"
---textures.autoLoadOnLogoutTextureStr = "|c00FF22".. zo_iconFormatInheritColor(autoLoadOnLogoutTexture, 24, 24) .."|r"
 
 
 --Strings
@@ -353,88 +351,6 @@ local stringConstants = {
 }
 constants.strings = stringConstants
 
-
-
---todo: Anything still needed here, which is not defined in en.lua? Add it there!
---[[
-local addonsStr = GetString(SI_GAME_MENU_ADDONS)
-local librariesStr = GetString(SI_ADDON_MANAGER_SECTION_LIBRARIES)
-local packNameCharacter = strfor(charNamePackColorTemplate, GetString(SI_ADDON_MANAGER_CHARACTER_SELECT_ALL))
-local singleCharNameStr = AddonSelector_GetLocalizedText("singleCharName")
-local singleCharNameColoredStr = strfor(charNamePackColorTemplate, singleCharNameStr)
-local packGlobalStr = AddonSelector_GetLocalizedText("packGlobal")
-local packNameGlobal = strfor(globalPackColorTemplate, packGlobalStr)
-local packCharNameStr = AddonSelector_GetLocalizedText("packCharName")
-local selectPackStr = AddonSelector_GetLocalizedText("selectPack")
-local selectedPackNameStr = AddonSelector_GetLocalizedText("selectedPackName")
-local deletePackAlertStr = AddonSelector_GetLocalizedText("deletePackAlert")
-local deletePackErrorStr = AddonSelector_GetLocalizedText("deletePackError")
-local deleteWholeCharacterPacksTitleStr = AddonSelector_GetLocalizedText("deleteWholeCharacterPacksTitle")
-local deleteWholeCharacterPacksQuestionStr = AddonSelector_GetLocalizedText("deleteWholeCharacterPacksQuestion")
-local savedGroupedByCharNameStr = AddonSelector_GetLocalizedText("SaveGroupedByCharacterName")
-local autoReloadUIStr = AddonSelector_GetLocalizedText("autoReloadUIHint")
-local searchMenuStr = AddonSelector_GetLocalizedText("AddonSearch")
-searchMenuStr = strsub(searchMenuStr, 1, -2) --remove last char
-local searchInstructions = AddonSelector_GetLocalizedText("searchInstructions")
-local searchFound = AddonSelector_GetLocalizedText("foundSearch")
-local searchFoundLast = AddonSelector_GetLocalizedText("foundSearchLast")
-local searchedForStr = AddonSelector_GetLocalizedText("searchedForStr")
-local clearSearchHistoryStr = AddonSelector_GetLocalizedText("searchClearHistory")
-local reloadUIStrWithoutIcon = strlow(AddonSelector_GetLocalizedText("ReloadUI"))
-local reloadUIStr = reloadUIStrWithoutIcon .. reloadUITextureStr
-local deletePackTitleStr = AddonSelector_GetLocalizedText("deletePackTitle")
-local selectSavedText = AddonSelector_GetLocalizedText("SelectAllAddonsSaved")
-local overwriteSavePackStr = AddonSelector_GetLocalizedText("OverwriteSavePack")
-local selectAllText = AddonSelector_GetLocalizedText("SelectAllAddons")
-local packNameStr = AddonSelector_GetLocalizedText("packName")
-local addonCategoriesStr = AddonSelector_GetLocalizedText("addonCategories")
-local noCategoryStr = AddonSelector_GetLocalizedText("noCategory")
-local currentTextStr = AddonSelector_GetLocalizedText("currentText")
-local enDisableCurrentStateTemplateText = AddonSelector_GetLocalizedText("enDisableCurrentStateTemplate")
-local enableText = AddonSelector_GetLocalizedText("enableText")
-local disableText = AddonSelector_GetLocalizedText("disableText")
-local stateText = AddonSelector_GetLocalizedText("stateText")
-local newStateText = AddonSelector_GetLocalizedText("newStateText")
-local libraryText = AddonSelector_GetLocalizedText("libraryText")
-local openDropdownStr = AddonSelector_GetLocalizedText("openDropdownStr")
-local openedStr = AddonSelector_GetLocalizedText("openedStr")
-local closedStr = AddonSelector_GetLocalizedText("closedStr")
---local chosenStr = AddonSelector_GetLocalizedText("chosenStr")
-local addPackTooltipStr = AddonSelector_GetLocalizedText("addPackTooltip")
-local showPacksAddonListStr = AddonSelector_GetLocalizedText("showPacksAddonList")
-local characterWideStr = AddonSelector_GetLocalizedText("characterWide")
-local accountWideStr = AddonSelector_GetLocalizedText("accountWide")
-local characterWidesStr = AddonSelector_GetLocalizedText("characterWides")
-local accountWidesStr = AddonSelector_GetLocalizedText("accountWides")
-local settingStr = AddonSelector_GetLocalizedText("settingPattern")
-local currentlyStr = GetString(SI_COLOR_PICKER_CURRENT)
-local searchHistoryStr = AddonSelector_GetLocalizedText("searchHistoryPattern")
-local submenuStr = AddonSelector_GetLocalizedText("submenu")
-local submenuOpenedStr = submenuStr .. " " .. openedStr
-local submenuClosedStr = submenuStr .. " " .. closedStr
-local entriesStr = AddonSelector_GetLocalizedText("entries")
-local entryMouseEnterStr = AddonSelector_GetLocalizedText("entryMouseEnter")
-local entrySelectedStr = AddonSelector_GetLocalizedText("entrySelected")
-local checkboxStr = AddonSelector_GetLocalizedText("checkBox")
-local enabledAddonsInPackStr = AddonSelector_GetLocalizedText("enabledAddonsInPack")
-local addonsInPackStr = AddonSelector_GetLocalizedText("addonsInPack")
-local librariesInPackStr = AddonSelector_GetLocalizedText("librariesInPack")
-local showSearchFilterAtPacksListStr = AddonSelector_GetLocalizedText("showSearchFilterAtPacksList")
-local disabledStr = AddonSelector_GetLocalizedText("disabledRed")
-local missingStr = AddonSelector_GetLocalizedText("missing")
-local otherAccStr = AddonSelector_GetLocalizedText("otherAccount")
-local changedAddonPackStr = AddonSelector_GetLocalizedText("changedAddonPack")
-local saveChangesNowStr = AddonSelector_GetLocalizedText("saveChangesNow")
-local packNameLoadNotFoundStr = AddonSelector_GetLocalizedText("packNameLoadNotFound")
-local packNameLoadFoundStr = AddonSelector_GetLocalizedText("packNameLoadFound")
-local packNameLoadAtLogoutFoundStr = AddonSelector_GetLocalizedText("packNameLoadAtLogoutFound")
-local addPackToKeybindStr = AddonSelector_GetLocalizedText("addPackToKeybind")
-local removePackFromKeybindStr = AddonSelector_GetLocalizedText("removePackFromKeybind")
-local loadOnLogoutOrQuitStr = AddonSelector_GetLocalizedText("loadOnLogoutOrQuit")
-local skipLoadAddonPackStr = AddonSelector_GetLocalizedText("skipLoadAddonPack")
-local autoAddMissingDependencyAtPackLoadStr = AddonSelector_GetLocalizedText("autoAddMissingDependencyAtPackLoad")
-local autoAddedMissingDependencyToPackStr = AddonSelector_GetLocalizedText("autoAddedMissingDependencyToPack")
-]]
 
 --Controls
 local asControls = { --these will be updated at EVENT_ADD_ON_LOADED etc.

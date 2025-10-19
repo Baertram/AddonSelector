@@ -2,12 +2,14 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { --by horizonxael
     ["packName"] = "Nome del profilo :",
     ["selectPack"] = "Seleziona",
-    ["ERRORpackMissing"] = "ADDON SELECTOR : Nessun nome profilo",
+    ["ERRORpackMissing"] = ADDON_NAME .. ": Nessun nome profilo",
     ["autoReloadUIHint"] = "Ricaricare l'interfaccia dopo aver selezionato un profilo.",
     ["autoReloadUIHintTooltip"] = "Ricaricamento automatico: selezionato, vieta la modifica o l'eliminazione dei profili. Deve essere deselezionato per modificare o eliminare un profilo",
     ["saveButton"] = "Registra",
@@ -15,8 +17,8 @@ local langArray = { --by horizonxael
     ["savePackBody"] = "Sostituisci il profilo esistente %s?",
     ["deleteButton"] = "Cancella",
     ["deletePackTitle"] = "Cancellare: ",
-    ["deletePackAlert"] = "ADDON SELECTOR: Devi selezionare un profilo da eliminare.",
-    ["deletePackError"] = "ADDON SELECTOR: Errore di eliminazione del profilo\n%s.",
+    ["deletePackAlert"] = ADDON_NAME .. ": Devi selezionare un profilo da eliminare.",
+    ["deletePackError"] = ADDON_NAME .. ": Errore di eliminazione del profilo\n%s.",
     ["deletePackBody"] = "Vuoi davvero eliminare questo profilo?\n%s",
     ["DeselectAllAddons"] = "Deseleziona tutto",
     ["SelectAllAddons"] = "Seleziona tutto",
@@ -27,7 +29,6 @@ local langArray = { --by horizonxael
     ["SelectAllAddonsSaved"] = "Seleziona Salvato",
     ["AddonSearch"] = "Ricercare:",
     ["selectedPackName"] = "Selezionato (%s): ",
-    ["LibDialogMissing"] = "Libreria \'LibDialog\' mancante! Il componente aggiuntivo non può funzionare senza di essa!",
     ["ReloadUI"] = GetString(SI_ADDON_MANAGER_RELOAD) or "Ricarica interfaccia",
     ["ShowActivePack"] = "Mostra profilo attivo",
     ["ShowSubMenuAtGlobalPacks"] = "Mostra i sottomenu del gruppo di profili",

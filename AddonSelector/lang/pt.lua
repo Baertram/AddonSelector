@@ -2,20 +2,22 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = {
     ["packName"] = "Nome do Pacote:",
     ["selectPack"] = "Escolha",
-    ["ERRORpackMissing"] = "ADDON SELECTOR: Faltando Nome do Pacote.",
+    ["ERRORpackMissing"] = ADDON_NAME .. ": Faltando Nome do Pacote.",
     ["autoReloadUIHint"]	= "Auto-Relê UI na seleção do pacote.",
     ["autoReloadUIHintTooltip"] = "Auto-Relê UI: Quando ativada, você também pode evitar a edição ou exclusão de pacotes complementares.",
     ["saveButton"] = "Salva",
     ["savePackTitle"]        = "Substituir pacote?",
     ["savePackBody"]        = "Substituir pacote existente %s?",
     ["deleteButton"] = "Apaga",
-    ["deletePackAlert"]     = "ADDON SELECTOR: Você deve selecionar um pacote para deletar.",
-    ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": Você deve selecionar um pacote para deletar.",
+    ["deletePackError"]     = ADDON_NAME .. ": Pack delete error\n%s.",
     ["deletePackTitle"] = "Apaga: ",
     ["deletePackBody"] = "Apaga de Verdade?\n%s",
     ["DeselectAllAddons"] = "Desmarca tudo",
@@ -23,7 +25,6 @@ local langArray = {
     ["SelectAllAddonsSaved"] = "Re-escolhe salvo",
     ["AddonSearch"] = "Procura:",
     ["selectedPackName"]     = "Selecionada (%s):",
-    ["LibDialogMissing"]     = "Biblioteca \'LibDialog \' está faltando! Este addon não funcionará sem ele!",
     ["ReloadUI"]        = GetString(SI_ADDON_MANAGER_RELOAD) or "Recarregar IU",
     ["ShowActivePack"]      = "Mostrar pacote ativo",
     ["ShowSubMenuAtGlobalPacks"]            = "Show submenu at global packs",

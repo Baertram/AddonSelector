@@ -2,12 +2,14 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- by Kwisatz
     ["packName"]            = "Nombre del conjunto:",
     ["selectPack"]          = "Selecciona",
-    ["ERRORpackMissing"]    = "ADDON SELECTOR: Falta nombre de conjunto",
+    ["ERRORpackMissing"]    = ADDON_NAME .. ": Falta nombre de conjunto",
     ["autoReloadUIHint"]    = "Recargar interfaz al seleccionar un conjunto.",
     ["autoReloadUIHintTooltip"] = "Recarga automática: Si está seleccionado, impide editar o suprimir conjuntos. Tiene que estar deseleccionado si quieres editar o suprimir conjuntos",
     ["saveButton"]          = "Guardar",
@@ -15,15 +17,14 @@ local langArray = { -- by Kwisatz
     ["savePackBody"]        = "Sobreescribir conjunto existente %s?",
     ["deleteButton"]        = "Suprimir",
     ["deletePackTitle"]     = "Suprimir: ",
-    ["deletePackAlert"]     = "ADDON SELECTOR: Tienes que seleccionar un conjunto a suprimir.",
-    ["deletePackError"]     = "ADDON SELECTOR: Error de supresión del conjunto\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": Tienes que seleccionar un conjunto a suprimir.",
+    ["deletePackError"]     = ADDON_NAME .. ": Error de supresión del conjunto\n%s.",
     ["deletePackBody"]      = "¿Quieres realmente suprimir el conjunto?\n%s",
     ["DeselectAllAddons"]   = "Deseleccionar todo",
     ["SelectAllAddons"]     = "Seleccionar todo",
     ["SelectAllAddonsSaved"] = "Seleccionar lo guardado",
     ["AddonSearch"]          = "Buscar:",
     ["selectedPackName"]     = "Seleccionado (%s): ",
-    ["LibDialogMissing"]     = "¡Falta la librería \'LibDialog\'! ¡El complemento no puede funcionar sin ella!",
     ["ReloadUI"]            = GetString(SI_ADDON_MANAGER_RELOAD) or "Recargar interfaz",
     ["ShowActivePack"]      = "Mostrar conjunto activo",
     ["ShowSubMenuAtGlobalPacks"] = "Mostrar submenus en los conjuntos globales",

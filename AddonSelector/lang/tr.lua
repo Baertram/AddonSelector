@@ -2,6 +2,8 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- Turkish
@@ -27,7 +29,6 @@ local langArray = { -- Turkish
     ["SelectAllAddonsSaved"] = "Kaydedilenleri seç",
     ["AddonSearch"] = "Arama:",
     ["selectedPackName"] = "Seçili (%s): ",
-    ["LibDialogMissing"] = "\'LibDialog\' kitaplığı eksik! Bu eklenti onsuz çalışmaz!",
     ["ReloadUI"] = GetString(SI_ADDON_MANAGER_RELOAD) or "Kullanıcı arayüzünü yeniden yükle",
     ["ShowActivePack"] = "Aktif paketi göster",
     ["ShowSubMenuAtGlobalPacks"] = "Genel paketlerde alt menüyü göster",

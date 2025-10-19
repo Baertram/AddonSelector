@@ -379,7 +379,7 @@ function AddonSelector_LoadPackByKeybind(keybindNr)
     local packKeybinds = AS.acwsv.packKeybinds
     local packDataToLoad = packKeybinds[keybindNr]
     if packDataToLoad == nil then return end
-    AS.loadAddonPackNow(packDataToLoad.packName, packDataToLoad.charName, nil, nil)
+    AS.loadAddonPackNow(packDataToLoad.packName, packDataToLoad.charName, nil, not AS.acwsv.autoReloadUI)
 end
 
 --Show the current user's active pack in the chat

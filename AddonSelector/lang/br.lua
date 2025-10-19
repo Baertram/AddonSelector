@@ -2,12 +2,14 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- by Anntauri
     ["packName"]            = "Nome do pacote:",
     ["selectPack"]          = "Selecionar",
-    ["ERRORpackMissing"]    = "ADDON SELECTOR: Nome do pacote não existe.",
+    ["ERRORpackMissing"]    = ADDON_NAME .. ": Nome do pacote não existe.",
     ["autoReloadUIHint"]    = "Atualizar interface na seleção de pacote.",
     ["autoReloadUIHintTooltip"] = "Atualização automática: se estiver ativo, isto irá te impedir de editar e deletar pacotes. Você precisa desativar essa opção para editar e deletar pacotes!",
     ["saveButton"]          = "Salvar",
@@ -15,15 +17,14 @@ local langArray = { -- by Anntauri
     ["savePackBody"]        = "Substituir pacote %s?",
     ["deleteButton"]        = "Deletar",
     ["deletePackTitle"]     = "Deletar: ",
-    ["deletePackAlert"]     = "ADDON SELECTOR: Você deve selecionar um pacote para deletar.",
-    ["deletePackError"]     = "ADDON SELECTOR: Erro ao deletar pacote\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": Você deve selecionar um pacote para deletar.",
+    ["deletePackError"]     = ADDON_NAME .. ": Erro ao deletar pacote\n%s.",
     ["deletePackBody"]      = "Quer realmente deletar?\n%s",
     ["DeselectAllAddons"]   = "Desmarcar todos",
     ["SelectAllAddons"]     = "Marcar todos",
     ["SelectAllAddonsSaved"] = "Selecionar addons atuais",
     ["AddonSearch"]          = "Buscar:",
     ["selectedPackName"]     = "Selecionado (%s): ",
-    ["LibDialogMissing"]     = "Está faltando \'LibDialog\'! O addon não funciona sem ela!",
     ["ReloadUI"]            = GetString(SI_ADDON_MANAGER_RELOAD) or "Atulizar interface",
     ["ShowActivePack"]      = "Mostrar pacote ativo",
     ["ShowSubMenuAtGlobalPacks"] = "Mostrar submenus nos pacotes globais",

@@ -2,6 +2,8 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = {
@@ -16,7 +18,7 @@ local langArray = {
     ["deleteButton"]		= "Löschen",
     ["deletePackAlert"]     = "ADDON SELECTOR: Du musst einen Pack zum Löschen auswählen.",
     ["deletePackError"]     = "ADDON SELECTOR: Pack Löschen Fehler\n%s.",
-    ["deletePackTitle"]     = zo_iconTextFormatNoSpace("/esoui/art/progression/removepoints_up.dds", 24, 24, "Löschen: "),
+    ["deletePackTitle"]     = zo_iconTextFormatNoSpace(textures.removepoints, 24, 24, "Löschen: "),
     ["deletePackBody"]      = "Pack löschen?\n%s",
     ["DeselectAllAddons"]   = "Alle demarkieren",
     ["SelectAllAddons"]     = "Alle markieren",
@@ -79,9 +81,8 @@ local langArray = {
     ["showPacksAddonList"]   = "Zeige Pack's AddOn Liste als Untermenü",
     ["addonsInPack"]         = "AddOns im Pack %q",
     ["librariesInPack"]      = "Bibliotheken im Pack %q",
-    ["singleCharName"]       = GetString(SI_CURRENCYLOCATION0),
     ["showSearchFilterAtPacksList"] = "Zeige Suche in der Pack-Liste",
-    ["OverwriteSavePack"]    = zo_iconTextFormatNoSpace("/esoui/art/buttons/edit_save_over.dds", 24, 24, "%s überschreiben (mit aktuell ausgewählten)"),
+    ["OverwriteSavePack"]    = zo_iconTextFormatNoSpace(textures.overwrite, 24, 24, "%s überschreiben (mit aktuell ausgewählten)"),
     ["deleteWholeCharacterPacksTitle"] = "Lösche alle Packs vom Charakter",
     ["deleteWholeCharacterPacksQuestion"] = "Wirklich ALLE Packs löschen??",
     ["disabledRed"] = "|c990000" .. GetString(SI_SCREEN_NARRATION_TOGGLE_DISABLED) .."|r",
@@ -98,11 +99,11 @@ local langArray = {
     ["LoadPackByKeybind3"] = "Lade Pack 3",
     ["LoadPackByKeybind4"] = "Lade Pack 4",
     ["LoadPackByKeybind5"] = "Lade Pack 5",
-    ["addPackToKeybind"] =   "|c00FF000+|r Pack zu Tastenkombination %s |c00FF000hinzufügen|r",
+    ["addPackToKeybind"] =   "|c00FF00+|r Pack zu Tastenkombination %s |c00FF00hinzufügen|r",
     ["removePackFromKeybind"] = "|cFF0000-|r Pack von Tastenkombination %s |cFF0000entfernen|r",
     ["loadOnLogoutOrQuit"] = "Beim Logout/Beenden automatisch laden",
     ["skipLoadAddonPack"] = "AddOn Pack laden beim Logout/Beenden überspringen: %q",
-    ["keybind"] = "|t80.000000%:80.000000%:/esoui/art/buttons/keyboard/nav_pc_arrowkeys_down.dds|t",
+    ["keybinds"] = textures.keybind .. " Tastenkombinationen",
     ["autoAddMissingDependencyAtPackLoad"] = "Automatisch fehlende dem Pack hinzufügen (beim Pack Laden)",
     ["autoAddedMissingDependencyToPack"] = "Automatisch %q zum Pack %q hinzugefügt",
 }

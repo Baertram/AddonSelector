@@ -2,12 +2,14 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- by Lykeion 20221206
     ["packName"] = "插件包名称:",
     ["selectPack"] = "选择插件包",
-    ["ERRORpackMissing"] = "ADDON SELECTOR: 未找到插件包名称",
+    ["ERRORpackMissing"] = ADDON_NAME..": 未找到插件包名称",
     ["autoReloadUIHint"] = "选择插件包时自动重新加载UI.",
     ["autoReloadUIHintTooltip"] = "启用该选项时你对插件包的编辑和删除将被重载中断. 如果你想编辑插件包请先关闭本功能!",
     ["saveButton"] = "保存",
@@ -15,8 +17,8 @@ local langArray = { -- by Lykeion 20221206
     ["savePackBody"] = "覆盖已存在的插件包 %s?",
     ["deleteButton"] = "删除",
     ["deletePackTitle"] = "删除: ",
-    ["deletePackAlert"] = "ADDON SELECTOR: 你必须选中一个插件包以删除.",
-    ["deletePackError"] = "ADDON SELECTOR: 插件包删除发生错误\n%s.",
+    ["deletePackAlert"] = ADDON_NAME..": 你必须选中一个插件包以删除.",
+    ["deletePackError"] = ADDON_NAME..": 插件包删除发生错误\n%s.",
     ["deletePackBody"] = "真的要删除吗?\n%s",
     ["DeselectAllAddons"] = "取消选择所有",
     ["SelectAllAddons"] = "选择所有",
@@ -27,7 +29,6 @@ local langArray = { -- by Lykeion 20221206
     ["SelectAllAddonsSaved"] = "选择已保存的",
     ["AddonSearch"] = "搜索:",
     ["selectedPackName"] = "已选择 (%s): ",
-    ["LibDialogMissing"] = "运行库 \'LibDialog\' 未找到! 本插件必须使用该运行库!",
     ["ReloadUI"] = GetString(SI_ADDON_MANAGER_RELOAD) or "重新加载UI",
     ["ShowActivePack"] = "显示启用的插件包",
     ["ShowSubMenuAtGlobalPacks"] = "在账户插件包包中展示子菜单",

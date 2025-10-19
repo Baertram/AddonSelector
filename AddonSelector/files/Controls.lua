@@ -1264,7 +1264,7 @@ function AS.UpdateDDL(wasDeleted)
                                 }
                                 local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
                                 nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
-                                    name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
+                                    name    =  AddonSelector_GetLocalizedText("keybinds"),
                                     callback = nil,
                                     entries = keybindingEntries,
                                     charName = charName,
@@ -1828,7 +1828,7 @@ function AS.UpdateDDL(wasDeleted)
             local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
             local keybindingEntriesCopy = ZO_ShallowNumericallyIndexedTableCopy(keybindingEntries)
             subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
-                name    =  GetString(SI_GAME_MENU_KEYBINDINGS),
+                name    =  AddonSelector_GetLocalizedText("keybinds"),
                 callback = nil,
                 entries = keybindingEntriesCopy,
                 charName = GLOBAL_PACK_NAME,

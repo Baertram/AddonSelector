@@ -2,20 +2,22 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- by Calamath
     ["packName"] = "パック名:",
     ["selectPack"] = "パック選択",
-    ["ERRORpackMissing"] = "ADDON SELECTOR: パック名が見つかりません",
+    ["ERRORpackMissing"] = ADDON_NAME .. ": パック名が見つかりません",
     ["autoReloadUIHint"] = "自動UIリロード",
     ["autoReloadUIHintTooltip"] = "自動UIリロード: ONにした場合、編集や削除ができなくなります。 編集や削除をする場合はOFFにして下さい。",
     ["saveButton"] = "保存",
     ["savePackTitle"] = "上書き保存しますか？",
     ["savePackBody"] = " %s に上書き保存しますか？",
     ["deleteButton"] = "削除",
-    ["deletePackAlert"]     = "ADDON SELECTOR: 削除するパックを選択する必要があります。",
-    ["deletePackError"]     = "ADDON SELECTOR: パック削除エラー\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": 削除するパックを選択する必要があります。",
+    ["deletePackError"]     = ADDON_NAME .. ": パック削除エラー\n%s.",
     ["deletePackTitle"] = "削除: ",
     ["deletePackBody"] = "本当に削除しますか？\n%s",
     ["DeselectAllAddons"] = "全解除",
@@ -23,7 +25,6 @@ local langArray = { -- by Calamath
     ["SelectAllAddonsSaved"] = "保存したものを再選択",
     ["AddonSearch"] = "検索:",
     ["selectedPackName"] = "選択中 (%s):",
-    ["LibDialogMissing"] = "ライブラリ \'LibDialog\' が見つかりません！ このアドオンはこれがないと動きません。",
     ["ReloadUI"]        = GetString(SI_ADDON_MANAGER_RELOAD) or "UIをリロード",
     ["ShowActivePack"]      = "アクティブパックを表示",
     ["ShowSubMenuAtGlobalPacks"]            = "グローバルパックでサブメニューを表示",

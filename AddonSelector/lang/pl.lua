@@ -2,13 +2,15 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray = { -- by generaluploads
     ["packName"]            = "Nazwa paczki:",
     ["selectPack"]          = "Wybierz",
     ["selectPackForAllChars"] = "Wybierz dla wszystkich postaci",
-    ["ERRORpackMissing"]    = "ADDON SELECTOR: Brak nazwy paczki",
+    ["ERRORpackMissing"]    = ADDON_NAME .. ": Brak nazwy paczki",
     ["autoReloadUIHint"]    = "Automatycznie przeładuj interfejs przy wyborze paczki",
     ["autoReloadUIHintTooltip"] = "Automatycznie przeładuj interfejs: Kiedy jest WłĄCZONA, uniemożliwi to edycję i usuwanie pakietów addonów. Będziesz musiał/a to wyłączyć, aby edytować lub usuwać paczki addonów!",
     ["saveButton"]          = "Zapisz",
@@ -16,8 +18,8 @@ local langArray = { -- by generaluploads
     ["savePackBody"]        = "Nadpisać istniejącą paczkę %s?",
     ["deleteButton"]        = "Usuń",
     ["deletePackTitle"]     = "Usuń: ",
-    ["deletePackAlert"]     = "ADDON SELECTOR: Musisz wybrać paczkę, którą chcesz usunąć.",
-    ["deletePackError"]     = "ADDON SELECTOR: Błąd usuwania paczki\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": Musisz wybrać paczkę, którą chcesz usunąć.",
+    ["deletePackError"]     = ADDON_NAME .. ": Błąd usuwania paczki\n%s.",
     ["deletePackBody"]      = "Naprawdę usunąć?\n%s",
     ["DeselectAllAddons"]   = "Odznacz wszystkie",
     ["SelectAllAddons"]     = "Zaznacz wszystkie",
@@ -28,7 +30,6 @@ local langArray = { -- by generaluploads
     ["SelectAllAddonsSaved"] = "Zapisano ponowny wybór",
     ["AddonSearch"]          = "Szukaj:",
     ["selectedPackName"]     = "Wybrano (%s): ",
-    ["LibDialogMissing"]     = "Brakuje biblioteki \'LibDialog\'! Ten addon nie będzie działał bez niego!",
     ["ReloadUI"]            = GetString(SI_ADDON_MANAGER_RELOAD) or "Przeładuj interfejs",
     ["ShowActivePack"]      = "Pokaż aktywną paczkę",
     ["ShowSubMenuAtGlobalPacks"] = "Pokaż podmenu przy paczkach ogólnych",

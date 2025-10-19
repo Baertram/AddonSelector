@@ -19,6 +19,15 @@ AS.addonNamePrefix = addonNamePrefix
 --Create constants table
 AS.constants = {}
 local constants = AS.constants
+constants.textures = {}
+local textures = constants.textures
+
+local keybindTexture = "|t80.000000%:80.000000%:/esoui/art/buttons/keyboard/nav_pc_arrowkeys_down.dds|t"
+textures.keybind = keybindTexture
+textures.removepoints = "/esoui/art/progression/removepoints_up.dds"
+textures.overwrite = "/esoui/art/buttons/edit_save_over.dds"
+
+
 
 
 --Variables for translations
@@ -63,7 +72,7 @@ local langArray = {
     ["savePackTitle"]        = "Overwrite pack?",
     ["savePackBody"]        = "Overwrite existing pack %s?",
     ["deleteButton"]		= "Delete",
-    ["deletePackTitle"]     = zo_iconTextFormatNoSpace("/esoui/art/progression/removepoints_up.dds", 24, 24, "Delete: "),
+    ["deletePackTitle"]     = zo_iconTextFormatNoSpace(textures.removepoints, 24, 24, "Delete: "),
     ["deletePackAlert"]     = "ADDON SELECTOR: You must select a pack to delete.",
     ["deletePackError"]     = "ADDON SELECTOR: Pack delete error\n%s.",
     ["deletePackBody"]      = "Really delete?\n%s",
@@ -127,7 +136,7 @@ local langArray = {
     ["addonsInPack"]         = "AddOns in pack %q",
     ["librariesInPack"]      = "Libraries in pack %q",
     ["showSearchFilterAtPacksList"] = "Show search at the pack list",
-    ["OverwriteSavePack"]    = zo_iconTextFormatNoSpace("/esoui/art/buttons/edit_save_over.dds", 24, 24, "%s overwrite (with currently selected)"),
+    ["OverwriteSavePack"]    = zo_iconTextFormatNoSpace(textures.overwrite, 24, 24, "%s overwrite (with currently selected)"),
     ["deleteWholeCharacterPacksTitle"] = "Delete all packs of character",
     ["deleteWholeCharacterPacksQuestion"] = "Really delete ALL packs?",
     ["otherAccount"] = "|cf9a602(Other @)|r",
@@ -146,7 +155,8 @@ local langArray = {
     ["removePackFromKeybind"] = "|cFF0000- Remove|r pack from keybind %s",
     ["loadOnLogoutOrQuit"] = "Load automatically at logout/quit",
     ["skipLoadAddonPack"] = "Skip loading addon pack at logout/quit: %q",
-    ["keybind"] = "|t80.000000%:80.000000%:/esoui/art/buttons/keyboard/nav_pc_arrowkeys_down.dds|t",
+    ["keybind"] = keybindTexture,
+    ["keybinds"] = keybindTexture .. " Keybinds",
     ["autoAddMissingDependencyAtPackLoad"] = "Automatically add missing dependencies to pack (at pack loading)",
     ["autoAddedMissingDependencyToPack"] = "Automatically added dependency %q to pack %q",
 

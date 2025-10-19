@@ -2,12 +2,14 @@ local AS = AddonSelectorGlobal
 local ADDON_NAME = AS.name
 local addonSelectorStrPrefix = AS.constants.addonSelectorStrPrefix
 
+local constants = AS.constants
+local textures = constants.textures
 
 --The strings
 local langArray =  { --by Friday_The13_rus
     ["packName"]            = "Имя сборки:",
     ["selectPack"]          = "Выбрать",
-    ["ERRORpackMissing"]    = "ADDON SELECTOR: Имя сборки не найдено.",
+    ["ERRORpackMissing"]    = ADDON_NAME .. ": Имя сборки не найдено.",
     ["autoReloadUIHint"]    = "Автоматически перезагружать интерфейс.",
     ["autoReloadUIHintTooltip"] = "Автоматически перезагружать интерфейс: Когда включено, делает невозможным редактирование и удаление сборок. Выключите опцию, чтобы редактировать или удалять сборки!",
     ["saveButton"]          = "Сохранить",
@@ -15,15 +17,14 @@ local langArray =  { --by Friday_The13_rus
     ["savePackBody"]        = "Перезаписать существующую сборку %s?",
     ["deleteButton"]        = "Удалить",
     ["deletePackTitle"]     = "Удалить: ",
-    ["deletePackAlert"]     = "ADDON SELECTOR: Вы должны выбрать сборку для удаления.",
-    ["deletePackError"]     = "ADDON SELECTOR: Ошибка при удалении сборки\n%s.",
+    ["deletePackAlert"]     = ADDON_NAME .. ": Вы должны выбрать сборку для удаления.",
+    ["deletePackError"]     = ADDON_NAME .. ": Ошибка при удалении сборки\n%s.",
     ["deletePackBody"]      = "Действительно удалить сборку?\n%s",
     ["DeselectAllAddons"]   = "Отключить всё",
     ["SelectAllAddons"]     = "Включить всё",
     ["SelectAllAddonsSaved"] = "Включить сохранённые",
     ["AddonSearch"]          = "Поиск:",
     ["selectedPackName"]     = "Выбрано (%s): ",
-    ["LibDialogMissing"]     = "Библиотека \'LibDialog\' отсутствует! Этот аддон не будет работать без него!",
     ["ReloadUI"]        = GetString(SI_ADDON_MANAGER_RELOAD) or "Перезагрузить интерфейс",
     ["ShowActivePack"]      = "Показать активную сборку",
     ["ShowSubMenuAtGlobalPacks"]            = "Показывать вложенное меню для глобальных сборок",
