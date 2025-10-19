@@ -26,7 +26,7 @@ local getAddonNameFromData = utility.getAddonNameFromData
 local getAddonNameAndData = utility.getAddonNameAndData
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
-
+local ADDON_MANAGER = utility.GetAddonManager()
 
 --ZOs reference variables
 local tos = tostring
@@ -337,7 +337,7 @@ local function OnAddonRowMouseEnterStartNarrate(control, prefixStr)
     if narrateAboutAddonText == nil then return end
 
     --d(">>Text: " .. tos(narrateAboutAddonText))
-    OnUpdateDoNarrate("OnAddonRowMouseEnter", 75, function() AddNewChatNarrationText(narrateAboutAddonText, true, control)  end)
+    OnUpdateDoNarrate("OnAddonRowMouseEnter", 75, function() AddNewChatNarrationText(narrateAboutAddonText, true) end)
 end
 narration.OnAddonRowMouseEnterStartNarrate = OnAddonRowMouseEnterStartNarrate
 
@@ -463,8 +463,9 @@ end
 narration.getNarrateTextOfControlAndNarrateFunc = getNarrateTextOfControlAndNarrateFunc
 
 local function narrateAddonsEnabledTotal()
-    local numAddonsEnabled = AS.numbers.numAddonsEnabled
-    local numAddonsTotal = AS.numAddonsTotal
+    local numVars = AS.numbers
+    local numAddonsEnabled = numVars.numAddonsEnabled
+    local numAddonsTotal = numVars.numAddonsTotal
     --AddonSelector.numAddonsTotal = 0
     AddNewChatNarrationText("[" ..GetString(SI_WINDOW_TITLE_ADDON_MANAGER) .. "] - " ..tostring(numAddonsEnabled) .. " - " ..GetString(SI_ADDON_MANAGER_ENABLED)
             .. "   [" ..GetString(SI_TRADINGHOUSESORTFIELD2) .. "] - "..tos(numAddonsTotal), false)

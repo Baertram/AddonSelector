@@ -176,7 +176,8 @@ function AS.LoadSaveVariables()
     --Show packs of all accounts at the same time
     --ZO_SavedVars:NewAccountWide(savedVariableTable, version, namespace, defaults, profile, displayName)
     AS.acwsv                = ZO_SavedVars:NewAccountWide(svName, SAVED_VAR_VERSION, nil, defaultSavedVars, worldName, "AllAccounts")
-    AS.acwsvChar            = ZO_SavedVars:NewCharacterIdSettings(svName, SAVED_VAR_VERSION, nil, defaultSavedVarsChar, worldName, nil)
+    --ZO_SavedVars:NewCharacterIdSettings(savedVariableTable, version, namespace, defaults, profile)
+    AS.acwsvChar            = ZO_SavedVars:NewCharacterIdSettings(svName, SAVED_VAR_VERSION, nil, defaultSavedVarsChar, worldName)
 
     --Reset "Skip load addon pack on logout"
     AS.acwsvChar.skipLoadAddonPackOnLogout = false
