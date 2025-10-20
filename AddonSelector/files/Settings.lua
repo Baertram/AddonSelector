@@ -400,8 +400,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local globalPackSubmenu = {
         {
             label    = AddonSelector_GetLocalizedText("ShowGlobalPacks"),
-            callback = function(state)
-                AS.acwsv.showGlobalPacks = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.showGlobalPacks = checked
                 checkIfGlobalPacksShouldBeShown()
                 clearAndUpdateDDL()
             end,
@@ -410,8 +410,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowSubMenuAtGlobalPacks"),
-            callback = function(state)
-                AS.acwsv.showSubMenuAtGlobalPacks = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.showSubMenuAtGlobalPacks = checked
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showSubMenuAtGlobalPacks end,
@@ -425,10 +425,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local characterNameSubmenu = {
         {
             label    = AddonSelector_GetLocalizedText("SaveGroupedByCharacterName"),
-            callback = function(state)
-                AS.acwsv.saveGroupedByCharacterName = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.saveGroupedByCharacterName = checked
                 checkIfGlobalPacksShouldBeShown()
-                if state == true then
+                if checked == true then
                     AS.acwsv.showGroupedByCharacterName = true
                 end
                 clearAndUpdateDDL()
@@ -438,8 +438,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowGroupedByCharacterName"),
-            callback = function(state)
-                AS.acwsv.showGroupedByCharacterName = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.showGroupedByCharacterName = checked
                 checkIfGlobalPacksShouldBeShown()
                 clearAndUpdateDDL()
             end,
@@ -449,8 +449,8 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
         },
         {
             label    = AddonSelector_GetLocalizedText("ShowPacksOfOtherAccountsChars"),
-            callback = function(state)
-                AS.acwsv.showPacksOfOtherAccountsChars = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.showPacksOfOtherAccountsChars = checked
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showPacksOfOtherAccountsChars end,
