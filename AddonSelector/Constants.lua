@@ -254,6 +254,8 @@ LSMconstants.defaultAddonPackMenuOptions = {
     sortEntries = false,
     enableFilter        = function() return AS.acwsv.showSearchFilterAtPacksList end,
     headerCollapsible   = true,
+    automaticSubmenuRefresh  = true, --Make the submenus automatically refresh if any entry was clicked
+    automaticRefresh    = true, --Make the normal menus automatically refresh if any entry was clicked (for the e.g. "Logout icon")
 
     narrate = {
         ["OnComboBoxMouseEnter"] =  narration.narrateComboBoxOnMouseEnter,
@@ -274,6 +276,8 @@ LSMconstants.defaultContextMenuOptions = {
     sortEntries         = false,
     enableFilter        = function() return AS.acwsv.showSearchFilterAtPacksList end,
     headerCollapsible   = true,
+    automaticSubmenuRefresh  = true, --Make the submenus automatically refresh if any entry was clicked
+    automaticRefresh    = true, --Make the normal menus automatically refresh if any entry was clicked (for the e.g. "Logout icon")
 }
 LSMconstants.defaultSettingsContextMenuOptions = {
     visibleRowsDropdown = 25,
