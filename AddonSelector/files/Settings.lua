@@ -274,9 +274,8 @@ local function OnClick_CheckBoxLabel(selfVar, currentStateVar)
     utility.ChangeDeleteButtonEnabledState(newState, nil)
 
     --Any setting was changed that needs to update the comboox's dropdown entries?
-    if settingNeedsToUpdateDDL[currentStateVar] then
-        ClearCustomScrollableMenu()
-        --Rebuild the dropdown entries
+    if settingNeedsToUpdateDDL[currentStateVar] == true then
+        --Prepare rebuild of the DDL dropdown entries
         utility.updateDDL()
         if currentStateVar == "autoReloadUI" then
             utility.updateAutoReloadUITexture(newState)
@@ -293,6 +292,10 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------
 function AddonSelector_ShowSettingsDropdown(buttonCtrl)
+    ClearCustomScrollableMenu()
+    --Hide the DDL dropdown, so that setting changes can properly be effecitve on next open
+    AS.controls.ddl.m_comboBox:HideDropdown()
+
     clearAndUpdateDDL = clearAndUpdateDDL or utility.clearAndUpdateDDL
 
     local areAllAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled()
@@ -301,7 +304,6 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
 
     local LSMadditionalData = { normalColor = myNormalColor, disabledColor = myDisabledColor, enabled = areAllAddonsCurrentlyEnabled }
 
-    ClearCustomScrollableMenu()
 
     --Add the currently logged in character name as header
     AddCustomScrollableMenuHeader(currentCharName)
@@ -402,7 +404,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             label    = AddonSelector_GetLocalizedText("ShowGlobalPacks"),
             callback = function(comboBox, itemName, item, checked)
                 AS.acwsv.showGlobalPacks = checked
-                checkIfGlobalPacksShouldBeShown()
+                checkIfGlobalPacksShouldBeShown(comboBox, moc(), item) --Should update the enabled state of the next submenu entry in same submenu automatically!
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showGlobalPacks end,
@@ -414,8 +416,12 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 AS.acwsv.showSubMenuAtGlobalPacks = checked
                 clearAndUpdateDDL()
             end,
-            checked  = function() return AS.acwsv.showSubMenuAtGlobalPacks end,
-            enabled = function() return not AS.acwsv.showGlobalPacks end,
+            checked  = function()
+                return AS.acwsv.showSubMenuAtGlobalPacks
+            end,
+            enabled = function()
+                return AS.acwsv.showGlobalPacks
+            end,
             entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
     }
@@ -427,7 +433,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             label    = AddonSelector_GetLocalizedText("SaveGroupedByCharacterName"),
             callback = function(comboBox, itemName, item, checked)
                 AS.acwsv.saveGroupedByCharacterName = checked
-                checkIfGlobalPacksShouldBeShown()
+                checkIfGlobalPacksShouldBeShown(comboBox, moc(), item)
                 if checked == true then
                     AS.acwsv.showGroupedByCharacterName = true
                 end
@@ -440,11 +446,11 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
             label    = AddonSelector_GetLocalizedText("ShowGroupedByCharacterName"),
             callback = function(comboBox, itemName, item, checked)
                 AS.acwsv.showGroupedByCharacterName = checked
-                checkIfGlobalPacksShouldBeShown()
+                checkIfGlobalPacksShouldBeShown(comboBox, moc(), item)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showGroupedByCharacterName end,
-            enabled = function(rootMenu, childControl) return not AS.acwsv.saveGroupedByCharacterName end,
+            enabled = function() return not AS.acwsv.saveGroupedByCharacterName end,
             entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
@@ -454,7 +460,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 clearAndUpdateDDL()
             end,
             checked  = function() return AS.acwsv.showPacksOfOtherAccountsChars end,
-            enabled = function(rootMenu, childControl) return AS.acwsv.saveGroupedByCharacterName and AS.acwsv.showGroupedByCharacterName end,
+            enabled = function() return AS.acwsv.saveGroupedByCharacterName or AS.acwsv.showGroupedByCharacterName end,
             entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
     }
@@ -465,16 +471,16 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
     local searchOptionsSubmenu = {
         {
             label    = AddonSelector_GetLocalizedText("searchExcludeFilename"),
-            callback = function(state)
-                AS.acwsv.searchExcludeFilename = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.searchExcludeFilename = checked
             end,
             checked  = function() return AS.acwsv.searchExcludeFilename end,
             entryType = LSM_ENTRY_TYPE_CHECKBOX,
         },
         {
             label    = AddonSelector_GetLocalizedText("searchSaveHistory"),
-            callback = function(state)
-                AS.acwsv.searchSaveHistory = state
+            callback = function(comboBox, itemName, item, checked)
+                AS.acwsv.searchSaveHistory = checked
             end,
             checked  = function() return AS.acwsv.searchSaveHistory end,
             entryType = LSM_ENTRY_TYPE_CHECKBOX,
@@ -561,10 +567,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                 AddCustomScrollableMenuHeader(AddonSelector_GetLocalizedText("LastPackLoaded"))
                 AddCustomScrollableMenuEntry("[" .. outputColorCharStart .. tos(lastLoadedPackCharName) .. outputColorCharEnd .."]" .. outputColorStart .. tos(lastLoadedPackName) .. outputColorEnd ..  " (" .. tos(lastLoadedPackTime) ..")",
                         function()
-                            --TODO Set the pack to the dropddown box again
+                            --Set the pack to the dropddown box again
                             if packStillExistsAndIsSelectable == true then
                                 AS.flags.doNotReloadUI = true
-                                --todo Select the entry in the pack dropdown box now and activate the addons of the pack that way
+                                --Select the entry in the pack dropdown box now and activate the addons of the pack that way
                                 --But do not reloadUI automatically!
                                 local function evalFunc(entry)
                                     if entry.isCharacterPackHeader == false then

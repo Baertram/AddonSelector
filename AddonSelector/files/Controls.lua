@@ -55,6 +55,7 @@ local EM = EVENT_MANAGER
 
 
 --Local function references
+local updateDDLNow
 local OnClickDDL, OnClick_Save, OnClick_Delete, OnClick_DeleteWholeCharacter
 local createItemEntry
 
@@ -79,8 +80,17 @@ local function onMouseExitTooltip()
 end
 
 local function updateDDL(wasDeleted)
---d("[AS]updateDDL")
-    AS.UpdateDDL(wasDeleted)
+--d("[AS]updateDDL - neededChanges: " ..tos(AS.controls.ddl.neededChanges))
+    updateDDLNow = updateDDLNow or AS.UpdateDDL
+    local ddl = AS.controls.ddl
+
+    --Increase the counter for later rebuild of the DDL entries
+    ddl.neededChanges = ddl.neededChanges + 1
+
+    --If anything got deleted, directly call the DDL entry update now
+    if wasDeleted == true then
+        updateDDLNow(wasDeleted)
+    end
 end
 utility.updateDDL = updateDDL
 
@@ -128,21 +138,25 @@ local function ChangeDeleteButtonEnabledState(autoreloadUICheckboxState, skipSta
 --d("[AddonSelector]ChangeDeleteButtonEnabledState-autoreloadUICheckboxState: " ..tos(autoreloadUICheckboxState) .. ", skipStateCheck: " ..tos(skipStateCheck))
     local deleteBtn = AS.controls.deleteBtn
     if not deleteBtn then end
-    skipStateCheck = skipStateCheck or false
-    local checkedBool = false
-    local newDeleteButtonEnabledState
-    if not skipStateCheck then
-        --autoreloadUICheckboxState = autoreloadUICheckboxState or AddonSelector.autoReloadBtn:GetState()
-        if autoreloadUICheckboxState == true then checkedBool = true end
-    end
-    newDeleteButtonEnabledState = not checkedBool
-    --New enabled state of delete button would be enabled?
-    if newDeleteButtonEnabledState == true then
-        --Check if the user selected any dropdown entry yet. If not, disable the button
-        local itemData = AS.comboBox:GetSelectedItemData()
-        if itemData == nil then
-            --No entry selected: Disable delete button
-            newDeleteButtonEnabledState = false
+
+    local newDeleteButtonEnabledState = false
+    local areAllAddonsCurrentlyEnabled = utility.areAddonsCurrentlyEnabled()
+    if areAllAddonsCurrentlyEnabled == true then
+        skipStateCheck = skipStateCheck or false
+        local checkedBool = false
+        if not skipStateCheck then
+            --autoreloadUICheckboxState = autoreloadUICheckboxState or AddonSelector.autoReloadBtn:GetState()
+            if autoreloadUICheckboxState == true then checkedBool = true end
+        end
+        newDeleteButtonEnabledState = not checkedBool
+        --New enabled state of delete button would be enabled?
+        if newDeleteButtonEnabledState == true then
+            --Check if the user selected any dropdown entry yet. If not, disable the button
+            local itemData = AS.comboBox:GetSelectedItemData()
+            if itemData == nil then
+                --No entry selected: Disable delete button
+                newDeleteButtonEnabledState = false
+            end
         end
     end
     deleteBtn:SetMouseEnabled(newDeleteButtonEnabledState)
@@ -156,6 +170,10 @@ local function ChangeSaveButtonEnabledState(newEnabledState)
     --Enable/Disable the "Save" button
     local saveButton = AS.controls.saveBtn
     if saveButton then
+        local areAllAddonsCurrentlyEnabled = utility.areAddonsCurrentlyEnabled()
+        if not areAllAddonsCurrentlyEnabled then
+            newEnabledState = false
+        end
         saveButton:SetEnabled(newEnabledState)
         saveButton:SetMouseEnabled(newEnabledState)
     end
@@ -352,6 +370,18 @@ function AS.CreateControlReferences()
         ddl = ASDropdownScrollHelper
     }
 
+    --Add an OnMouseUp hook to call the update of the DDL entries on each open, if the counter below is > 0 (or if any entry was deleted)
+    -->Set the initial counter to 1 so it will populate the entries once
+    AS.controls.ddl.neededChanges = 1
+    ZO_PreHookHandler(AS.controls.ddl, "OnMouseUp", function(selfVar, button, upInside, ctrl, alt, shift, command)
+        if not upInside or not button == MOUSE_BUTTON_INDEX_LEFT then return end
+--d("[AS]Left OnMouseUp on DDL - needed changes found? " .. tos(AS.controls.ddl.neededChanges))
+        --Directly update the DDL entries now, without increasing the counter! If the counter is > 0 it will update automatically
+        updateDDLNow = updateDDLNow or AS.UpdateDDL
+        updateDDLNow()
+    end)
+
+
     AS.comboBox                            = AS.controls.ddl.m_comboBox
     local savedPacksComboBox               = AS.comboBox
 
@@ -373,6 +403,7 @@ function AS.CreateControlReferences()
     AS.controls.searchBox = addonSelector:GetNamedChild("SearchBox")
     AS.controls.searchBox:SetHandler("OnMouseUp", function(selfCtrl, mouseButton, isUpInside)
         if isUpInside and mouseButton == MOUSE_BUTTON_INDEX_RIGHT then
+            ClearCustomScrollableMenu()
             local doShowMenu = false
             local searchHistoryWasAdded = false
             if settings.searchSaveHistory then
@@ -380,7 +411,6 @@ function AS.CreateControlReferences()
                 local searchType = SEARCH_TYPE_NAME
                 local searchHistoryOfSearchMode = searchHistory[searchType]
                 if searchHistoryOfSearchMode ~= nil and #searchHistoryOfSearchMode > 0 then
-                    ClearMenu()
                     for _, searchTerm in ipairs(searchHistoryOfSearchMode) do
                         --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
                         AddCustomScrollableMenuEntry(searchTerm, function()
@@ -737,13 +767,24 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- AddonSelector - Dropdown List (DDL)
 ------------------------------------------------------------------------------------------------------------------------
--- Called on load or when a new addon pack is saved & added to the comboBox
+-- Called on load or when a new addon pack is saved & added to the comboBox, or when the dropdown opens
+-- Only if AS.controls.ddl.neededChanges > 0 (any changes are needed) then the DDL wil be updated here:
+--
 -- Clear & re-add all items + submenus, including new ones. Easier/quicker than
 -- trying to see if an item already exists & editing it. Just adding
 -- a new item would result in duplicates when editing a pack.
 -->Uses LibScrollableMenu now as LibCustomMenu uses ZO_Menu and since API101040 ZO_ComboBox is a multiselect scrollable comboxbox NOT using ZO_Menu anymore!!!
 function AS.UpdateDDL(wasDeleted)
+    updateDDLNow = AS.UpdateDDL
     wasDeleted = wasDeleted or false
+
+    --Any changes needed?
+    if not wasDeleted and AS.controls.ddl.neededChanges == 0 then
+        return --No changes needed
+    end
+    --Reset the counter to 0 and do the changes now
+    AS.controls.ddl.neededChanges = 0
+
     local megaServer = GetWorldName()
     --local addonPacks = AddonSelector.acwsv.addonPacks
     local packTable = {} -- table with the pack entries and the submenus (if enabled)
@@ -1956,6 +1997,8 @@ function AS.UpdateDDL(wasDeleted)
     --Update the currently selected packName label
     UpdateCurrentlySelectedPackName(wasDeleted, nil, nil)
 end
+updateDDLNow = AS.UpdateDDL
+
 
 -- Create ItemEntry table for the ddl (dropdown box, ZO_ComboBox entries)
 function AS.CreateItemEntry(packName, label, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader, iconData, contextMenuCallbackFunc)

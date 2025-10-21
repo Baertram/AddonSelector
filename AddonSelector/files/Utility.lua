@@ -297,7 +297,7 @@ utility.getCurrentCharsPackNameData = getCurrentCharsPackNameData
 ------------------------------------------------------------------------------------------------------------------------
 -- Global Pack functions
 ------------------------------------------------------------------------------------------------------------------------
-local function checkIfGlobalPacksShouldBeShown()
+local function checkIfGlobalPacksShouldBeShown(comboBox, mocCtrl, item)
     local settings = AS.acwsv
     if not settings then return end
     local showGlobalPacks = settings.showGlobalPacks
@@ -306,6 +306,18 @@ local function checkIfGlobalPacksShouldBeShown()
     if showGlobalPacks == false and savePerCharacter == false then
         AS.acwsv.showGlobalPacks = true
     end
+--[[ Moved to LibScrollableMenu directly
+    --Update the visible LSM dropdown's submenu now so the disabled state and checkbox values commit again
+    if comboBox ~= nil and mocCtrl ~= nil then
+        if comboBox:IsDropdownVisible() == true and mocCtrl.m_owner ~= nil and mocCtrl.m_owner.openingControl ~= nil then
+            --This alone does not update the enabled state of the submenu entries...
+d(">ZO_ScrollList_RefreshVisible submenu settings")
+            --ZO_ScrollList_RefreshVisible(mocCtrl.m_dropdownObject.scrollControl)
+            --Reshow the whole submenu of the openingControl again, to update all enabled and checked states!
+            mocCtrl.m_dropdownObject:ShowSubmenu(mocCtrl.m_owner.openingControl)
+        end
+    end
+]]
     utility.updateSaveModeTexure(savePerCharacter)
 end
 utility.checkIfGlobalPacksShouldBeShown = checkIfGlobalPacksShouldBeShown
@@ -438,9 +450,10 @@ local function isAddonRow(rowControl)
 end
 utility.isAddonRow = isAddonRow
 
---Enable/Disable all the controls of this addon depending on the enabled checkbox for all addons
+--Enable/Disable all the controls of this addon "AddonSelector" depending on the enabled checkbox for all addons
 local function setThisAddonsControlsEnabledState(enabledState)
-    local addonSelectorTLC = AS.controls.addonSelectorControl
+    local controls = AS.controls
+    local addonSelectorTLC = controls.addonSelectorControl
     local numChildControls = addonSelectorTLC:GetNumChildren()
     if numChildControls <= 0 then return end
     for childindex=1, numChildControls, 1 do
@@ -451,7 +464,11 @@ local function setThisAddonsControlsEnabledState(enabledState)
             end
         end
     end
-    AddonSelectorddlOpenDropdown:SetMouseEnabled(enabledState)
+    if enabledState == false then
+        controls.editBox:Clear()
+    end
+    --AddonSelectorddlOpenDropdown:SetMouseEnabled(enabledState)
+    controls.ddl.m_comboBox.m_openDropdown:SetMouseEnabled(enabledState)
 end
 utility.setThisAddonsControlsEnabledState = setThisAddonsControlsEnabledState
 

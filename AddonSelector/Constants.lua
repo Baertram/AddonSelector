@@ -279,6 +279,10 @@ LSMconstants.defaultSettingsContextMenuOptions = {
     visibleRowsDropdown = 25,
     visibleRowsSubmenu  = 25,
     sortEntries         = false,
+    --enableFilter        = true,
+    --headerCollapsible   = true,
+    automaticSubmenuRefresh  = true, --Make the submenus automatically refresh if any entry was clicked
+    automaticRefresh    = true, --Make the normal menus automatically refresh if any entry was clicked
 }
 constants.LSM = LSMconstants
 
