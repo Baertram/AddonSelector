@@ -33,6 +33,7 @@ local packNameGlobal = AddonSelector_GetLocalizedText("packNameGlobal")
 --ZOs reference variables
 local tos = tostring
 local strlow = string.lower
+local strfor = string.format
 local tins = table.insert
 
 --======================================================================================================================
@@ -324,7 +325,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                     local submenuItemsUndo = {}
                     local firstSubmenuItem = {
                         label    = AddonSelector_GetLocalizedText("UndoLastMassMarking"),
-                        callback = function(state)
+                        callback = function()
                             AddonSelector_UndoLastMassMarking(false)
                         end,
                     }
@@ -333,9 +334,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                     --AddOns
                     for idx, addonUndoName in ipairs(addonsUndoTab) do
                         if idx == 1 then
+                            local addonsInUndoText = strfor(AddonSelector_GetLocalizedText("addons") .. " - #" .. colors.numAddonsColorTemplate.."/%s", tos(#addonsUndoTab), tos(countAddonsInBackup))
                             local submenuItemUndoAddOnsHeader = {
-                                label    = AddonSelector_GetLocalizedText("addons") .. " (#" .. tos(#addonsUndoTab) .. ")",
-                                callback = function(state)
+                                label    = addonsInUndoText,
+                                callback = function()
                                 end,
                                 entryType = LSM_ENTRY_TYPE_HEADER,
                             }
@@ -344,7 +346,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                         end
                         local submenuItemUndo = {
                             label    = addonUndoName,
-                            callback = function(state)
+                            callback = function()
                             end,
                             enabled = false,
                         }
@@ -353,9 +355,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                     --Libraries
                     for idx, libraryUndoName in ipairs(librariesUndoTab) do
                         if idx == 1 then
+                            local librariesInUndoText = strfor(AddonSelector_GetLocalizedText("libraries") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", tos(#librariesUndoTab), tos(countAddonsInBackup))
                             local submenuItemUndoLibrariesHeader = {
-                                label    = AddonSelector_GetLocalizedText("libraries") .. " (#" .. tos(#librariesUndoTab) .. ")",
-                                callback = function(state)
+                                label    = librariesInUndoText,
+                                callback = function()
                                 end,
                                 entryType = LSM_ENTRY_TYPE_HEADER,
                             }
@@ -363,7 +366,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                         end
                         local submenuItemUndo = {
                             label    = libraryUndoName,
-                            callback = function(state)
+                            callback = function()
                             end,
                             enabled = false,
                         }

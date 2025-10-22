@@ -726,7 +726,7 @@ local function saveUpdatedAddonPackCallbackFuncSubmenu(p_comboBox, p_item, entri
             end
         end
     end
-    d(string.format(addonNamePrefix .. AddonSelector_GetLocalizedText("changedAddonPack"), tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (AddonSelector_GetLocalizedText("packCharName") .. ": " .. p_character)), tos(addonsChanged)))
+    d(strfor(addonNamePrefix .. AddonSelector_GetLocalizedText("changedAddonPack"), tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (AddonSelector_GetLocalizedText("packCharName") .. ": " .. p_character)), tos(addonsChanged)))
     if addonsChanged > 0 then
         updateDDL()
         --Disable the saved button's enabled state
@@ -981,7 +981,7 @@ function AS.UpdateDDL(wasDeleted)
                                     end
 
                                     if numOnlyAddOnsInSubmenuPack > 0 then
-                                        local addonsInPackText = string.format(AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate.."/%s", packNameOfChar, tos(numOnlyAddOnsInSubmenuPack), tos(numAddonsInSubmenuPack)) .. " [" .. AddonSelector_GetLocalizedText("singleCharNameColoredStr") .. ": " .. charName .. "]"
+                                        local addonsInPackText = strfor(AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate.."/%s", packNameOfChar, tos(numOnlyAddOnsInSubmenuPack), tos(numAddonsInSubmenuPack)) .. " [" .. AddonSelector_GetLocalizedText("singleCharNameColoredStr") .. ": " .. charName .. "]"
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = addonsInPackText, --Colored white/light grey
@@ -1019,7 +1019,7 @@ function AS.UpdateDDL(wasDeleted)
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local addonsInPackTextNotEnabled = string.format("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numDisabledAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
+                                        local addonsInPackTextNotEnabled = strfor("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numDisabledAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = addonsInPackTextNotEnabled, --Colored white/light grey
@@ -1057,7 +1057,7 @@ function AS.UpdateDDL(wasDeleted)
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local addonsInPackTextMissing = string.format("["..AddonSelector_GetLocalizedText("missing").."]"..AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numMissingAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
+                                        local addonsInPackTextMissing = strfor("["..AddonSelector_GetLocalizedText("missing").."]"..AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packNameOfChar, tos(numMissingAddonsInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = addonsInPackTextMissing, --Colored white/light grey
@@ -1097,7 +1097,7 @@ function AS.UpdateDDL(wasDeleted)
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local librariesInPackText = string.format(AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackText = strfor(AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1] = {
                                             name    = librariesInPackText, --Colored white/light grey
                                             --[[
@@ -1131,7 +1131,7 @@ function AS.UpdateDDL(wasDeleted)
                                             enabled = false,
                                             isDivider = true,
                                         }
-                                        local librariesInPackTextNotEnabled = string.format("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numDisabledLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackTextNotEnabled = strfor("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packNameOfChar, tos(numDisabledLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = librariesInPackTextNotEnabled, --Colored white/light grey
@@ -1169,7 +1169,7 @@ function AS.UpdateDDL(wasDeleted)
                                             enabled = false, -- non clickable
                                             isDivider = true,
                                         }
-                                        local librariesInPackTextMissing = string.format("["..AddonSelector_GetLocalizedText("missing").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", packNameOfChar, tos(numMissingLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
+                                        local librariesInPackTextMissing = strfor("["..AddonSelector_GetLocalizedText("missing").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", packNameOfChar, tos(numMissingLibrariesInSubmenuPack), tos(numAddonsInSubmenuPack))
                                         subSubMenuEntriesForCharPack[#subSubMenuEntriesForCharPack + 1]  = {
                                             name    = librariesInPackTextMissing, --Colored white/light grey
                                             --[[
@@ -1290,7 +1290,7 @@ function AS.UpdateDDL(wasDeleted)
                                 local charNameCopy = charName
                                 nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] = {
                                     name    =  packNameOfChar,
-                                    label    = string.format(AddonSelector_GetLocalizedText("OverwriteSavePack"), packNameOfChar),
+                                    label    = strfor(AddonSelector_GetLocalizedText("OverwriteSavePack"), packNameOfChar),
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                                         OnClick_Save(packNameOfCharCopy, packData, charNameCopy)
                                     end,
@@ -1550,7 +1550,7 @@ function AS.UpdateDDL(wasDeleted)
             end
 
             if numOnlyAddOnsInGlobalPack > 0 then
-                local addonsInPackText = string.format(AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate.."/%s", packName, tos(#addonTableSortedAddons), tos(numAddonsInGlobalPack)) .. " [" .. packNameGlobal .. "]"
+                local addonsInPackText = strfor(AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate.."/%s", packName, tos(#addonTableSortedAddons), tos(numAddonsInGlobalPack)) .. " [" .. packNameGlobal .. "]"
                 --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = addonsInPackText, --Colored white/light grey
@@ -1588,7 +1588,7 @@ function AS.UpdateDDL(wasDeleted)
                     enabled = false,
                     isDivider = true,
                 }
-                local addonsInPackTextNotEnabled = string.format("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packName, tos(numDisabledAddonsInGlobalPack), tos(numAddonsInGlobalPack))
+                local addonsInPackTextNotEnabled = strfor("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packName, tos(numDisabledAddonsInGlobalPack), tos(numAddonsInGlobalPack))
                 --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = addonsInPackTextNotEnabled, --Colored white/light grey
@@ -1626,7 +1626,7 @@ function AS.UpdateDDL(wasDeleted)
                     enabled = false,
                     isDivider = true,
                 }
-                local addonsInPackTextMissing = string.format("["..AddonSelector_GetLocalizedText("missing").."]"..AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packName, tos(numMissingAddonsInGlobalPack), tos(numAddonsInGlobalPack))
+                local addonsInPackTextMissing = strfor("["..AddonSelector_GetLocalizedText("missing").."]"..AddonSelector_GetLocalizedText("addonsInPack") .. " - #" .. colors.numAddonsColorTemplate .. "/%s", packName, tos(numMissingAddonsInGlobalPack), tos(numAddonsInGlobalPack))
                 --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = addonsInPackTextMissing, --Colored white/light grey
@@ -1666,7 +1666,7 @@ function AS.UpdateDDL(wasDeleted)
                     enabled = false,
                     isDivider = true,
                 }
-                local librariesInPackText = string.format(AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packName, tos(#addonTableSortedLibraries), tos(numAddonsInGlobalPack))
+                local librariesInPackText = strfor(AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packName, tos(#addonTableSortedLibraries), tos(numAddonsInGlobalPack))
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = librariesInPackText, --Colored white/light grey
                     --[[
@@ -1701,7 +1701,7 @@ function AS.UpdateDDL(wasDeleted)
                     enabled = false,
                     isDivider = true,
                 }
-                local librariesInPackTextNotEnabled = string.format("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packName, tos(numDisabledLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
+                local librariesInPackTextNotEnabled = strfor("["..AddonSelector_GetLocalizedText("disabledRed").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate .. "/%s", packName, tos(numDisabledLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
                 --Build nested submenuData for the submenu below, so one can see each single addon saved to the pack in the nested submenu
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = librariesInPackTextNotEnabled, --Colored white/light grey
@@ -1739,7 +1739,7 @@ function AS.UpdateDDL(wasDeleted)
                     enabled = false, -- non clickable
                     isDivider = true,
                 }
-                local librariesInPackTextMissing = string.format("["..AddonSelector_GetLocalizedText("missing").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", packName, tos(numMissingLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
+                local librariesInPackTextMissing = strfor("["..AddonSelector_GetLocalizedText("missing").."]" .. AddonSelector_GetLocalizedText("librariesInPack") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", packName, tos(numMissingLibrariesInGlobalPack), tos(numAddonsInGlobalPack))
                 subSubMenuEntriesGlobal[#subSubMenuEntriesGlobal + 1] = {
                     name    = librariesInPackTextMissing, --Colored white/light grey
                     --[[
@@ -1862,7 +1862,7 @@ function AS.UpdateDDL(wasDeleted)
         subMenuEntriesGlobal[#subMenuEntriesGlobal +1] =
         {
             name    =  packName,
-            label    = string.format(AddonSelector_GetLocalizedText("OverwriteSavePack"), packName),
+            label    = strfor(AddonSelector_GetLocalizedText("OverwriteSavePack"), packName),
             callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                 OnClick_Save(packNameCopy, packData, GLOBAL_PACK_NAME)
             end,
