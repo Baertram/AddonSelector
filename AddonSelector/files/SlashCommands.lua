@@ -45,7 +45,7 @@ local function searchAddOnSlashCommandHandlder(args)
 end
 
 local function loadAddOnPackSlashCommandHandler(args, noReloadUI)
-    openGameMenuAndAddOnsAndThenSearch(args, nil, noReloadUI)
+    AS.OpenGameMenuAndAddOnsAndThenLoadPack(args, nil, noReloadUI, nil)
 end
 
 

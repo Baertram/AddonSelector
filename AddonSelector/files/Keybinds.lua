@@ -15,6 +15,8 @@ local strfor = string.format
 local ADDON_MANAGER_OBJECT = utility.GetAddonManagerObject()
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
+local updateLibScrollableSubmenu = utility.updateLibScrollableSubmenu
+local updateLibScrollableMainmenu = utility.updateLibScrollableMainmenu
 
 
 --======================================================================================================================
@@ -108,30 +110,35 @@ local function getKeybindingLSMEntriesForPacks(packName, charName)
     local keybindIconData = {}
     for keybindNr = 1, MAX_ADDON_LOAD_PACK_KEYBINDS, 1 do
         local isPackAlreadySavedAsKeybind = isPackKeybindUsed(keybindNr, packName, charName)
-        if isPackAlreadySavedAsKeybind == false then
-            keybindEntries[#keybindEntries + 1] = {
-                name = strfor(AddonSelector_GetLocalizedText("addPackToKeybind"), tos(keybindNr)),
-                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+        keybindEntries[#keybindEntries + 1] = {
+            name = function()
+                return strfor(AddonSelector_GetLocalizedText(not isPackKeybindUsed(keybindNr, packName, charName) and "addPackToKeybind" or "removePackFromKeybind"), tos(keybindNr))
+            end,
+            callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                if not isPackKeybindUsed(keybindNr, packName, charName) then
                     savePackToKeybind(keybindNr, packName, charName)
-                    utility.clearAndUpdateDDL()
-                end,
-                entryType = LSM_ENTRY_TYPE_NORMAL,
-            }
-        else
-            keybindEntries[#keybindEntries + 1] = {
-                name = strfor(AddonSelector_GetLocalizedText("removePackFromKeybind"), tos(keybindNr)),
-                callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
+                else
                     removePackFromKeybind(keybindNr, packName, charName)
-                    utility.clearAndUpdateDDL()
-                end,
-                entryType = LSM_ENTRY_TYPE_NORMAL,
-            }
+                end
+                utility.clearAndUpdateDDL()
 
-            keybindIconData[#keybindIconData +1] = {
+                local refreshMode = LSM_UPDATE_MODE_MAINMENU
+                if IsCustomScrollableContextMenuShown() then
+                    refreshMode = LSM_UPDATE_MODE_BOTH
+                end
+                RefreshCustomScrollableMenu(moc(), refreshMode, comboBox)
+            end,
+                entryType = LSM_ENTRY_TYPE_CHECKBOX,
+                checked = function() return isPackKeybindUsed(keybindNr, packName, charName) end,
+                }
+
+                --Add conData for the label of the opening row
+                if isPackAlreadySavedAsKeybind == true then
+                keybindIconData[#keybindIconData +1] = {
                 iconTexture=keybindTexturesLoadPack[keybindNr], iconTint="FFFFFF", tooltip=AddonSelector_GetLocalizedText("LoadPackByKeybind" .. tos(keybindNr))
-            }
-        end
-    end
+                }
+                end
+            end
     return keybindEntries, keybindIconData
 end
 utility.getKeybindingLSMEntriesForPacks = getKeybindingLSMEntriesForPacks

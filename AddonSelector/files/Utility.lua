@@ -306,18 +306,6 @@ local function checkIfGlobalPacksShouldBeShown(comboBox, mocCtrl, item)
     if showGlobalPacks == false and savePerCharacter == false then
         AS.acwsv.showGlobalPacks = true
     end
---[[ Moved to LibScrollableMenu directly
-    --Update the visible LSM dropdown's submenu now so the disabled state and checkbox values commit again
-    if comboBox ~= nil and mocCtrl ~= nil then
-        if comboBox:IsDropdownVisible() == true and mocCtrl.m_owner ~= nil and mocCtrl.m_owner.openingControl ~= nil then
-            --This alone does not update the enabled state of the submenu entries...
-d(">ZO_ScrollList_RefreshVisible submenu settings")
-            --ZO_ScrollList_RefreshVisible(mocCtrl.m_dropdownObject.scrollControl)
-            --Reshow the whole submenu of the openingControl again, to update all enabled and checked states!
-            mocCtrl.m_dropdownObject:ShowSubmenu(mocCtrl.m_owner.openingControl)
-        end
-    end
-]]
     utility.updateSaveModeTexure(savePerCharacter)
 end
 utility.checkIfGlobalPacksShouldBeShown = checkIfGlobalPacksShouldBeShown
@@ -606,6 +594,12 @@ local function isAddonPackEnabledForAutoLoadOnLogout(packName, characterOrGlobal
     return false
 end
 utility.isAddonPackEnabledForAutoLoadOnLogout = isAddonPackEnabledForAutoLoadOnLogout
+
+
+------------------------------------------------------------------------------------------------------------------------
+-- LibScrollableMenu
+------------------------------------------------------------------------------------------------------------------------
+--> See API function RefreshCustomScrollableMenu
 
 
 ------------------------------------------------------------------------------------------------------------------------

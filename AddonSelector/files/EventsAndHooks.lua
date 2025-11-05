@@ -302,7 +302,7 @@ local function openGameMenuAndAddOnsAndThenSearch(addonName, doNotShowAddOnsScen
     if not doNotShowAddOnsScene then
         --Show the game menu and open the AddOns
         if not showAddOnsList() then
---d("<aborted set search!")
+--d("<aborted addon search!")
             return
         end
     end
@@ -879,7 +879,8 @@ end
 --====================================--
 local function AS_Initialize()
     --Libraries
-    AS.LSM     = LibScrollableMenu
+    AS.LSM     = LibScrollableMenu -- The update of the LibScrollableMenu entries in the dropdown happens in file controls.lua, function AS.UpdateDDL
+
 
     --Get the addon manager and object
     ADDON_MANAGER =           utility.GetAddonManager()
@@ -928,13 +929,11 @@ function AS.OnAddOnLoaded(_, addonName)
     ADDON_MANAGER =         utility.GetAddonManager()
     ADDON_MANAGER_OBJECT =  utility.GetAddonManagerObject()
 
+    --The update of the LibScrollableMenu entries in the dropdown happens in file controls.lua, function AS.UpdateDDL
+
     --Save the currently logged in @account's characterId = characterName table
     AS.charactersOfAccount, AS.charactersOfAccountLower     = getCharactersOfAccount(false)
     AS.characterIdsOfAccount, AS.characterIdsOfAccountLower = getCharactersOfAccount(true)
-    --local charactersOfAccount   = AS.charactersOfAccount
-    --local charactersOfAccountLower   = AS.charactersOfAccountLower
-    --local characterIdsOfAccount = AS.characterIdsOfAccount
-    --local characterIdsOfAccountLowerCase = AS.characterIdsOfAccountLower
 
 ---------------------------------------------------------------------
     --Load SavedVariables, create and update controls etc.

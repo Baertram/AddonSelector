@@ -823,6 +823,10 @@ function AS.UpdateDDL(wasDeleted)
     local addonsLookup    = AS.NameLookup
     createItemEntry = createItemEntry or AS.CreateItemEntry
 
+
+    local keybindingEntries_Character, keybindIconData_Character
+    local keybindingEntries_Global, keybindIconData_Global
+
 ------------------------------------------------------------------------------------------------------------------------
     --!LibScrollableMenu - Create the dropdown menu entries now - CharacterName entries!
     --Show the addon packs saved per character?
@@ -1303,11 +1307,12 @@ function AS.UpdateDDL(wasDeleted)
                                     callback = function() end,
                                     disabled = true,
                                 }
-                                local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
+                                keybindingEntries_Character, keybindIconData_Character = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
+                                local keybindingEntries_CharacterCopy = ZO_ShallowTableCopy(keybindingEntries_Character)
                                 nestedSubmenuEntriesOfCharPack[#nestedSubmenuEntriesOfCharPack+1] =  {
                                     name    =  AddonSelector_GetLocalizedText("keybinds"),
                                     callback = nil,
-                                    entries = keybindingEntries,
+                                    entries = keybindingEntries_CharacterCopy,
                                     charName = charName,
                                 }
 
@@ -1327,7 +1332,7 @@ function AS.UpdateDDL(wasDeleted)
                                             AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
                                         end
                                         clearAndUpdateDDL()
-                                        LibScrollableMenu.UpdateIconsRecursively(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
+                                        LibScrollableMenu.UpdateIconsPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
                                     end,
                                     icon = function()
                                         if utility.isAddonPackEnabledForAutoLoadOnLogout(packNameOfCharCopy, charNameCopy) then
@@ -1341,7 +1346,15 @@ function AS.UpdateDDL(wasDeleted)
                                 }
 
                                 --Add the characterPack as entry, with the nested submenu entries to select, select & reloadUI, and delete it
+                                --[[
                                 local labelCharacterPack = packNameOfChar
+                                if not ZO_IsTableEmpty(keybindIconData) then
+                                    for _, v in ipairs(keybindIconData) do
+                                        labelCharacterPack = labelCharacterPack .. v.iconTexture
+                                    end
+                                end
+                                ]]
+
                                 local function getIconData()
                                     local iconData
                                     local autoLoadThisPackOnLogout = isAddonPackEnabledForAutoLoadOnLogout(packNameOfChar, charName)
@@ -1353,19 +1366,21 @@ function AS.UpdateDDL(wasDeleted)
                                         local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
                                         tins(iconData, { iconTexture=textures.autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=AddonSelector_GetLocalizedText("loadOnLogoutOrQuit") })
                                     end
-                                    if not ZO_IsTableEmpty(keybindIconData) then
-                                        iconData = iconData or {}
-                                        for _, v in ipairs(keybindIconData) do
-                                            --tins(iconData, v)
-                                            labelCharacterPack = labelCharacterPack .. v.iconTexture
-                                        end
-                                    end
                                     return iconData
                                 end
 
                                 subMenuEntriesChar[#subMenuEntriesChar + 1] = {
                                     name = packNameOfChar,
-                                    label = labelCharacterPack,
+                                    label = function()
+                                        local labelCharacterPack = packNameOfChar
+                                        keybindingEntries_Character, keybindIconData_Character = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
+                                        if not ZO_IsTableEmpty(keybindIconData_Character) then
+                                            for _, v in ipairs(keybindIconData_Character) do
+                                                labelCharacterPack = labelCharacterPack .. v.iconTexture
+                                            end
+                                        end
+                                        return labelCharacterPack
+                                    end,
                                     charName = charName,
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
                                         OnClickDDL(comboBox, packNameOfChar, packData, selectionChanged, oldItem)
@@ -1876,8 +1891,8 @@ function AS.UpdateDDL(wasDeleted)
             callback = function() end,
             disabled = true,
         }
-        local keybindingEntries, keybindIconData = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
-        local keybindingEntriesCopy = ZO_ShallowNumericallyIndexedTableCopy(keybindingEntries)
+        keybindingEntries_Global, keybindIconData_Global = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+        local keybindingEntriesCopy = ZO_ShallowNumericallyIndexedTableCopy(keybindingEntries_Global)
         subMenuEntriesGlobal[#subMenuEntriesGlobal +1] = {
             name    =  AddonSelector_GetLocalizedText("keybinds"),
             callback = nil,
@@ -1901,7 +1916,7 @@ function AS.UpdateDDL(wasDeleted)
                     AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
                 end
                 clearAndUpdateDDL()
-                LibScrollableMenu.UpdateIconsRecursively(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
+                LibScrollableMenu.UpdateIconsPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
             end,
             icon = function()
                 if utility.isAddonPackEnabledForAutoLoadOnLogout(packNameCopy, GLOBAL_PACK_NAME) then
@@ -1918,17 +1933,17 @@ function AS.UpdateDDL(wasDeleted)
 
         --end --if showSubMenuAtGlobalPacks == true then
 
+        --[[
         local label = packName
+        if not ZO_IsTableEmpty(keybindIconData_Global) then
+            for _, v in ipairs(keybindIconData_Global) do
+                label = label .. v.iconTexture
+            end
+        end
+        ]]
 
         local function getIconDataGlobalPackEntry()
             local iconData = (autoReloadUI == true and { iconTexture=textures.reloadUITexture, iconTint="FF0000", tooltip=AddonSelector_GetLocalizedText("reloadUIStrWithoutIcon") }) or nil
-            if not ZO_IsTableEmpty(keybindIconData) then
-                iconData = iconData or {}
-                for _, v in ipairs(keybindIconData) do
-                    --tins(iconData, v)
-                    label = label .. v.iconTexture
-                end
-            end
 
             local autoLoadThisPackOnLogout = isAddonPackEnabledForAutoLoadOnLogout(packName, GLOBAL_PACK_NAME)
             --if autoLoadThisPackOnLogout == true then
@@ -1946,6 +1961,7 @@ function AS.UpdateDDL(wasDeleted)
 
         ------------------------------------------------------------------------------------------------------------------------
         ---Context menu (right click) at the addon pack name
+        ---->Copy the above submenu which shows at the entry, to be a contextmenu now instead!
         local globalPackContextMenuCallbackFunc
         if addedSubMenuEntryGlobal then
             local subMenuEntriesCopy    = ZO_ShallowNumericallyIndexedTableCopy(subMenuEntriesGlobal)
@@ -1978,6 +1994,7 @@ function AS.UpdateDDL(wasDeleted)
                                     --AddonSelector data
                                     charName = submenuEntryData.charName,
                                     addonTable = submenuEntryData.addonTable,
+                                    isAddonPackContextMenuEntry = true,
                                 }
                         )
                     end
@@ -1993,7 +2010,9 @@ function AS.UpdateDDL(wasDeleted)
                             ]]
                             onHideCallback = function(comboBox, openingControl, specialData)
                                 --Refresh the openingControl's scrollList by showing it completely new -> Updating all icons etc. properly
-                                openingControl.m_dropdownObject:SubmenuOrCurrentListRefresh(openingControl, true)
+                                if openingControl and openingControl.m_dropdownObject then
+                                    openingControl.m_dropdownObject:SubmenuOrCurrentListRefresh(openingControl, true)
+                                end
                             end,
                         }
                         ddlOpenAndCloseCallbacksAdded = true
@@ -2011,7 +2030,18 @@ function AS.UpdateDDL(wasDeleted)
         ------------------------------------------------------------------------------------------------------------------------
 
         --CreateItemEntry(packName, addonTable, isCharacterPack, charName, tooltip, entriesSubmenu, isSubmenuMainEntry, isHeader)
-        local itemGlobalData = createItemEntry(packName, label, addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("accountWide").." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
+        local itemGlobalData = createItemEntry(packName,
+                function()
+                    local label = packName
+                    keybindingEntries_Global, keybindIconData_Global = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+                    if not ZO_IsTableEmpty(keybindIconData_Global) then
+                        for _, v in ipairs(keybindIconData_Global) do
+                            label = label .. v.iconTexture
+                        end
+                    end
+                    return label
+                end,
+                addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("accountWide").." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
                 subMenuEntriesGlobal, subMenuEntriesGlobal ~= nil, false,
                 function() return getIconDataGlobalPackEntry() end, globalPackContextMenuCallbackFunc)
         tins(packTable, itemGlobalData)
