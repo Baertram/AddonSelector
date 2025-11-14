@@ -130,6 +130,7 @@ local function enableDisabledAddonDependencies(addOnIndex, doDebug, packData, is
                             addonTable[dependencyFileName] = strippedAddOnName
                             anyAddonAddedToPack = true
                         end
+--AS._debugPackDataAutoAdded = packData
                     end
                 end
             end
@@ -138,6 +139,7 @@ local function enableDisabledAddonDependencies(addOnIndex, doDebug, packData, is
 
     if anyAddonAddedToPack == true then
         --Update the DDL now - Throttled, so next call to enableDisabledAddonDependencies won't update it again and again ...
+        -->Flag DDL update for next open
         utility.updateDDLThrottled(500)
     end
 end

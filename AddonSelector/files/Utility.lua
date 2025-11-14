@@ -95,6 +95,7 @@ end
 utility.throttledCall = throttledCall
 
 local function updateDDLThrottled(delay)
+    updateDDL = updateDDL or utility.updateDDL
     delay = delay or 250
     throttledCall(updateDDL, delay, ASUpdateDDLThrottleName)
 end

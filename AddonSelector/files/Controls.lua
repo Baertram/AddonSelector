@@ -728,11 +728,19 @@ local function saveUpdatedAddonPackCallbackFuncSubmenu(p_comboBox, p_item, entri
     end
     d(strfor(addonNamePrefix .. AddonSelector_GetLocalizedText("changedAddonPack"), tos(p_packName), tos((p_character == GLOBAL_PACK_NAME) and packNameGlobal or (AddonSelector_GetLocalizedText("packCharName") .. ": " .. p_character)), tos(addonsChanged)))
     if addonsChanged > 0 then
+        --Flag DDL update for next open
         updateDDL()
+        --Update the currently shown menu and submeun to reflect changes of removed entries
+        --Does not work to refresh the current submeny entries. They need to use a function returning always the current state! Else a complete DDL update (reopen) would be needed to rebuild the items and submenu items!
+        --RefreshCustomScrollableMenu(moc(), LSM_UPDATE_MODE_BOTH, p_comboBox)
+
         --Disable the saved button's enabled state
         ChangeSaveButtonEnabledState(false)
         --Disable the "delete pack" button
         ChangeDeleteButtonEnabledState(nil, false)
+
+        --Update the Dropdown now to reflect changes
+        updateDDLNow()
     end
 end
 
@@ -1332,7 +1340,7 @@ function AS.UpdateDDL(wasDeleted)
                                             AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameOfCharCopy, charName = charNameCopy }
                                         end
                                         clearAndUpdateDDL()
-                                        LibScrollableMenu.UpdateIconsPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
+                                        UpdateCustomScrollableMenuEntryIconPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
                                     end,
                                     icon = function()
                                         if utility.isAddonPackEnabledForAutoLoadOnLogout(packNameOfCharCopy, charNameCopy) then
@@ -1916,7 +1924,7 @@ function AS.UpdateDDL(wasDeleted)
                     AS.acwsvChar.loadAddonPackOnLogout = { packName = packNameCopy, charName = GLOBAL_PACK_NAME }
                 end
                 clearAndUpdateDDL()
-                LibScrollableMenu.UpdateIconsPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
+                UpdateCustomScrollableMenuEntryIconPath(comboBox, rowControl, nil) --update the icons up the path from current entry in submenu, to the main menu
             end,
             icon = function()
                 if utility.isAddonPackEnabledForAutoLoadOnLogout(packNameCopy, GLOBAL_PACK_NAME) then
