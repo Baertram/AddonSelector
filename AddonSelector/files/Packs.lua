@@ -396,11 +396,35 @@ end
 local addonIndicesOfAddonsWhichShouldNotBeDisabled = {}
 local thisAddonIndex = 0
 
+function AddonSelector_DisableAllAddonsAndReloadUI()
+    if not areAllAddonsEnabled(false) then return end
+
+    --Disable really all addons now including AddonSelector and needed dependencies
+    local wasDisabled = false
+    local numAddons = ADDON_MANAGER:GetNumAddOns()
+    if numAddons >= 1 then
+        --Save the currently enabled addons as a special "backup pack" so we can restore it later
+        saveAddonsAsPackBeforeMassMarking()
+
+        for i = 1, numAddons do
+            local _, _, _, _, isEnabled = ADDON_MANAGER:GetAddOnInfo(i)
+            if isEnabled == true then
+                ADDON_MANAGER:SetAddOnEnabled(i, false)
+                wasDisabled = true
+            end
+        end
+    end
+    if wasDisabled == true then
+--d("[AS]All addons disabled - Reloading the UI now!")
+        ReloadUI("Ingame")
+    end
+end
+
 --Select/Deselect all addon checkboxes
 function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
     enableAll = enableAll or false
     onlyLibraries = onlyLibraries or false
---d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tos(selectAll) .. ", enableAll: " ..tos(enableAll).. ", onlyLibraries: " ..tos(onlyLibraries))
+    --d("[AddonSelector]AddonSelector_SelectAddons - selectAll: " ..tos(selectAll) .. ", enableAll: " ..tos(enableAll).. ", onlyLibraries: " ..tos(onlyLibraries))
     if not areAllAddonsEnabled(false) then return end
     if not ZOsControls.ZOAddOnsList or not ZOsControls.ZOAddOnsList.data then return end
 
@@ -437,10 +461,10 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
                 if addonIndex ~= nil then
                     if thisAddonIndex == 0 and addonFileName == ADDON_NAME then
                         thisAddonIndex = addonIndex
---d(">>>Found AddonSelector at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
+                        --d(">>>Found AddonSelector at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
                     elseif addonsWhichShouldNotBeDisabled[addonFileName] and not addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] then
                         addonIndicesOfAddonsWhichShouldNotBeDisabled[addonIndex] = true
---d(">>>Found AddonSelector mandatory dependency at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
+                        --d(">>>Found AddonSelector mandatory dependency at addonIdx: " ..tos(addonIndex) .. ", addOnFileName: " ..tos(addonFileName))
                     end
                 end
 
@@ -484,6 +508,7 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
         fullHouse = true
         emptyHouse = false
     end
+
     if not fullHouse and not emptyHouse then
         selectAddOnsButton:SetText(AddonSelector_GetLocalizedText("SelectAllAddonsSaved"))
     else
@@ -492,36 +517,35 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
     addonSelectorSelectAddonsButtonNameLabel = addonSelectorSelectAddonsButtonNameLabel or asControls.addonSelectorSelectAddonsButtonNameLabel
     local isSelectAddonsButtonTextEqualSelectedSaved = (not enableAll and selectAll == true and addonSelectorSelectAddonsButtonNameLabel:GetText() == AddonSelector_GetLocalizedText("SelectAllAddonsSaved") and true) or false
 
---d(">isSelectAddonsButtonTextEqualSelectedSaved: " ..tos(isSelectAddonsButtonTextEqualSelectedSaved))
+    --d(">isSelectAddonsButtonTextEqualSelectedSaved: " ..tos(isSelectAddonsButtonTextEqualSelectedSaved))
 
-    --local addonsMasterList = ADDON_MANAGER_OBJECT.masterList
     local numAddons = ADDON_MANAGER:GetNumAddOns()
     for i = 1, numAddons do
         local isProtectedAddonOrDependency = ((i == thisAddonIndex or addonIndicesOfAddonsWhichShouldNotBeDisabled[i]) and true) or false
 
         --name, title, author, description, enabled, state, isOutOfDate, isLibrary
         local addonName, _, _, _, enabled, _, _, isLibrary = ADDON_MANAGER:GetAddOnInfo(i)
---d(">>addonIdx: " ..tos(i) .. ", addOnFileName: " ..tos(addonName) .. ", isLibrary: " ..tos(isLibrary) .. ", enabled: " ..tos(enabled) ..", isProtectedAddonOrDependency: " ..tos(isProtectedAddonOrDependency))
+        --d(">>addonIdx: " ..tos(i) .. ", addOnFileName: " ..tos(addonName) .. ", isLibrary: " ..tos(isLibrary) .. ", enabled: " ..tos(enabled) ..", isProtectedAddonOrDependency: " ..tos(isProtectedAddonOrDependency))
 
         if enableAll == true or selectAll == true or not isProtectedAddonOrDependency then
             if not onlyLibraries and isSelectAddonsButtonTextEqualSelectedSaved == true then -- Are we restoring from save?
---d(">>>restoring previously saved addonIdx: " ..tos(i))
+                --d(">>>restoring previously saved addonIdx: " ..tos(i))
                 ADDON_MANAGER:SetAddOnEnabled(i, selectAllSave[i])
 
             elseif not isSelectAddonsButtonTextEqualSelectedSaved and not isProtectedAddonOrDependency then
                 -- Otherwise continue as normal: enabled/disable addon via "selectAll" boolean flag
                 if (not onlyLibraries or (onlyLibraries == true and isLibrary == true)) and selectAll ~= enabled then
---d(">>>1- changing state to: " ..tos(selectAll))
+                    --d(">>>1- changing state to: " ..tos(selectAll))
                     ADDON_MANAGER:SetAddOnEnabled(i, selectAll)
                 end
             end
 
-        --Enable the addons/libraries - But only the "must always be enabled ones"? But do not do that if restoring from last saved addons
+            --Enable the addons/libraries - But only the "must always be enabled ones"? But do not do that if restoring from last saved addons
         elseif enableAll == true and selectAll == true and isProtectedAddonOrDependency == true and not isSelectAddonsButtonTextEqualSelectedSaved then
             if not enabled then
                 --if not onlyLibraries or (onlyLibraries == true and isLibrary == true) then
---d(">>>enable must-be-enabled addon '" .. tos(addonName) .."' again")
-                    ADDON_MANAGER:SetAddOnEnabled(i, true)
+                --d(">>>enable must-be-enabled addon '" .. tos(addonName) .."' again")
+                ADDON_MANAGER:SetAddOnEnabled(i, true)
                 --end
             end
         end
@@ -541,7 +565,7 @@ function AddonSelector_SelectAddons(selectAll, enableAll, onlyLibraries)
     --Re-Add the addons fragment to the scene (to refresh it properly)
     SM:AddFragment(ADDONS_FRAGMENT)
 
---Attempt to fix ESC and RETURN key and other global keybinds not woring aftr you have used an AddonManager keybind
+    --Attempt to fix ESC and RETURN key and other global keybinds not woring aftr you have used an AddonManager keybind
     -->Maybe because of the remove and add fragment?
     ADDON_MANAGER_OBJECT:RefreshKeybinds()
 end

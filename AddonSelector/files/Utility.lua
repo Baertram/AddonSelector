@@ -478,7 +478,6 @@ local function areAddonsCurrentlyEnabled()
 end
 utility.areAddonsCurrentlyEnabled = areAddonsCurrentlyEnabled
 
-
 --Check if the checkbox to disable all addons is enabled or not
 local function areAllAddonsEnabled(noControlUpdate)
     noControlUpdate = noControlUpdate or false

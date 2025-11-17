@@ -17,6 +17,7 @@ local EM = EVENT_MANAGER
 
 local openGameMenuAndAddOnsAndThenSearch = AS.OpenGameMenuAndAddOnsAndThenSearch
 local updateDDL = utility.updateDDL
+local areAllAddonsEnabled = utility.areAllAddonsEnabled
 
 local AddonSelector_GetLocalizedText = AddonSelector_GetLocalizedText
 
@@ -66,6 +67,9 @@ local function skipLoadAddonPackOnLogoutToggle(args)
     d(strfor(addonNamePrefix .. skipLoadAddonPackStr, tos(booleanToOnOff[currentValue])))
 end
 
+local function disableAllAddonsAndReload()
+    AddonSelector_DisableAllAddonsAndReloadUI()
+end
 
 --Slash commands
 local function registerSlashCommands()
@@ -100,6 +104,10 @@ local function registerSlashCommands()
 
 
     SLASH_COMMANDS["/asap"]             = AddonSelector_ShowActivePackInChat
+
+    SLASH_COMMANDS["/asnone"]           = disableAllAddonsAndReload
+    SLASH_COMMANDS["/addonselectornone"]= disableAllAddonsAndReload
+
     if LibAddonMenu2 ~= nil then
         SLASH_COMMANDS["/addonsettings"] =  AS.ShowLAMAddonSettings
         SLASH_COMMANDS["/lam"] =            AS.ShowLAMAddonSettings

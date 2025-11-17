@@ -2,20 +2,19 @@
 ------------------------------------------------------------------------------------------------------------------------
  Changelog
 ------------------------------------------------------------------------------------------------------------------------
-2025-11-12
+2025-11-17
 AddonSelector v3.00
 
 
 ------------------------------------------------------------------------------------------------------------------------
  Known bugs - Max: 19
 ------------------------------------------------------------------------------------------------------------------------
-20251104 - #17 Selecting a keybind at the submenu of a saved pack write the text "Keybind ...." into the DDL instead of not selecting it to the DDL, and there is no keybind icon at the DDL entry
-20251104 - #18 Selecting a keybind at the context menu of a saved pack (as submenus at the pack are disabled in the settings) won't update the next open of the context menu so the keybind can be removed again, and there is no keybind icon at the DDL entry
+20251117 - #18 Selecting a keybind at the keybind submenu at the context menu of a saved pack will close the context menu after the 2nd keybind has changed in that menu.
+-->Workaround: After changing one keybind at the context menu's keybind submenu, select any other entry in the main context menu e.g. and then reopen the submenu for keybinds.
 
 
 
 Feature requests:
-20251010 - #16 Add missing dependencies (e.g. new added to addons) automatically to loaded packs (maybe show a popup informing the user about it)
 20251010 - Show missing (non installed) dependencies, of all addons, at a collapsible UI at the addon manager
 20251112 - Add slash command /asnone to disable all addons and reload the UI
 

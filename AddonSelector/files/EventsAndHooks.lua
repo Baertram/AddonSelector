@@ -161,7 +161,7 @@ AS.showAddOnsList = showAddOnsList
 
 local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, noReloadUI, charName, wasCalledFromLogout)
 --d("[AS]openGameMenuAndAddOnsAndThenLoadPack - args: " .. tos(args) .. ", doNotShowAddOnsScene: " ..tos(doNotShowAddOnsScene) .. ", noReloadUI: " ..tos(noReloadUI) .. ", charName: " ..tos(charName) .. ", wasCalledFromLogout: " ..tos(wasCalledFromLogout))
-    if not args or args == "" then return end
+    if not args or args == "" then return  end
     doNotShowAddOnsScene = doNotShowAddOnsScene or false
     wasCalledFromLogout = wasCalledFromLogout or false
     if noReloadUI == nil then noReloadUI = true end
@@ -186,7 +186,7 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
     options = utility.splitStringAndRespectQuotes(args)
     if ZO_IsTableEmpty(options) then return end
     local numOptions = #options
---d(">got here, #options: " .. tos(numOptions))
+    --d(">got here, #options: " .. tos(numOptions))
     if numOptions >= 1 then
 
         local characterIdForSV, charNameForSV = currentCharId, GLOBAL_PACK_NAME
@@ -195,8 +195,8 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
             --Save character packs is enabled at the settings? Assume we load a character pack then
             --if not: Assume we load a global pack then
             isCharacterPack = (not wasCalledFromLogout and charName ~= nil and charName ~= GLOBAL_PACK_NAME and true)
-                                or (wasCalledFromLogout == true and ( (charName ~= nil and charName ~= GLOBAL_PACK_NAME and true) or (charName ~= nil and charName == GLOBAL_PACK_NAME and false) ))
-                                or AS.acwsv.saveGroupedByCharacterName
+                    or (wasCalledFromLogout == true and ( (charName ~= nil and charName ~= GLOBAL_PACK_NAME and true) or (charName ~= nil and charName == GLOBAL_PACK_NAME and false) ))
+                    or AS.acwsv.saveGroupedByCharacterName
             packNameLower = options[1]
         else
             --2 or more params have been enered at the chat.
@@ -206,7 +206,7 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
             if charName == nil or charName == "" then
                 local firstParamIsNumber = tonumber(options[1])
                 local firstParamType = type(firstParamIsNumber)
---d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
+                --d("> " .. options[1] .. ", firstParamType: " ..tos(firstParamType))
                 if firstParamType ~= "number" then
                     charName = tos(options[1])
                     charNameForMsg = charName
@@ -217,7 +217,7 @@ local function openGameMenuAndAddOnsAndThenLoadPack(args, doNotShowAddOnsScene, 
             packNameLower = table.concat(options, " ", 2)
         end
 
---d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower) .. ", isCharacterPack: " ..tos(isCharacterPack))
+        --d(">charName: " .. tos(charName) .. ", packName: " ..tos(packNameLower) .. ", isCharacterPack: " ..tos(isCharacterPack))
 
         if packNameLower ~= nil then
             --Character is the currentlyLoggedIn or any other?
