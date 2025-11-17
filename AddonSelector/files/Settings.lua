@@ -451,7 +451,7 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                     end
                 end
                 --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
-                AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastBeforeDisableAllMarking"),function() AddonSelector_UndoLastMassMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+                AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
                 AddCustomScrollableMenuDivider()
             end
         end
