@@ -117,6 +117,8 @@ local savedVariablesConst = {
             [5] = {},
         },
         autoAddMissingDependencyAtPackLoad = false, --#16
+        lastSavedProfileBeforeDisableAllTime = nil,
+        lastSavedProfileBeforeDisableAll = nil,
     },
     --===============================================
     defaultSavedVarsChar = {
@@ -140,6 +142,10 @@ constants.CHARACTER_PACK_CHARNAME_IDENTIFIER = CHARACTER_PACK_CHARNAME_IDENTIFIE
 
 local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = "$BACKUP_BEFORE_MASSMARK"
 constants.GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME
+local GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME = "$BACKUP_BEFORE_DISABLE_ALL"
+constants.GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME = GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME
+
+
 local SEARCH_TYPE_NAME = "name"
 constants.SEARCH_TYPE_NAME = SEARCH_TYPE_NAME
 

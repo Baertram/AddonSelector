@@ -11,6 +11,7 @@ local ZOsControls = constants.ZOsControls
 
 local GLOBAL_PACK_NAME = constants.GLOBAL_PACK_NAME
 local GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME = constants.GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME
+local GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME = constants.GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME
 
 local currentCharId = constants.currentCharId
 local addonsWhichShouldNotBeDisabled = constants.addonsWhichShouldNotBeDisabled
@@ -317,10 +318,17 @@ AS.saveAddonsAsPackToSV = saveAddonsAsPackToSV
 
 local function saveAddonsAsPackBeforeMassMarking()
     AS.acwsv.lastMassMarkingSavedProfile     = nil
-    AS.acwsv.lastMassMarkingSavedProfile     = saveAddonsAsPackToSV("LastAddonsBeforeMassMarking", true)
     AS.acwsv.lastMassMarkingSavedProfileTime = GetTimeStamp()
+    AS.acwsv.lastMassMarkingSavedProfile     = saveAddonsAsPackToSV("LastAddonsBeforeMassMarking", true)
 end
 AS.saveAddonsAsPackBeforeMassMarking = saveAddonsAsPackBeforeMassMarking
+
+local function saveAddonsAsPackBeforeDisableAll()
+    AS.acwsv.lastSavedProfileBeforeDisableAll     = nil
+    AS.acwsv.lastSavedProfileBeforeDisableAllTime = GetTimeStamp()
+    AS.acwsv.lastSavedProfileBeforeDisableAll     = saveAddonsAsPackToSV("LastAddonsBeforeDisableAll", true)
+end
+AS.saveAddonsAsPackBeforeDisableAll = saveAddonsAsPackBeforeDisableAll
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -386,7 +394,23 @@ function AddonSelector_UndoLastMassMarking(clearBackup)
         updateAddonsEnabledStateByPackData(packData)
         onAddonPackSelected(GLOBAL_PACK_BACKUP_BEFORE_MASSMARK_NAME, packData, true)
     end
-    ClearMenu() -- Hide the context menu (AddonSelector settings)
+    ClearCustomScrollableMenu()
+end
+
+--Undo the last mass marking by loading the last saved profile before the disable all was done
+function AddonSelector_UndoLastDisableAllMarking(clearBackup)
+    if AS.acwsv.lastSavedProfileBeforeDisableAll == nil then return end
+    clearBackup = clearBackup or false
+
+    if clearBackup then
+        AS.acwsv.lastSavedProfileBeforeDisableAll     = nil
+        AS.acwsv.lastSavedProfileBeforeDisableAllTime = nil
+    else
+        local packData = AS.acwsv.lastSavedProfileBeforeDisableAll
+        updateAddonsEnabledStateByPackData(packData)
+        onAddonPackSelected(GLOBAL_PACK_BACKUP_BEFORE_DISABLE_ALL_NAME, packData, true)
+    end
+    ClearCustomScrollableMenu() -- Hide the context menu (AddonSelector settings)
 end
 
 
@@ -404,7 +428,7 @@ function AddonSelector_DisableAllAddonsAndReloadUI()
     local numAddons = ADDON_MANAGER:GetNumAddOns()
     if numAddons >= 1 then
         --Save the currently enabled addons as a special "backup pack" so we can restore it later
-        saveAddonsAsPackBeforeMassMarking()
+        saveAddonsAsPackBeforeDisableAll()
 
         for i = 1, numAddons do
             local _, _, _, _, isEnabled = ADDON_MANAGER:GetAddOnInfo(i)

@@ -20,7 +20,7 @@
 					<OnEnter>
 						AddonSelector_SearchAddon("name", self:GetText(), false)
 					</OnEnter>
-					<OnTextChanged>ClearMenu()</OnTextChanged>
+					<OnTextChanged>ClearCustomScrollableMenu()</OnTextChanged>
 					<Controls>
 						<Backdrop name="$(parent)Bg" inherits="ZO_EditBackdrop" alpha="1"  >
 							<AnchorFill />

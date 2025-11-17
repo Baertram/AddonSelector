@@ -311,6 +311,79 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
 
     --Addons are all enabled (or disabled)?
     if areAllAddonsCurrentlyEnabled == true then
+        --Last saved pack before disable all
+        local lastDisableAllProfile = AS.acwsv.lastSavedProfileBeforeDisableAll
+        if lastDisableAllProfile ~= nil then
+            local lastSavedPreDisableAllTime = ""
+            local countAddonsInBackup        = NonContiguousCount(lastDisableAllProfile)
+            if AS.acwsv.lastSavedProfileBeforeDisableAllTime ~= nil then
+                lastSavedPreDisableAllTime = os.date("%c", AS.acwsv.lastSavedProfileBeforeDisableAllTime)
+            end
+            if countAddonsInBackup ~= nil and countAddonsInBackup > 0 then
+                local addonsUndoTab, librariesUndoTab = utility.sortAndGroupAddons(lastDisableAllProfile)
+                if #addonsUndoTab > 1 or #librariesUndoTab > 1 then
+                    local submenuItemsUndo = {}
+                    local firstSubmenuItem = {
+                        label    = AddonSelector_GetLocalizedText("UndoLastBeforeDisableAllMarking"),
+                        callback = function()
+                            AddonSelector_UndoLastDisableAllMarking(false)
+                        end,
+                    }
+                    tins(submenuItemsUndo, firstSubmenuItem)
+
+                    --AddOns
+                    for idx, addonUndoName in ipairs(addonsUndoTab) do
+                        if idx == 1 then
+                            local addonsInUndoText = strfor(AddonSelector_GetLocalizedText("addons") .. " - #" .. colors.numAddonsColorTemplate.."/%s", tos(#addonsUndoTab), tos(countAddonsInBackup))
+                            local submenuItemUndoAddOnsHeader = {
+                                label    = addonsInUndoText,
+                                callback = function()
+                                end,
+                                entryType = LSM_ENTRY_TYPE_HEADER,
+                            }
+                            tins(submenuItemsUndo, submenuItemUndoAddOnsHeader)
+
+                        end
+                        local submenuItemUndo = {
+                            label    = addonUndoName,
+                            callback = function()
+                            end,
+                            enabled = false,
+                        }
+                        tins(submenuItemsUndo, submenuItemUndo)
+                    end
+                    --Libraries
+                    for idx, libraryUndoName in ipairs(librariesUndoTab) do
+                        if idx == 1 then
+                            local librariesInUndoText = strfor(AddonSelector_GetLocalizedText("libraries") .. " - #" .. colors.numLibrariesColorTemplate.."/%s", tos(#librariesUndoTab), tos(countAddonsInBackup))
+                            local submenuItemUndoLibrariesHeader = {
+                                label    = librariesInUndoText,
+                                callback = function()
+                                end,
+                                entryType = LSM_ENTRY_TYPE_HEADER,
+                            }
+                            tins(submenuItemsUndo, submenuItemUndoLibrariesHeader)
+                        end
+                        local submenuItemUndo = {
+                            label    = libraryUndoName,
+                            callback = function()
+                            end,
+                            enabled = false,
+                        }
+                        tins(submenuItemsUndo, submenuItemUndo)
+                    end
+                    if #submenuItemsUndo > 0 then
+                        --AddCustomScrollableSubMenuEntry(text, entries, callbackFunc)
+                        AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("UndoLastBeforeDisableAllMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreDisableAllTime) .. ")", submenuItemsUndo, function() AddonSelector_UndoLastDisableAllMarking(false) end)
+                    end
+                end
+                --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
+                AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastBeforeDisableAllMarking"),function() AddonSelector_UndoLastDisableAllMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+                AddCustomScrollableMenuDivider()
+            end
+        end
+
+
         --Last changed addons backup/restore
         local lastMassMarkingProfile = AS.acwsv.lastMassMarkingSavedProfile
         if lastMassMarkingProfile ~= nil then
@@ -377,10 +450,10 @@ function AddonSelector_ShowSettingsDropdown(buttonCtrl)
                         AddCustomScrollableSubMenuEntry(AddonSelector_GetLocalizedText("UndoLastMassMarking") .. " #" .. tos(countAddonsInBackup) .." (" .. tos(lastSavedPreMassMarkingTime) .. ")", submenuItemsUndo, function() AddonSelector_UndoLastMassMarking(false) end)
                     end
                 end
+                --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
+                AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
+                AddCustomScrollableMenuDivider()
             end
-            --AddCustomScrollableMenuEntry(text, callback, entryType, entries, additionalData)
-            AddCustomScrollableMenuEntry(AddonSelector_GetLocalizedText("ClearLastMassMarking"),function() AddonSelector_UndoLastMassMarking(true) end, LSM_ENTRY_TYPE_NORMAL, nil, LSMadditionalData)
-            AddCustomScrollableMenuDivider()
         end
 
         --Deselect/Select all
