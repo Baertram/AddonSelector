@@ -651,7 +651,8 @@ local function ShowConfirmationDialog(title, body, callbackYes, callbackNo, data
 
     if updateDialogTextsAndCallbacks(yesNoDialog, title, body, callbackYes, callbackNo) == true then
         --Show the dialog now
-        ZO_Dialogs_ShowPlatformDialog(ASYesNoDialogName, data)
+        --ZO_Dialogs_ShowPlatformDialog(ASYesNoDialogName, data)
+        ZO_Dialogs_ShowDialog(ASYesNoDialogName, data)
         narration.AddDialogTitleBodyKeybindNarration(title, body, nil)
     end
 end
