@@ -1,5 +1,5 @@
 local AS                            = AddonSelectorGlobal
-AS.version                          = "3.10"
+AS.version                          = "3.20"
 local ADDON_NAME	= AS.name
 local addonNamePrefix = AS.addonNamePrefix
 

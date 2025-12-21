@@ -58,6 +58,8 @@ local EM = EVENT_MANAGER
 local updateDDLNow
 local OnClickDDL, OnClick_Save, OnClick_Delete, OnClick_DeleteWholeCharacter
 local createItemEntry
+local buildAddOnReverseLookupTable
+
 
 --======================================================================================================================
 -- Create/update controls
@@ -772,6 +774,29 @@ function AS.ChangeLayout()
 end
 
 
+--Check for keybindings enabled at the pack and list them at the pack's name text (one after another)
+local keybindingEntries_Character, keybindIconData_Character
+local keybindingEntries_Global, keybindIconData_Global
+local function processKeybindingsTableAndAddToText(keybindTab, currentText)
+    if not ZO_IsTableEmpty(keybindTab) then
+        for _, v in ipairs(keybindTab) do
+            currentText = currentText .. v.iconTexture
+        end
+    end
+    return currentText
+end
+local function getKeybindingEntryText(packName, charName, currentText, isGlobal)
+    if isGlobal and charName == nil then
+        keybindingEntries_Global, keybindIconData_Global = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
+        return processKeybindingsTableAndAddToText(keybindIconData_Global, currentText)
+    elseif not isGlobal and charName ~= nil then
+        keybindingEntries_Character, keybindIconData_Character = getKeybindingLSMEntriesForPacks(packName, charName)
+        return processKeybindingsTableAndAddToText(keybindIconData_Character, currentText)
+    end
+    return
+end
+
+
 ------------------------------------------------------------------------------------------------------------------------
 -- AddonSelector - Dropdown List (DDL)
 ------------------------------------------------------------------------------------------------------------------------
@@ -826,14 +851,12 @@ function AS.UpdateDDL(wasDeleted)
     --local characterCount = NonContiguousCount(AddonSelector.charactersOfAccount)
 
     --Build the lookup tables for libraries
-    utility.BuildAddOnReverseLookUpTable()
+    buildAddOnReverseLookupTable = buildAddOnReverseLookupTable or utility.BuildAddOnReverseLookUpTable
+    buildAddOnReverseLookupTable()
     local librariesLookup = AS.Libraries
     local addonsLookup    = AS.NameLookup
     createItemEntry = createItemEntry or AS.CreateItemEntry
 
-
-    local keybindingEntries_Character, keybindIconData_Character
-    local keybindingEntries_Global, keybindIconData_Global
 
 ------------------------------------------------------------------------------------------------------------------------
     --!LibScrollableMenu - Create the dropdown menu entries now - CharacterName entries!
@@ -1372,7 +1395,7 @@ function AS.UpdateDDL(wasDeleted)
                                     if autoLoadThisPackOnLogout == true then
                                         iconData = iconData or {}
                                         local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
-                                        tins(iconData, { iconTexture=textures.autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=AddonSelector_GetLocalizedText("loadOnLogoutOrQuit") })
+                                        tins(iconData, { iconTexture=textures.autoLoadOnLogoutTexture, iconTint=(skipAutoLoadPackAtLogout == true and "FF0000") or "00FF22", tooltip=AddonSelector_GetLocalizedText("loadOnLogoutOrQuit") })
                                     end
                                     return iconData
                                 end
@@ -1381,13 +1404,7 @@ function AS.UpdateDDL(wasDeleted)
                                     name = packNameOfChar,
                                     label = function()
                                         local labelCharacterPack = packNameOfChar
-                                        keybindingEntries_Character, keybindIconData_Character = getKeybindingLSMEntriesForPacks(packNameOfCharCopy, charNameCopy)
-                                        if not ZO_IsTableEmpty(keybindIconData_Character) then
-                                            for _, v in ipairs(keybindIconData_Character) do
-                                                labelCharacterPack = labelCharacterPack .. v.iconTexture
-                                            end
-                                        end
-                                        return labelCharacterPack
+                                        return getKeybindingEntryText(packNameOfCharCopy, charNameCopy, labelCharacterPack, false)
                                     end,
                                     charName = charName,
                                     callback = function(comboBox, packNameWithSelectPackStr, packData, selectionChanged, oldItem)
@@ -1950,17 +1967,15 @@ function AS.UpdateDDL(wasDeleted)
         end
         ]]
 
-        local function getIconDataGlobalPackEntry()
-            local iconData = (autoReloadUI == true and { iconTexture=textures.reloadUITexture, iconTint="FF0000", tooltip=AddonSelector_GetLocalizedText("reloadUIStrWithoutIcon") }) or nil
-
+        local function getIconDataGlobalPackEntry(packName)
+            local iconData = (autoReloadUI == true and { [1] = {iconTexture=textures.reloadUITexture, iconTint="FF0000", tooltip=AddonSelector_GetLocalizedText("reloadUIStrWithoutIcon")} }) or nil
             local autoLoadThisPackOnLogout = isAddonPackEnabledForAutoLoadOnLogout(packName, GLOBAL_PACK_NAME)
-            --if autoLoadThisPackOnLogout == true then
-            --    label = label .. autoLoadOnLogoutTextureStr
-            --end
+    --d("[AS]Pack " .. tos(packName) .. "; autoLoadThisPackOnLogout: " .. tos(autoLoadThisPackOnLogout))
             if autoLoadThisPackOnLogout == true then
                 iconData = iconData or {}
                 local skipAutoLoadPackAtLogout = AS.acwsvChar.skipLoadAddonPackOnLogout
-                tins(iconData, { iconTexture=textures.autoLoadOnLogoutTexture, iconTint=not skipAutoLoadPackAtLogout and "00FF22" or "FF0000", tooltip=AddonSelector_GetLocalizedText("loadOnLogoutOrQuit") })
+                tins(iconData, { iconTexture=textures.autoLoadOnLogoutTexture, iconTint=(skipAutoLoadPackAtLogout == true and "FF0000") or "00FF22", tooltip=AddonSelector_GetLocalizedText("loadOnLogoutOrQuit") })
+    --d("[AS]Pack: " .. tos(packName) .." - added autoLoadOnLogoutTexture texture to iconData, skipAutoLoadPackAtLogout: " ..tos(skipAutoLoadPackAtLogout))
             end
             return iconData
         end
@@ -2041,17 +2056,11 @@ function AS.UpdateDDL(wasDeleted)
         local itemGlobalData = createItemEntry(packName,
                 function()
                     local label = packName
-                    keybindingEntries_Global, keybindIconData_Global = getKeybindingLSMEntriesForPacks(packName, GLOBAL_PACK_NAME)
-                    if not ZO_IsTableEmpty(keybindIconData_Global) then
-                        for _, v in ipairs(keybindIconData_Global) do
-                            label = label .. v.iconTexture
-                        end
-                    end
-                    return label
+                    return getKeybindingEntryText(packName, nil, label, true)
                 end,
                 addonTable, false, GLOBAL_PACK_NAME, "[" .. tostring(megaServer) .. "]"..AddonSelector_GetLocalizedText("accountWide").." \'" ..packName.."\'" .. enabledAddonsInPackStrAddition,
                 subMenuEntriesGlobal, subMenuEntriesGlobal ~= nil, false,
-                function() return getIconDataGlobalPackEntry() end, globalPackContextMenuCallbackFunc)
+                function() return getIconDataGlobalPackEntry(packName) end, globalPackContextMenuCallbackFunc)
         tins(packTable, itemGlobalData)
         wasItemAdded = true
     end --for _, packName in ipairs(addonPacksSortedLookup) do
