@@ -149,7 +149,7 @@ utility.getKeybindingLSMEntriesForPacks = getKeybindingLSMEntriesForPacks
 function AS.LoadKeybinds()
     --AddonSelector UI Keybinds
     ZO_CreateStringId("SI_KEYBINDINGS_CATEGORY_ADDON_SELECTOR", ADDON_NAME)
-    ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        AddonSelector_GetLocalizedText("reloadUI"))
+    ZO_CreateStringId("SI_BINDING_NAME_ADDONS_RELOADUI",        AddonSelector_GetLocalizedText("ReloadUI"))
     ZO_CreateStringId("SI_BINDING_NAME_SHOWACTIVEPACK",         AddonSelector_GetLocalizedText("ShowActivePack"))
 
     --Pack load keybinds
