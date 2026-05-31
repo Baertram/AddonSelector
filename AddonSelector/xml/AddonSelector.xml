@@ -1,5 +1,6 @@
 <!-- Level then Layer then Tier (lowest to highest prescendence -->
 <GuiXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sir.insidi.at/or/schema/esoui.xsd">
+	<Font name="AS_FontEditbox" font="$(CHAT_FONT)|$(KB_18)|soft-shadow-thin" />
 	<Controls>
 	<!--  This is know longer used. ZO_AddOnManager:GetRowSetupFunction() is now wrapped, thanks for the idea Merlight
 	
@@ -14,7 +15,7 @@
             <Dimensions x="400" y="80"/>
 			<Anchor point="TOPLEFT" relativeTo="ZO_AddOnsDivider" relativePoint="BOTTOMLEFT" offsetX="10" offsetY="0" />
 			<Controls>
-				<EditBox name="$(parent)SearchBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
+				<EditBox name="$(parent)SearchBox" font="AS_FontEditbox" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPRIGHT" relativeTo="ZO_AddOns" relativePoint="TOPRIGHT"  offsetX="-5" offsetY="75" />
 					<OnEnter>
@@ -39,7 +40,7 @@
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 				</Backdrop>
-				<EditBox name="$(parent)EditBox" font="ZoFontChat" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
+				<EditBox name="$(parent)EditBox" font="AS_FontEditbox" editEnabled="true" maxInputCharacters="64" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop" tier="LOW" layer="CONTROLS" level="5">
 					<Dimensions x="200" y="20"/>
 					<Anchor point="TOPLEFT" relativeTo="$(parent)NameLabel" relativePoint="TOPRIGHT"  offsetX="20" offsetY="0" />
 					<OnTextChanged>
