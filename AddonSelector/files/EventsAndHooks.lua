@@ -18,6 +18,8 @@ local currentCharId = constants.currentCharId
 local currentCharName = constants.currentCharName
 --local isExcludedFromChangeEnabledState = constants.isExcludedFromChangeEnabledState
 
+local string_gsub = string.gsub
+
 local booleanToOnOff = stringConstants.booleanToOnOff
 
 --Flags
@@ -756,6 +758,16 @@ function AS.LoadHooks()
             enableZO_AddOnsUI_controlNarration()
 
         end, 500) -- Attention: Delay needs to be 500 as AddonSelector_HookForMultiSelectByShiftKey was enabled!!!
+    end)
+
+    --PostHook the Addonmanagers OnShow function to fix the Update 51 introduced character name with apostrophe bug
+    --> ESO vanilla code adds an escape \ in front of the apostrophe. Remove the backslashes here again and reselect the
+    --> character again to read AND save the correct addons --20261003
+    ZO_PostHook(ADDON_MANAGER_OBJECT, "OnShow", function(addonManagerObject)
+        if not addonManagerObject.selectedCharacterEntry then return end
+        local name = addonManagerObject.selectedCharacterEntry.name
+        local fixedName = string_gsub(name, "\\", "")
+        addonManagerObject:OnCharacterChanged(fixedName, {name=fixedName, allCharacters=false})
     end)
 
     --PreHook the Addonmanagers OnEffectivelyHidden function
