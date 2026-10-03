@@ -704,7 +704,7 @@ function AS.LoadHooks()
     end
 
     --PreHook the Addonmanagers OnShow function
-    ZO_PreHook(ADDON_MANAGER_OBJECT, "OnShow", function(ctrl)
+    ZO_PreHook(ADDON_MANAGER_OBJECT, "OnShow", function(addonManagerObject)
         --d("ADD_ON_MANAGER:OnShow")
         --Hide other controls/keybinds
         AS.OnShow_HideStuff()
@@ -760,14 +760,14 @@ function AS.LoadHooks()
         end, 500) -- Attention: Delay needs to be 500 as AddonSelector_HookForMultiSelectByShiftKey was enabled!!!
     end)
 
-    --PostHook the Addonmanagers OnShow function to fix the Update 51 introduced character name with apostrophe bug
-    --> ESO vanilla code adds an escape \ in front of the apostrophe. Remove the backslashes here again and reselect the
-    --> character again to read AND save the correct addons --20261003
-    ZO_PostHook(ADDON_MANAGER_OBJECT, "OnShow", function(addonManagerObject)
-        if not addonManagerObject.selectedCharacterEntry then return end
-        local name = addonManagerObject.selectedCharacterEntry.name
-        local fixedName = string_gsub(name, "\\", "")
-        addonManagerObject:OnCharacterChanged(fixedName, {name=fixedName, allCharacters=false})
+    --20261003 PostHook the Addonmanagers' OnCharacterChanged function (selection of the dropdown entry of any character -> At the addon manager)
+    -- to fix the Update 51 introduced character name with apostrophe bug --> ESO vanilla code adds an escape \ in front of the apostrophe.
+    --> Remove the backslashes here and update the entry
+    SecurePostHook(ZO_AddOnManager, "OnCharacterChanged", function(selfVar, name, entry)
+        if entry == nil or entry.allCharacters == true or entry.name == nil then return end
+        entry.name = string_gsub(entry.name, "\\", "") --remove any leading backslash from the character name & update the name to the currently selected entry again
+        selfVar.selectedCharacterEntry = entry
+        selfVar:RefreshData()
     end)
 
     --PreHook the Addonmanagers OnEffectivelyHidden function
